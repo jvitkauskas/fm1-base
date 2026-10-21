@@ -1,0 +1,35 @@
+Open BLE on fm1-base - device bench round 1, 2026-10-21 20:46-21:20
+Image: template/build/template-open.fwsc sha256 b899c915df7c456b92beba0997d229fe5d1ad1ca39c9dcfd443a429cb6a6893b
+(flashed over Felucca-ble S3.1d; previous flash backed up as ~/backups/fm1-20261021-204640.bin on the desktop).
+Centrals: HONOR Magic V3 (Android 16, RPA, legacy by its own choice) and desktop BlueZ (SC). Readout over USB
+with tools/fm1_remote.py log (mido + python-rtmidi). Final log: out/open-ble/bench-r1-final-log.txt.
+
+RESULT: PASS for boot, pairing (legacy + SC), MIDI both ways, durable reconnect, off/on.
+Two observations for the next round (below).
+
+1. Boot: "open BLE READY", executor_selftest 1, no crash; FIRST_BOOT seed in the new store; idle timing:
+   dispatch <=190 us, W_item 46 us, audio max 127 us, no late audio.
+2. The phone kept connecting with its old Felucca bond (same public address): 31 negative LTK replies, as
+   designed; the old bond was removed on the phone (it showed as "FM-1 Open BLE").
+3. Android pairing: legacy Just Works, key 16, encrypted, bonded, MTU 200, subscribed; linked=connected=1.
+4. MIDI FM-1 -> phone: tapkey 7/9/11 over fm1_remote -> NoteOn/Off 60/62/64 in MIDI Scope.
+   Phone -> FM-1: 8 MIDI Keyboard keys -> midi_ble_in 16 into the template synth; bad 0, drop 0, MIC 0,
+   audio_late 0 (max 169 us).
+5. BlueZ: remove + pair -> SC (method 2) first try, key 16, subscribed. aplaymidi to the "FM-1 Open BLE" ALSA
+   port -> midi_ble_in +14; template key -> midi_ble_out +2.
+6. Bond flush on disconnect: 7 records, bond_writes 2, failures 0 (A/B store).
+7. Power cycle: seed CHAINED seq 1 -> 2, STORED; 7 records reloaded, malformed 0; rl_entries 2.
+   Phone: 3 reconnects from new RPAs, each resolved (rl_matches = attempts), LTK reply, encrypted, no prompt.
+   Desktop: explicit connect -> encrypted with the stored SC key, ltk_negative 0.
+8. plat_ble_enable through the template (hold REC ~1.1 s): off -> state BLE_OFF, the link ended by local host
+   (0x16), advertising stopped (events frozen 1183); on -> READY, advertising resumed.
+OBSERVATION A: the first BlueZ connect after "on" failed in BlueZ (le-connection-abort-by-local) without any
+   connect attempt at the FM-1 (connect_invalid 0, connect_ignored 0, establishment_fail 0); the retry connected
+   and encrypted at once. One occurrence; likely BlueZ's connect timeout, unproved.
+OBSERVATION B: worker_timer_max_gap_us 17,804 (worker_timer_over_7500us 1) over the session; no audio late/xrun.
+   Timing of the gap is not recorded; candidates: the radio restart on "on" (radio_quiet) or the boot. Needs a
+   timestamp/state attribution in the log.
+Final counters: W_item max 89 us (over_100 0), own_over_250 0, dispatch max 183 us, refill max 42 us
+(over_80 0), mic_failures 0.
+NOT RUN: connection-parameter updates (ble_conn_update_bench needs the Felucca console; to adapt),
+F-28 repeat pairing, 10-minute load, APP_BLE_AT_BOOT / SAVE interplay, crash-inhibit, two-peer replacement.

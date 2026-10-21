@@ -1,0 +1,272 @@
+log: no crash recorded
+log: rails boot 0B 1B now 0F 1F x1
+log: last watchdog reset in ?
+log: open BLE S3.1d / NimBLE 1.9.0 starting
+log: open BLE READY
+log: open BLE disabled; closing links
+log: open BLE enabled
+log: open BLE READY
+log: gap 00000081 late 00000000 tick 00000026
+log: lock 00000000 from 00000000
+log: peripheral_state 2
+log: peripheral_linked 0
+log: peripheral_connected 0
+log: audio_late 0
+log: audio_max_wall_us 138
+log: audio_xruns 0
+log: midi_ble_in 0
+log: midi_ble_out 0
+log: BLE S3.1 / NimBLE 1.9.0 / MIDI; SC Just Works + legacy
+log: enc_phase_N_S1_S2_PA_PB_PC 0
+log: enc_rx_on 0
+log: enc_tx_on 0
+log: enc_enabled 0
+log: enc_starts 5
+log: enc_refreshes 0
+log: mic_failures 0
+log: enc_phase_errors 0
+log: ltk_requests 5
+log: ltk_negative 0
+log: enc_tx_counter_hi 0
+log: enc_tx_counter_lo 00000000
+log: enc_rx_counter_hi 0
+log: enc_rx_counter_lo 00000000
+log: seed_FAILED_FIRST_CHAINED_PROVISIONED_UNPERSISTED 2
+log: seed_origin 2
+log: seed_STORED_NOT_STORED_UNVERIFIED 0
+log: seed_sequence 00000002
+log: seed_credit_bits 0
+log: seed_malformed 0
+log: seed_conflicts 0
+log: seed_flash_failures 0
+log: le_rand_calls 0
+log: entropy_bytes 60
+log: reseed_attempts 5
+log: bond_records 8
+log: bond_pending 0
+log: bond_writes 1
+log: bond_erases 1
+log: bond_failures 0
+log: bond_malformed 0
+log: bond_private_refused 0
+log: bond_private_dropped 0
+log: bond_orphan_dropped 0
+log: bond_equal_writes_skipped 0
+log: rl_capacity 4
+log: rl_entries 2
+log: rl_enabled 1
+log: rl_attempts 3
+log: rl_matches 3
+log: rl_unresolved 0
+log: rl_aes_failures 0
+log: rl_network_rejected 0
+log: executor_selftest 1
+log: executor_dispatch_max_us 183
+log: executor_dispatch_live_max_us 183
+log: executor_dispatch_negative 0
+log: executor_wall_max_us 277
+log: executor_own_max_us 190
+log: executor_item_max_us 89
+log: executor_item_over_100us 0
+log: executor_item_max_kind command
+log: executor_item_max_opcode 00000406
+log: executor_kind service max_ticks 57 count 354113 over100 0 opcode 0000
+log: executor_kind key max_ticks 678 count 354084 over100 0 opcode 0000
+log: executor_kind rx max_ticks 955 count 354108 over100 0 opcode FFFF
+log: executor_kind control max_ticks 838 count 49 over100 0 opcode 0000
+log: executor_kind housekeep max_ticks 1093 count 354084 over100 0 opcode 0000
+log: executor_kind delivery max_ticks 512 count 353964 over100 0 opcode 0000
+log: executor_kind resolution max_ticks 419 count 8 over100 0 opcode 0000
+log: executor_kind driver max_ticks 89 count 353972 over100 0 opcode 0000
+log: executor_kind command max_ticks 2140 count 44 over100 0 opcode 0406
+log: executor_kind stop max_ticks 131 count 1 over100 0 opcode 0C03
+log: executor_kind adv_prepare max_ticks 839 count 115 over100 0 opcode 200A
+log: executor_kind entropy_sample max_ticks 1125 count 354084 over100 0 opcode 0000
+log: executor_kind entropy_reseed max_ticks 603 count 10 over100 0 opcode 0000
+log: executor_kind entropy_output max_ticks 665 count 5 over100 0 opcode 0000
+log: executor_kind entropy_rekey max_ticks 530 count 10 over100 0 opcode 0000
+log: executor_kind control_rx max_ticks 1028 count 49 over100 0 opcode 0012
+log: executor_kind refill max_ticks 760 count 38 over100 0 opcode 0012
+log: executor_kind reset_clear max_ticks 159 count 28 over100 0 opcode 0C03
+log: executor_kind reset_defaults max_ticks 202 count 1 over100 0 opcode 0C03
+log: executor_kind reset_stats max_ticks 350 count 1 over100 0 opcode 0C03
+log: executor_kind reset_complete max_ticks 265 count 1 over100 0 opcode 0C03
+log: executor_own_over_250us 0
+log: executor_over_250us_plus_item 0
+log: refill_max_us 44
+log: refill_ccm_max_us 24
+log: refill_other_max_us 24
+log: refill_over_80us 0
+log: worker_timer_calls 354113
+log: worker_timer_max_gap_us 17804
+log: worker_timer_over_7500us 1
+log: worker_timer_last_ticks 0154D4E7
+log: worker_timer_con 00000019
+log: worker_timer_cnt 2989
+log: worker_timer_prd 6000
+log: worker_timer_irqcfg 00000005
+log: ble_breadcrumb 30000000
+log: ble_breadcrumb_ticks 0154D4F4
+log: ble_fault_breadcrumb 00000000
+log: ble_fault_ticks 00000000
+log: ble_fault_crash_count 0
+log: link_state_idle_created_up_closing_stopped 0
+log: link_epoch 11
+log: link_established 0
+log: conn_interval_1250us 12
+log: conn_latency 0
+log: conn_timeout_10ms 400
+log: conn_event 2068
+log: connections 5
+log: connect_invalid 0
+log: conn_events 12298
+log: rx_A_new 12180
+log: rx_B_crc_5_13 28
+log: rx_C_repeat_9 31
+log: rx_D_unknown 0
+log: retransmission_rx 31
+log: rx_delayed_stamp 0
+log: rx_backpressure 0
+log: rx_queued 0
+log: rx_peak 2
+log: tx_queued_loaded 0
+log: establishment_fail 0
+log: supervision_fail 0
+log: disconnects 5
+log: last_disconnect_reason 00000015
+log: conn_updates 10
+log: channel_map_updates 6
+log: late_instants 0
+log: pending_proc kind 0 instant 0 received 0 programmed 0 interval 0 latency 0 timeout 0 win 0 offset 0 map 00 00 00 00 00
+log: control_last_ignored opcode 0 reason 0 event 0
+log: control_ignore_length 0
+log: control_ignore_params 0
+log: control_ignore_map 0
+log: control_ignore_pending 0
+log: control_ignore_role 0
+log: control_ignore_unexpected 0
+log: control_ignore_version 0
+log: control_ignore_reserved 0
+log: control_ignore_encrypted 0
+log: conn_update serial 9 epoch 8 old 12 new 12 win 1 offset 0 instant 74 received 67 outcome 3 reason 0
+log: conn_update serial 10 epoch 10 old 12 new 12 win 1 offset 0 instant 75 received 68 outcome 3 reason 0
+log: conn_update serial 7 epoch 6 old 24 new 12 win 1 offset 0 instant 18 received 10 outcome 3 reason 0
+log: conn_update serial 8 epoch 6 old 12 new 12 win 1 offset 0 instant 58 received 49 outcome 3 reason 0
+log: acl_tx_accepted 51
+log: acl_tx_rejected 0
+log: acl_rx 48
+log: acl_acked 51
+log: ncp_credits 51
+log: acl_flushed 0
+log: control_dropped 0
+log: control_ignored 0
+log: worker_max_gap_us 1236
+log: worker_max_us 252
+log: worker_over_7500us 0
+log: worker_calls 185233
+log: terminate_timeouts 0
+log: nimble_running 1
+log: nimble_synced 1
+log: nimble_syncs 1
+log: nimble_resets 0
+log: nimble_error 0
+log: nimble_assertions 0
+log: nimble_event_drop 0
+log: nimble_acl_drop 0
+log: nimble_encrypted 0
+log: nimble_bonded 0
+log: nimble_key_size 0
+log: nimble_pair_method_legacy1_SC2 0
+log: security_requests 3
+log: nimble_bond_sc 0
+log: nimble_bond_identity_known 0
+log: nimble_peer_identity_type 0
+log: nimble_peer_identity 00 00 00 00 00 00
+log: security_skipped 2
+log: security_already 0
+log: pair_failures 0
+log: pair_last_status 0
+log: nimble_main_gap_ms 50
+log: nimble_mtu 200
+log: midi_echo 0
+log: nimble_subscribed 0
+log: nimble_heap_used 384
+log: nimble_heap_peak 396
+log: nimble_heap_fail 0
+log: midi_packets_in 0
+log: midi_packets_out 0
+log: midi_bad 0
+log: midi_drop 0
+log: frozen 0
+log: loop_iters_per_us_x1000 44998
+log: loop_ticks 53335
+log: clock 0 000001C1
+log: clock 1 00010400
+log: clock 2 00000006
+log: clock 3 00010200
+log: icfg_probe 043F0600 043F0600 043F0600 043F0700
+log: ticks_while_irq_masked 0
+log: error 0
+log: failure_stage 0
+log: calibration_1_record_2_self 1
+log: vm_status 1
+log: btif_status 1
+log: records_present 0000001F
+log: public_address_hci 6C DF C0 52 60 FD
+log: configured_random_hci 00 00 00 00 00 00
+log: trim_crc 0000AC73
+log: bringup_us 60405
+log: bringup_end_ticks 018416AC
+log: first_hci_command_ticks 0184785B
+log: step_us 1 58
+log: step_us 2 12
+log: step_us 3 4025
+log: step_us 4 18
+log: step_us 5 46377
+log: step_us 6 111
+log: step_us 7 7
+log: step_us 8 43
+log: step_us 9 9
+log: step_us 10 3930
+log: step_us 11 4680
+log: step_us 12 819
+log: step_us 13 45
+log: step_us 14 51
+log: step_us 15 88
+log: enabled 0
+log: stopping 0
+log: driver_step 0
+log: driver_error 0
+log: commands 49
+log: replies 50
+log: last_opcode 0000201A
+log: last_status 00000000
+log: intake_rejected 0
+log: command_overflow 0
+log: advertising_events 1556
+log: event_irqs 13860
+log: rx_irqs 13173
+log: scan_req 929
+log: connect_ignored 0
+log: bad_rx 0
+log: rx_max_ticks 2068
+log: event_max_ticks 1181
+log: rx_over_380us 0
+log: event_work_max_ticks 1093
+log: event_work_over_150us 0
+log: ble_critical_max_ticks 28836
+log: ble_critical_over_390us 1
+log: main_controller_gap_us 1236
+log: stop_timeouts 0
+log: restarts 0
+log: enable_ticks 9D065162
+log: first_event_close_ticks 9D07E7FD
+log: dma_base 01C36688
+log: dma_end 01C373A0
+log: modem_base 01C373A0
+log: dma_canary_errors 0
+log: p33_timeouts 0
+log: trace_records 293
+log: trace_total 285
+log: trace_frozen_drops 0
+log: vco_limits 47 47 47 47 47 47 4A 4F 56 5D 64 6B 72 79 80 88 8B 83 83 83 83 83 83 83 87 8F 96 9D A4 A8 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 3F
