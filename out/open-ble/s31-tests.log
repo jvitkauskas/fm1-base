@@ -1,0 +1,37 @@
+S3 AES/Core CCM, negative MIC/counter/LLID, seed parsing/wrap/conflicts/wear/failures, deferred persistent bonds, encryption phase/marker/barrier/exhaustion tests: PASS
+NimBLE 1.9.0 integration: startup, GATT discovery/empty read/CCCD, bidirectional MIDI, fragmented ACL, update, 10-minute simulated link, 10 reconnects, backstop timeout: PASS
+heap peak 784; HCI credits 5; MIDI packets in 3 out 2; controller control PDUs 22
+central update matrix: 48 cases + 48 immediate updates, near/far, tick wrap, WinOffset 0/mid/max, WinSize 1/max: PASS
+invalid NEW-interval limits ignored; busy/length diagnostics; both late kinds/missing-close watchdog and I-1 receipt: PASS
+map/update pending and programmed: 7 closing causes, supervision expiry, reconnect timing/epoch/queues clean: PASS
+600-second event grid crosses stale-first half-wrap and multiple tick wraps with no frozen counters: PASS
+12 encrypted central interval changes, WinOffset 0/mid/max and maximum WinSize, real CCM/ordered control path: PASS
+H-22..H-25 / K-11 / F-24 connection path: PASS (legacy OTA RPA 01; Enhanced identity 02/03 plus RPA)
+F-25 NOR simulation: two bonds, net churn/no writes, compaction/reload, orphan drop, RPA refusal/migration, failed-write retry: PASS
+F-27 arithmetic: signed dispatch/wrap/error, nested preemption counted once, own budget/item, split refill, stable nonzero local IRK: PASS
+F-27 resumable RNG: synchronous/async byte equality; normal 3, reseed 5 SHA blocks over separate items; model 60 us/block, per-kind max 60 us; owner exclusion/cancel/rekey: PASS
+r7 Reset queued ENC_REQ: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset decoded ENC_REQ: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset entropy requested: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset entropy mid-reseed: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset LTK event pending: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset LTK delivered: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset LTK reply pending: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset START_ENC_REQ loaded: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset RX_ON marker pending: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset decoded START_ENC_RSP: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset response/refill pending: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset entropy output ready before consumption: 31 resumed calls, modeled item max 1152 ticks, clear 1152, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset active advertising: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset mid-resolution: 31 resumed calls, modeled item max 1056 ticks, clear 384, defaults 1005, stats 1056, complete 132; no stale events: PASS
+r7 Reset: mid-advertising publication FIFO, power/defaults/public/DRBG persistence, pending-resolution cancellation and queued-reply ordering: PASS
+r7 control opcode 06: AES 8 us/block + controller memory 1 tick/byte MODEL; control_rx 1014, control 1, one-slot refill 1444 ticks; each <=70 us: PASS
+r7 split control: first encrypted response takes TX counter 0 ahead of ACL; pause RX_OFF marker and clear response remain ordered: PASS
+r7 failed control MIC: opcode FFFF (unavailable), no dispatch/refill: PASS
+NimBLE legacy Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 200, encrypted MIDI both directions, MIC failure: PASS; LE Rand 6, heap peak 784
+NimBLE SC Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 200, encrypted MIDI both directions, MIC failure: PASS; LE Rand 10, heap peak 784
+NimBLE legacy/RPA+HCI-Reset/S-13 Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 200, encrypted MIDI both directions, MIC failure: PASS; LE Rand 6, heap peak 784
+F-28: real NimBLE repeat pairing, same IRK, changed IRK with old RPA, changed IRK with new unresolved RPA, OTA c1/f5/f6, 2028 before 2027 without disconnect, three fresh-RPA encrypted reconnects each: PASS
+NimBLE legacy/RPA+HCI-Reset/S-13 Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 200, encrypted MIDI both directions, MIC failure: PASS; LE Rand 6, heap peak 784
+F-28: real NimBLE repeat pairing, same IRK, changed IRK with old RPA, changed IRK with new unresolved RPA, OTA c1/f5/f6, 2028 before 2027 without disconnect, three fresh-RPA encrypted reconnects each: PASS
+NimBLE SC/RPA+HCI-Reset/S-13 Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 200, encrypted MIDI both directions, MIC failure: PASS; LE Rand 10, heap peak 784

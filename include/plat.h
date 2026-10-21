@@ -65,12 +65,16 @@ uint32_t plat_midi_out_link(void);     /* a number that changes at each new USB 
 uint32_t plat_midi_count(int port, int out);   /* messages through port PORT_* since the start (out: sent), real-time (clock...) left out */
 uint32_t plat_midi_ago(int port, int out);     /* ms since the last one (0xFFFFFFFF: none yet) */
 
-/* Bluetooth MIDI (fm1.toml ble = true: FM1B_BLE 1): JieLi's BT libraries on fm1-base's shim (ble/), started at
+/* Bluetooth MIDI (FM1B_BLE 1): fm1.toml ble = true selects JieLi's libraries and shim;
+ * ble = "open" selects the open peripheral controller/NimBLE (FM1B_BLE_OPEN 1, docs/OPEN-BLE.md). Started at
  * every boot unless the last Bluetooth run crashed (then by hand: plat_ble_start). The app gives it a store object,
  * OBJ_BLE (the radio's address and pairing). Without it (FM1B_BLE 0, tools/build.py --no-ble) nothing of JieLi's is
  * linked, and the state stays BLE_OFF */
 #ifndef FM1B_BLE
 #define FM1B_BLE 0
+#endif
+#ifndef FM1B_BLE_OPEN
+#define FM1B_BLE_OPEN 0
 #endif
 enum { BLE_OFF, BLE_STARTING, BLE_READY, BLE_FAILED };
 int plat_ble_state(void);
@@ -138,7 +142,9 @@ void plat_log(const char *line);
  * a sector there (bsp/loader/ldr_core.c: "AT" at bytes 0xF06..0xF07, a nonzero CRC-16 at 0xF00 over the 78 bytes
  * from 0xF02), so in these two an app keeps bytes 0xF00..0xF07 of every sector erased (0xFF), or else makes sure
  * those bytes never read as a record: never "AT" at 0xF06 (LOOM-8's sample bank moves its data so, and refuses a
- * bank that has it) */
+ * bank that has it).
+ * Open BLE additionally protects 0x93000..0x93FFF and 0xE9000..0xE9FFF (runtime calibration/identity inputs):
+ * reads are allowed, writes/erases return an error. A live open BLE link refuses all flash writes (-8). */
 #define PLAT_DATA_LO 0x97000u
 #define PLAT_DATA_HI 0xE0000u
 #define PLAT_XDATA0_LO 0x93000u
@@ -181,7 +187,8 @@ int plat_store_head(uint32_t obj, void *dst, uint32_t n);     /* its first n byt
                                                                * shorter */
 int plat_store_size(uint32_t obj);                           /* its length in bytes, < 0 = none / bad (an app that
                                                                * wants it whole or not at all checks it first) */
-int plat_store_save(uint32_t obj, const void *src, uint32_t len);   /* 0 = ok */
+int plat_store_save(uint32_t obj, const void *src, uint32_t len);   /* 0 = ok; open BLE: -8 while linked,
+                                                                 * pauses/resumes advertising while idle */
 #define PLAT_STORE_MAX 3840u           /* bytes per object */
 /* The objects are the app's (app.h): an enum that includes OBJ_PANEL (the panel calibration, the platform's) and
  * ends with OBJ_NOBJ, and APP_STORE_MAP, each object's flash offset: two 4 KiB sectors (A/B) from there, inside the

@@ -1,7 +1,7 @@
 # Licensing
 
 **fm1-base is MPL-2.0** (full text in `LICENSE`), file by file: every source file carries an
-`SPDX-License-Identifier: MPL-2.0` header. If you change one of these files and distribute it, publish your change to
+`SPDX-License-Identifier: MPL-2.0` header, except the separately licensed open BLE stack and vendored dependencies below. If you change one of these files and distribute it, publish your change to
 that file under MPL-2.0. Your own files, such as an app built on fm1-base, may use any licence, closed ones included.
 So a firmware made of felucca-bsp, fm1-base and its own code may link JieLi's binary Bluetooth and Wi-Fi libraries.
 
@@ -23,6 +23,29 @@ values in `ble/shim/rf_const.c` (Apache-2.0 only). Each file's header says which
 The GPL copies in Felucca and in those firmwares stay under the GPL; the copies here are MPL-2.0. No code by other
 Felucca contributors is in fm1-base: the history of every file was checked when it was imported (from fm1-fomni
 `7e7547f`).
+
+## Open Bluetooth alternative
+
+`ble = "open"` links the open controller, BLE-MIDI service and platform adapter by
+**Julius Vitkauskas**, Copyright (c) 2026 Julius Vitkauskas, offered as
+**MIT OR MPL-2.0**. This covers `open_ble/` except its radio tables, the new
+`device/ble_open*.c` files, BLE test/tool additions and `docs/OPEN-BLE.md`.
+Choose MPL-2.0 to follow fm1-base's per-file licensing; the MIT text is in
+`LICENSES/MIT-BLE.txt`. Changes to existing MPL-2.0 platform/BSP files remain
+MPL-2.0 and keep their original authors' notices.
+
+The open build links nothing of JieLi's except the transcribed numeric radio
+tables in `open_ble/hal/fm1_ble_tables.h`, **Apache-2.0**. Their attribution is:
+
+> Values transcribed from the JieLi AC79 SDK, Copyright (c) JIELI (Zhuhai Jieli Technology Co., Ltd.), under the Apache License 2.0 (LICENSES/Apache-2.0.txt): br_seq is the SDK's wl_rfd_ram_lut (apps/common/net/wifi_conf.c); the other tables are values of the SDK's radio libraries.
+
+`third_party/nimble/` contains Apache **NimBLE 1.9.0**, Apache-2.0
+(`LICENSE`, `NOTICE`), and **TinyCrypt**, BSD-3-Clause with its original notices
+(`ext/tinycrypt/LICENSE`, `AUTHORS` and source headers). The pin and the single
+conditional TinyCrypt multiply change are recorded in `PINNED.md` and
+`FM1-CHANGES.md`. There is no JieLi controller, host, crypto, RF library, shim,
+WiFi or lwIP code in an open link. Package construction still carries the three
+SDK package files listed below as data, outside the application link.
 
 ## Not part of fm1-base
 

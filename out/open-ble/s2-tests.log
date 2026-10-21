@@ -1,0 +1,7 @@
+BLE S2 frame alignment, breadcrumbs, logic, HCI, lifecycle, credits, and MIDI tests: PASS
+central update matrix: 48 cases + 48 immediate updates, near/far, tick wrap, WinOffset 0/mid/max, WinSize 1/max: PASS
+invalid NEW-interval limits ignored; busy/length diagnostics; both late kinds/missing-close watchdog and I-1 receipt: PASS
+map/update pending and programmed: 7 closing causes, supervision expiry, reconnect timing/epoch/queues clean: PASS
+600-second event grid crosses stale-first half-wrap and multiple tick wraps with no frozen counters: PASS
+NimBLE 1.9.0 integration: startup, GATT discovery/empty read/CCCD, bidirectional MIDI, fragmented ACL, update, 10-minute simulated link, 10 reconnects, backstop timeout: PASS
+heap peak 784; HCI credits 5; MIDI packets in 3 out 2; controller control PDUs 22

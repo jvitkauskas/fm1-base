@@ -48,6 +48,9 @@
 #include "fm1_audio.h"
 #include "fm1_adc.h"
 #include "fm1_lcd_hw.h"
+#if FM1B_BLE_OPEN
+#include "../open_ble/ble_store.h"
+#endif
 #include "fm1_flash.h"
 #include "fm1_xip.h"
 #include "fm1_perf.h"
@@ -111,6 +114,9 @@ static uint8_t flash_ok;          /* JEDEC id matched at boot */
 static void audio_silence(void);
 static int st_read(uint32_t off, void *dst, uint32_t n)   /* 256-byte IRQ-off windows: audio keeps up */
 {
+#if FM1B_BLE_OPEN
+    return fl_read_plain(off,dst,n);
+#else
     uint8_t *d = dst;
     while (n) {
         uint32_t k = n > 256u ? 256u : n, f = irq_save();
@@ -123,10 +129,14 @@ static int st_read(uint32_t off, void *dst, uint32_t n)   /* 256-byte IRQ-off wi
         n -= k;
     }
     return 0;
+#endif
 }
 static int st_erase(uint32_t off)
 {
     uint32_t took;
+#if FM1B_BLE_OPEN
+    if(!fm1_ble_flash_allowed()) return -8;
+#endif
     if (!FL_STORE_OK(off, 0x1000u))
         return -8;
     audio_silence();
@@ -201,7 +211,13 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
     return ota_wire_send(p, n);
 }
 #include "panel.c"
-#if FM1B_BLE || FM1B_WIFI
+#if FM1B_BLE_OPEN
+#include "../open_ble/hal/fm1_ble.h"
+#include "../open_ble/hal/fm1_ble_crypto.h"
+#include "ble_open_platform.c"
+#include "ble_open.c"
+#include "ble_open_diag.c"
+#elif FM1B_BLE || FM1B_WIFI
 #include "radio.c"                /* the shim's platform, a radio's start; Bluetooth MIDI (FM1B_BLE, ble/: the shim, the
                                    * MIDI service) */
 #else

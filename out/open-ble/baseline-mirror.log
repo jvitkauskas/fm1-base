@@ -1,0 +1,6 @@
+drawn bands: 10675 bytes in the ring for the screen above (fills, header, main with a noisy band, a partial blit)
+drops: a busy screen at 15 kB/s: 47 frames dropped, the screen whole after 2380 ms
+remote: 24 requests done, each answered
+FAIL build/baseline-mirror/tests/mirror_test.c:679: session: 200 rows differ
+session: 414463 bytes to build/baseline-mirror/session/stream.syx
+FAILED: 518212 bytes decoded (1081 rects, 4 fills, 25 input reports)

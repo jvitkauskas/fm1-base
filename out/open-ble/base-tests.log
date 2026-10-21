@@ -1,0 +1,29 @@
+  ok   encoder
+  ok   trs
+  ok   storage
+  ok   fastmath
+  ok   installer
+  ok   backup
+  ok   backup-tool
+  ok   backup-page
+  skip update path (no template/build/template.fwsc: tools/build.py template)
+  ok   host-build
+  FAIL mirror (see template/build/tests/mirror.log)
+       drawn bands: 10675 bytes in the ring for the screen above (fills, header, main with a noisy band, a partial blit)
+       drops: a busy screen at 15 kB/s: 47 frames dropped, the screen whole after 2380 ms
+       remote: 24 requests done, each answered
+       FAIL tests/mirror_test.c:679: session: 200 rows differ
+       session: 414463 bytes to template/build/tests/mirror/stream.syx
+       FAILED: 518212 bytes decoded (1081 rects, 4 fills, 25 input reports)
+  FAIL mirror-viewer (see template/build/tests/mirror-viewer.log)
+       FAIL the screen: 200 rows differ from the device's (screen.bin)
+       FAIL remote answers: [{"seq":7,"op":1,"ok":false},{"seq":8,"op":1,"ok":false}]
+       FAIL no report of SEL held with keys 5 and 9
+       FAIL the turns: 0,0,0,0,0,0,0 (K1 3, PRESETS -2, K2 4)
+       FAIL MASTER 2048
+       FAIL PLAY never lit (green)
+       FAIL fed again in other pieces: 0 bad, 0 missing
+       FAILED: 414463 bytes, 569 frames (554 rects, 2 fills, 10 input reports), turns 0 0 0 0 0 0 0
+  ok   mirror-png
+  ok   template
+TESTS FAILED

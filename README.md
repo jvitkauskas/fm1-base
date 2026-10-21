@@ -50,6 +50,28 @@ A firmware has Bluetooth or WiFi, not both: each fills most of what the FM-1 has
 and together they don't fit. Each needs JieLi's AC79 SDK (`$AC79_SDK`) for its libraries; a build without either
 links nothing of JieLi's.
 
+### Open peripheral Bluetooth
+
+Set `ble = "open"` and `ble_central = false` in fm1.toml, or build the unchanged
+template once with `python3 tools/build.py template --open-ble`. The output is
+`template/build/template-open.fwsc`. `ble = true` retains the existing JieLi
+stack and central option; `--no-ble` removes both alternatives.
+
+The open stack uses Apache NimBLE 1.9.0 and supports one peripheral BLE-MIDI
+link, legacy/SC Just Works pairing, two persistent peer bonds, encrypted
+reconnects and central-initiated connection updates. Apps keep the same plat.h
+API and give it `OBJ_BLE` in `APP_STORE_MAP`. The open build links nothing of
+JieLi's except the transcribed Apache-2.0 radio tables. The open host simulator
+and browser emulator keep BLE off.
+
+See [docs/OPEN-BLE.md](docs/OPEN-BLE.md) for the platform/interrupt map,
+A/B persistence, size results, native sanitizer tests, known limits and owner
+bench checklist. This fm1-base port has not been tested on hardware. The
+source controller was device-passed through Felucca S3.1d; A9 disconnect
+provenance and physical timing qualification remain open. Android chooses
+legacy pairing; BlueZ can use SC. The old one-sector bond compaction window
+is replaced here by an atomic A/B object snapshot.
+
 ### Turning Bluetooth on
 
 1. In fm1.toml, `ble = true`. Add `ble_central = true` for the FM-1 to connect to MIDI devices too (a keyboard,
@@ -92,9 +114,13 @@ The FM-1 has a 581 KB app slot in the flash, 96 KB of RAM for `.data` and `.bss`
 | --- | --- | --- | --- |
 | The template without a radio (`--no-ble`) | 77 | 27 | 68 |
 | Bluetooth MIDI with a computer (`ble`) | + 124 | + 45 | + 24 |
+| Open peripheral BLE (`ble = "open"`, measured on this port) | + 106.83 | + 5.88 | + 26.11 |
 | Bluetooth MIDI devices too (`ble_central`) | + 8 | + 1 | 0 |
 | WiFi (`wifi`, from fm1-radio's measurements) | + about 300 | + about 100 | + about 276 |
 
+- Open BLE additionally keeps a 20 KiB trace in RAMTEXT and about 2.1 KiB of retained log/breadcrumbs outside
+  these columns. Measured template: 189,564 B flash, 34,336 B static RAM, 96,124 B pool; see
+  [the build results](out/open-ble/RESULTS.md). The published JieLi increments remain estimates, not a new build.
 - Bluetooth: JieLi's BT controller and stack (the flash), its 24 KB heap and their tables (the RAM), three task
   stacks of 8 KB (the pool). The template with Bluetooth and devices is 210 KB of flash, 74 of 96 KB of RAM: room
   for a big app (CTL-1, with a General MIDI synth, is 491 KB).

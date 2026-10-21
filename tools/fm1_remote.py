@@ -141,7 +141,7 @@ class FM1:
                 i += 1
             elif c == "log":
                 self.sysex(LG)
-                for f in self.frames(LG, 2.0, until=lambda f: f == b"end"):
+                for f in self.frames(LG, 8.0, until=lambda f: f == b"end"):
                     if f != b"end":
                         print("log:", f.decode("latin1", "replace"))
                 i += 1
