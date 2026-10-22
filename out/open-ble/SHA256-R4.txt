@@ -1,0 +1,3 @@
+42a5b5602d93dcc0cc69cd0d1bb22e732399ebe3905eaabea70822c6b7a12eec  template/build/template-open.fwsc
+8866ab78df218f4a9c89c4b409e9fce9c3b2d4d4b49aeb2574ef94f85ed6fe06  template/build/template-open-r4.fwsc
+4da4d456aefb6e58b6c2fded86a4659666e2e1b40544db2bd9478b327bde6e76  template/build/template-open-r4-no-diag.fwsc

@@ -438,12 +438,14 @@ def open_ble_units():
     own=[SRC / "open_ble" / (n+".c") for n in
          ("ble_logic","ble_controller","ble_link_logic","ble_link","ble_midi",
           "ble_heap","ble_crypto","ble_seed","ble_bonds","ble_timing","ble_privacy",
-          "ble_npl","ble_host","ble_store")]
+          "ble_npl","ble_host","ble_store","ble_health")]
     for f in [*own,*nb.sources()]:
         prefix="ble_" if f in own and f.stem not in ("ble_host","ble_npl","ble_bonds") else "nimble_"
         obj=out / (prefix+"_".join(f.relative_to(SRC).with_suffix("").parts)+".o")
         flags=[*CFLAGS,*FPU,"-DFM1B_BLE_OPEN=1","-DFELUCCA_BLE=1","-DFELUCCA_BLE_STAGE=3",
-               "-DFELUCCA_BLE_S31=1",*nb.flags(target=True,vendor=f not in own)]
+               "-DFELUCCA_BLE_S31=1",f"-DFM1B_BLE_DIAG={int(CONF.get('ble_diag',True))}",*nb.flags(target=True,vendor=f not in own)]
+        if VERSION:
+            flags.append(f'-DAPP_VERSION="{VERSION}"')
         # nb's include paths are absolute; target Docker also sees ROOT at /work.
         flags=[("-I"+str(Path(a[2:]).relative_to(ROOT))) if a.startswith("-I") and Path(a[2:]).is_absolute() else a
                for a in flags]
@@ -458,7 +460,8 @@ def build_app():
     if BLE_OPEN:
         import nimble_build as nb
         flags += ["-DFM1B_BLE=1", "-DFM1B_BLE_OPEN=1", "-DFELUCCA_BLE=1",
-                  "-DFELUCCA_BLE_STAGE=3", "-DFELUCCA_BLE_S31=1", *nb.flags(target=True,vendor=False)]
+                  "-DFELUCCA_BLE_STAGE=3", "-DFELUCCA_BLE_S31=1",
+                  f"-DFM1B_BLE_DIAG={int(CONF.get('ble_diag',True))}", *nb.flags(target=True,vendor=False)]
     elif BLE:
         flags += ["-DFM1B_BLE=1", *inc(SRC / "ble" / "shim")]
         if CONF.get("ble_central"):
@@ -680,12 +683,14 @@ def check(img, syms, dis, rt):
         trace0,trace1=sym("_ble_trace_start"),sym("_ble_trace_end")
         if not (0x01C20000 <= dma0 < dma1 <= 0x01C74000 and dma1-dma0 >= 4324):
             errors.append("open BLE DMA is not in the verified pool SRAM class")
-        if not (sym("_rt_end") <= trace0 < trace1 <= 0x01C08000 and trace1-trace0 == 20480):
+        expected_trace=20480 if CONF.get("ble_diag",True) else 0
+        if not (sym("_rt_end") <= trace0 <= trace1 <= 0x01C08000 and trace1-trace0 == expected_trace):
             errors.append("open BLE trace is not reserved in RAMTEXT")
         notes.append(f"open BLE: DMA {dma0:#010x}..{dma1:#010x}; trace {trace1-trace0} B of RAMTEXT")
     ram, pool_max, spare = (128 * 1024, 0x4C000, 2048) if WIFI else (96 * 1024, 0x54000, 8192)   # (app_wifi.ld)
     if os.environ.get("FM1B_POOL_SPARE", "").isdigit():   # an app's own build for itself (a demo build with mirror)
         spare = int(os.environ["FM1B_POOL_SPARE"])
+    notes.append(f"RAMTEXT code {sym('_rt_end')-0x01C00000} B")
     notes.append(f"image {len(img)} B; RAM .data+.bss {bss} B of {ram}; pool {pool} B of {pool_max}")
     if bss > ram:
         errors.append("RAM region overflow")
@@ -856,6 +861,8 @@ def main():
     ap.add_argument("--release", metavar="X.Y[.Z]", help="release build: identity id_prefix + XXYYZZ, version string X.Y[.Z]")
     ap.add_argument("--no-ble", action="store_true", help="without Bluetooth (fm1.toml ble = true): NAME-usb.fwsc")
     ap.add_argument("--open-ble", action="store_true", help="open peripheral stack; overrides ble and disables ble_central")
+    ap.add_argument("--ble-diag", choices=("on","off"), help="override open-stack diagnostics (default: fm1.toml ble_diag, true)")
+    ap.add_argument("--package-name", help="package basename in APP_DIR/build (preserve a benched image)")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     ap.add_argument("--host", action="store_true", help="build the host simulator instead of the firmware")
     ap.add_argument("--web", action="store_true", help="build the browser emulator instead of the firmware")
@@ -870,6 +877,10 @@ def main():
     if a.open_ble:
         CONF["ble"]="open"
         CONF["ble_central"]=False
+    if a.ble_diag is not None:
+        CONF["ble_diag"]=a.ble_diag=="on"
+    if not isinstance(CONF.get("ble_diag",True),bool):
+        raise SystemExit("fm1.toml: ble_diag must be true or false")
     BLE = bool(CONF.get("ble")) and not a.no_ble
     BLE_OPEN = BLE and CONF.get("ble")=="open"
     if BLE_OPEN and CONF.get("ble_central"):
@@ -895,6 +906,10 @@ def main():
         PRODUCT = prefix + "%02d%02d%02d" % (int(m[1]), int(m[2]), int(m[3] or 0))
         VERSION = a.release.upper()
         name = f"{STEM}-{a.release}.fwsc"
+    if a.package_name:
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\.fwsc",a.package_name):
+            raise SystemExit("--package-name must be a .fwsc basename")
+        name = a.package_name
     if a.host or a.web:
         generate()
         return build_host() if a.host else build_web()

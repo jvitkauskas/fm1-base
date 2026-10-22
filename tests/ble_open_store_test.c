@@ -82,6 +82,42 @@ static void bonds_test(void)
     sim_flash_fault=0; ble_bonds_flush(); reopen(); assert(!ble_bonds_read(1,&k2,&out) && out.sec.ltk[0]==0x77);
     puts("open storage: deferred identity bonds, two peers, 40 net no-ops, boot preserves bonds, RPA refusal: PASS");
 }
+static void cache_version_test(void)
+{
+    union ble_store_value v=value(1,0x55),out;
+    union ble_store_key k=keyof(&v);
+    uint8_t records[BLE_BOND_SLOTS*128u]; uint32_t version;
+    fresh(); boot_seed(); assert(!ble_bonds_write(1,&v)); ble_bonds_flush();
+    assert(!ble_bonds_db_version(0,v.sec.peer_addr.val,&version) && version==BLE_GATT_DB_VERSION);
+    /* Exact old v1 layout: reserved cache bytes were all zero. No keys or
+     * subscriptions are discarded; inner and outer CRCs remain valid. */
+    for(unsigned i=0;i<BLE_BOND_SLOTS;i++) {
+        uint8_t *r=records+i*128u; assert(!ble_object_bond_load(i,r));
+        if(!memcmp(r,"FLBD",4)) { memset(r+12+68,0,4); ble_put32(r+124,ble_crc32(r,124)); }
+    }
+    assert(!ble_object_bonds_save(records)); reopen();
+    assert(!ble_bonds_db_version(0,v.sec.peer_addr.val,&version) && !version);
+    assert(!ble_bonds_read(1,&k,&out) && !memcmp(v.sec.ltk,out.sec.ltk,16));
+    assert(!ble_bonds_write(1,&v));
+    assert(!ble_bonds_db_version(0,v.sec.peer_addr.val,&version) && !version);
+    assert(!ble_bonds_db_confirm(0,v.sec.peer_addr.val,BLE_GATT_DB_VERSION));
+    unsigned e=erases; sim_flash_idle=0; ble_bonds_flush(); assert(erases==e);
+    sim_flash_idle=1; sim_flash_fault=BLE_FLASH_NOT_ISSUED; ble_bonds_flush();
+    sim_flash_fault=0; reopen();
+    assert(!ble_bonds_db_version(0,v.sec.peer_addr.val,&version) && !version);
+    assert(!ble_bonds_db_confirm(0,v.sec.peer_addr.val,BLE_GATT_DB_VERSION));
+    ble_bonds_flush(); reopen();
+    assert(!ble_bonds_db_version(0,v.sec.peer_addr.val,&version) && version==BLE_GATT_DB_VERSION);
+    e=erases; assert(!ble_bonds_db_confirm(0,v.sec.peer_addr.val,BLE_GATT_DB_VERSION));
+    ble_bonds_flush(); assert(erases==e);
+    union ble_store_value other=value(2,0x66); assert(!ble_bonds_write(1,&other));
+    assert(!ble_bonds_db_confirm(0,other.sec.peer_addr.val,0));
+    assert(!ble_bonds_db_version(0,v.sec.peer_addr.val,&version) && version==BLE_GATT_DB_VERSION);
+    assert(!ble_bonds_delete(1,&k)); assert(!ble_bonds_write(1,&v));
+    assert(!ble_bonds_db_version(0,v.sec.peer_addr.val,&version) && version==BLE_GATT_DB_VERSION);
+    assert(!ble_bonds_db_version(0,other.sec.peer_addr.val,&version) && !version);
+    puts("R3 cache store: old v1 migration, key rewrite preserves stale generation, no linked flash, failed save retries, independent peers, confirmation/re-pair/no-op: PASS");
+}
 static void cuts_test(void)
 {
     union ble_store_value v=value(1,0x55),out; union ble_store_key k=keyof(&v);
@@ -111,4 +147,4 @@ static void cuts_test(void)
     for(unsigned i=0xf00;i<0x1000;i++) assert(nor[0xde000u+i]==255 && nor[0xdf000u+i]==255);
     puts("open storage: 10,474 byte-cut cases (seed + bond), old/new whole, no compaction loss, loader tails blank: PASS");
 }
-int main(void) { seed_test(); bonds_test(); cuts_test(); return 0; }
+int main(void) { seed_test(); bonds_test(); cache_version_test(); cuts_test(); return 0; }

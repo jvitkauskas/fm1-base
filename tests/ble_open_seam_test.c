@@ -35,6 +35,7 @@ uint32_t ble_host_midi_room(void) { return subscribed ? 19 : 0; }
 int ble_host_midi_take(uint32_t *pkt,uint32_t *ms) { *pkt=0x643c9009; *ms=now; return subscribed; }
 void ble_host_midi_out(uint32_t pkt,uint32_t ms) { assert(pkt==0x643c9009); (void)ms; }
 static uint32_t fm1_ms;
+static uint32_t fm1_ticks(void) { return now*24000u; }
 #include "../device/ble_open.c"
 static void reboot(int cold)
 {
@@ -57,6 +58,11 @@ int main(void)
     assert(plat_ble_state()==BLE_OFF && !plat_ble_linked() && off_calls==1 && !open_log.active);
     plat_ble_enable(1); assert(plat_ble_state()==BLE_STARTING); ble_poll();
     assert(plat_ble_state()==BLE_READY && start_calls==1 && on_calls==1 && open_log.active);
+    for(unsigned i=0;i<5;i++) {
+        link=subscribed=1;
+        plat_ble_enable(0); ble_poll(); assert(!plat_ble_linked());
+        plat_ble_enable(1); ble_poll(); assert(plat_ble_state()==BLE_READY && start_calls==1);
+    }
     for(unsigned i=0;i<60;i++) plat_log("ring line");
     assert(plat_ble_log_total()>=60 && !strcmp(plat_ble_log_line(47),"ring line") && !*plat_ble_log_line(48));
     unsigned total=plat_ble_log_total(); reboot(0); assert(!radio_last_bad && plat_ble_log_total()==total);

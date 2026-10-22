@@ -1,0 +1,18 @@
+In file included from /root/fm1/fm1-base-open/lib/touch.c:6,
+                 from /root/fm1/fm1-base-open/host/plat_host.c:583:
+/root/fm1/fm1-base-open/lib/sense.c: In function ‘sense_pressure’:
+/root/fm1/fm1-base-open/lib/sense.c:228:33: warning: operand of ‘?:’ changes signedness from ‘int’ to ‘unsigned int’ due to unsignedness of other operand [-Wsign-compare]
+  228 |         rel = k->dland > k->d ? k->dland - k->d : 0u;
+      |                                 ^~~~~~~~~~~~~~~
+/root/fm1/fm1-base-open/lib/sense.c:231:34: warning: operand of ‘?:’ changes signedness from ‘int’ to ‘unsigned int’ due to unsignedness of other operand [-Wsign-compare]
+  231 |         rel = k->v > k->floor_ ? k->v - k->floor_ : 0u;
+      |                                  ^~~~~~~~~~~~~~~~
+font T: BarlowSemiCondensed-SemiBold.ttf 10px h 12, digit adv 5, 3600 B
+font XS: BarlowSemiCondensed-SemiBold.ttf 12px h 15, digit adv 6, 7005 B
+font S: BarlowSemiCondensed-Medium.ttf 15px h 16, digit adv 7, 8576 B
+font B: BarlowSemiCondensed-Bold.ttf 15px h 16, digit adv 8, 8752 B
+font M: BarlowSemiCondensed-SemiBold.ttf 23px h 24, digit adv 12, 11832 B
+font L: BarlowSemiCondensed-Bold.ttf 31px h 32, digit adv 16, 19776 B
+font set barlow: 60782 B (approx)
+words: 3 own + 51 common -> /root/fm1/fm1-base-open/template/web/words/95a41ce197.json (1059 B)
+host     /root/fm1/fm1-base-open/template/build/host/template-open_host

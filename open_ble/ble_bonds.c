@@ -134,6 +134,11 @@ int ble_bonds_write(int type,const union ble_store_value *value)
         if(type==3) key.cccd.peer_addr=a; else key.sec.peer_addr=a;
     }
     found=find(type,&key);
+    /* Reserved security payload bytes 68..71 are a per-peer cache generation.
+     * Old FLBD v1 records contain zero; keep their keys/CCCDs and treat them as
+     * stale. Repeated key writes must never mark an old cache as current. */
+    if(type<3) ble_put32(p+68,found<0 ? BLE_GATT_DB_VERSION :
+                        ble_get32(bonds.entry[found].p+68));
     if(found<0) {
         for(i=0;i<BOND_COUNT;i++) if(bonds.entry[i].active && bonds.entry[i].type==type) count++;
         if(type<3 && count==2) return BLE_HS_ESTORE_CAP;
@@ -154,6 +159,25 @@ int ble_bonds_delete(int type,const union ble_store_key *key)
     int i=find(type,key);
     if(i<0) return BLE_HS_ENOENT;
     bonds.entry[i].active=0; reconcile(); return 0;
+}
+static int db_entry(uint8_t type,const uint8_t identity[6])
+{
+    union ble_store_key key;
+    memset(&key,0,sizeof key); key.sec.peer_addr.type=type;
+    memcpy(key.sec.peer_addr.val,identity,6);
+    return find(BLE_STORE_OBJ_TYPE_OUR_SEC,&key);
+}
+int ble_bonds_db_version(uint8_t type,const uint8_t identity[6],uint32_t *version)
+{
+    int i=db_entry(type,identity);
+    if(i<0) return BLE_HS_ENOENT;
+    *version=ble_get32(bonds.entry[i].p+68); return 0;
+}
+int ble_bonds_db_confirm(uint8_t type,const uint8_t identity[6],uint32_t version)
+{
+    int i=db_entry(type,identity);
+    if(i<0) return BLE_HS_ENOENT;
+    ble_put32(bonds.entry[i].p+68,version); reconcile(); return 0;
 }
 #if FM1B_BLE_OPEN
 void ble_bonds_flush(void)

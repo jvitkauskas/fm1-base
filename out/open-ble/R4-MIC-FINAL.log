@@ -1,0 +1,7 @@
+random seed=4d494334 events=10000 counter=2441 missed=52 lost_ack=237 zero spontaneous MIC failures: PASS
+corrupted MIC: 0x3d, exact counter/header/history/pressure flags, journal survives stop and HCI Reset: PASS
+DMA reuse during both-full service preserves A/B/C FIFO; lengths 32/255 filtered, 1..4 fail once; four-record journal wraps: PASS
+RX_ON reservation blocked with one full slot: wait retains delayed/pressure state, marker/PDU recover once: PASS
+production HAL RX_ON/RX_OFF: clear/encrypted coalescing, old encrypted terminate before pause marker, new key/counter-zero restart: PASS
+MIC after update/tick wrap: event=5676 interval=24 age_ms=170040 exact counter=2: PASS
+production USB/CDC MIC formatter: complete fields, 39-bit hex counters, all logical rows fit USB frame: PASS

@@ -1,0 +1,26 @@
+  ok note == 60
+  ok midi_out == 1
+  ok note == -1
+  ok octave == 1
+  ok dirty == 1
+  ok wave == 1
+  ok turns5 == 3
+  ok dirty == 0
+  ok store_writes == 1
+  ok octave == 1
+  ok wave == 1
+  ok note == 60
+  ok peak -26.3 dBFS (min -30)
+said!: TEMPLATE. OCTAVE +1. WAVE TRIANGLE. MIDI IN USB 80 3C 00
+  ok said "TEMPLATE. OCTAVE +1. WAVE TRIANGLE"
+said!: BUTTON ARP
+  ok said "BUTTON ARP"
+  ok vel == 40 (>30)
+  ok vel == 40 (<50)
+  ok prs == 102 (>40)
+  ok ble == 0
+  ok ble_dev == 0
+  ok ble == 0
+  ok ble_dev == 0
+  ok midi_in_usb == 5
+host: 4996 ms simulated, 123 blits, render 0.0% of real time (host CPU)

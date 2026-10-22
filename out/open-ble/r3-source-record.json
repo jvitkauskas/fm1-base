@@ -1,0 +1,15 @@
+{
+  "public_documents": [
+    {
+      "url": "https://developer.apple.com/accessories/Accessory-Design-Guidelines.pdf",
+      "sha256": "b631b8b25d6b4fba85f90dff494a7a7edc9996e357cbc97093aedc9d9bd6f2c9",
+      "size": 32775473
+    },
+    {
+      "url": "https://drive.google.com/uc?export=download&id=15jF6H78kMS0jEBQ7JpH0W6MHf_yxoE5r",
+      "sha256": "70cae8df6d440c64423f0376970653d74a622c8e1dd564a833fef328bc8fc9e0",
+      "size": 413465
+    }
+  ],
+  "core": "https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core-62/out/en/host/generic-attribute-profile--gatt-.html"
+}

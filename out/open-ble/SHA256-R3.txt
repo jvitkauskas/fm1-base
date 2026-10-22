@@ -1,0 +1,1 @@
+42a5b5602d93dcc0cc69cd0d1bb22e732399ebe3905eaabea70822c6b7a12eec  template/build/template-open.fwsc

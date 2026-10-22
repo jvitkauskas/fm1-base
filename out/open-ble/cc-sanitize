@@ -1,0 +1,2 @@
+#!/bin/sh
+exec cc -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie "$@"

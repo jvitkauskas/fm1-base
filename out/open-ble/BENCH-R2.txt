@@ -1,0 +1,43 @@
+Open BLE R2 on fm1-base - device bench, 2026-10-21 22:15 - 2026-10-22 01:40 (owner local time)
+Image: template/build/template-open.fwsc sha256 2fbf32deec62b261c93629c88668c30a95c337532f5d22db0952539a51a66e29
+Centrals: HONOR Magic V3 (Android 16), desktop BlueZ (Intel-class adapter), Mac (macOS 26.7.1, arm64,
+Audio MIDI Setup + CoreMIDI via mido), iPhone (GarageBand). Readout: tools/fm1_remote.py ble/log over USB.
+
+PASS
+- Boot: READY, selftest 1, error 0, canaries 0; gap record works (max 1.1 ms at radio start).
+- Android with its R1 bond: RPA resolved, encrypted, subscribed, MTU 517, our L2CAP request accepted
+  (15 ms, latency 0, timeout 6 s: conn_timeout_10ms 600), gatt_invalidations 1; MIDI both ways (8 in, 4 out).
+- Five off/on cycles, each from a live encrypted phone link: clean termination, advertising stops while
+  off, new session after on, the phone's first CONNECT_IND seen and accepted in every session.
+- Worker gaps >7.5 ms: two, both 17.8-17.9 ms with no link (states starting / off), reason
+  "radio_start,flash_write" (epochs 3 and 15). No gap with a link up. audio_late 0 throughout.
+- Central-initiated connection updates (desktop, after a 120 s hold): 15 -> 7.5 -> 11.25 -> 15 -> 30 -> 15 ms
+  measured 7.504 / 11.239 / 15.001 / 30.002 / 15.001 ms, every event serviced, epoch stable;
+  26+ updates, late_instants 0, supervision_fail 0, mic_failures 0. Reconnect after the bench: linked, encrypted.
+- Mac: SC pairing, encrypted, MTU 185; macOS chose 7.5 ms / 2 s timeout (overriding our 15 ms request);
+  CoreMIDI port "FM-1 Open BLE Bluetooth"; FM-1 -> Mac 3 notes (6 msgs) received with timing; Mac -> FM-1
+  16 msgs; bad 0, drop 0, MIC 0. After an FM-1 power cycle the Mac reconnected by itself within ~10 s.
+- iPhone (GarageBand): SC pairing (method 2), 7.5 ms, MTU 185, encrypted, bonded; iOS lists it under
+  My Devices and auto-reconnects like the Mac.
+
+FAIL / FINDINGS
+1. FIRST CONNECT AFTER PAIRING DROPS ON APPLE (Mac and iPhone, same symptom): Connect -> pairing prompt
+   accepted -> the Apple MIDI UI shows "not connected", the device disappears (the FM-1 is linked but the
+   central then terminates, reason 0x13); a second Connect/tap works at once. FM-1 side: pair_failures 0,
+   ltk_negative 0, mic_failures 0, supervision_fail 0; all disconnects 0x13 from the central;
+   gatt_invalidations = connections (a full-range Service Changed indication on EVERY encrypted
+   connection). Hypothesis: the indication arrives during the Apple MIDI driver's setup right after the
+   pairing that its CCCD/MIDI access triggered, invalidating its handles.
+2. BLUEZ LOST THE MIDI SERVICE WITH ITS OLD BOND: after R2 (GATT grew by DIS) the desktop, bonded under R1,
+   connected and encrypted but BlueZ's database had GAP, GATT and DIS and no MIDI service (no ALSA port;
+   cached name still "Felucca BLE"); reconnecting did not help; a fresh pairing (remove + pair) restored it.
+   Same root-cause family as 1 (Service Changed handling / cache).
+3. CONNECT_IND NOT RECEIVED FROM THE DESKTOP (now with evidence): desktop's controller reports Enhanced
+   Connection Complete success then 0x3E; the FM-1 session record shows seen 0 accepted 0; no CRC / bad /
+   invalid / ignored counts; SCAN_REQs from the same desktop arrive (8550). 8/10 connects succeed. Also seen
+   on Felucca S3.1d (F-25: 4/10). The phone never failed. Needs the sniffer (new open entry).
+4. Tool: fm1_remote readback "USB log incomplete (missing end)" once right after a reconnect; the bench
+   aborted before writing measurements.json (results are in its log). Needs a retry in read_log.
+5. Upstream (not ours): sanitizer failures in fm1-base fastmath.h:58 and mirror.c:179 (R2 results).
+
+Overnight soak started 2026-10-22 ~01:37 (desktop, fresh bond, 8 h): out/soak-r2 on the desktop.

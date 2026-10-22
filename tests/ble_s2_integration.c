@@ -6,12 +6,14 @@
 #include <stdio.h>
 #include <string.h>
 #include "ble_s2_sim.h"
+#include "../open_ble/ble_diag.h"
 #include "../open_ble/ble_host.h"
 static uint8_t l2[512],att[512];
 static unsigned l2_n,l2_want,att_n,att_count,control_count;
 static uint16_t peer_event_n;
 static void control(const uint8_t *p,unsigned n);
 static unsigned l2cap_updates;
+static uint32_t connected_ms;
 extern uint16_t ble_hs_hci_avail_pkts;
 static void consume_tx(unsigned slot)
 {
@@ -24,6 +26,9 @@ static void consume_tx(unsigned slot)
         if(l2_n==l2_want) {
             if(ble_get16(l2+2)==4) { att_n=l2_n-4u; memcpy(att,l2+4,att_n); att_count++; }
             if(ble_get16(l2+2)==5 && l2_n==16 && l2[4]==0x12) {
+                assert((uint32_t)(ble_port_ms()-connected_ms)>=5000u);
+                assert(ble_get16(l2+8)==12 && ble_get16(l2+10)==12);
+                assert(!ble_get16(l2+12) && ble_get16(l2+14)==600);
                 uint8_t rsp[10]={6,0,5,0,0x13,0,2,0,0,0};
                 uint8_t update[12]={0,1,0,0,0,0,0,0,0,0,0,0};
                 rsp[5]=l2[5];
@@ -72,6 +77,7 @@ static void connected(void)
 {
     ble_conn_t c=sim_connection(); unsigned i;
     peer_event_n=0; l2_n=l2_want=0; sim_slot[0]=sim_slot[1]=-1;
+    connected_ms=ble_port_ms();
     ble_ll_create(&c,sim_ticks); sim_advance_us(0); ble_host_worker();
     control((uint8_t[9]){8,0xff,1,2,3,4,5,6,7},9);
     control((uint8_t[6]){12,6,1,0,2,0},6);
@@ -88,23 +94,38 @@ int main(void)
     ble_host_get_diag(&d);
     assert(d.synced && d.running && !d.error && !d.resets && sim_starts==1);
     assert(sim_advertising.data_len==21 && !memcmp(sim_advertising.data+5,uuid,16));
+    ble_adv_t boot_adv=sim_advertising;
+    assert(!boot_adv.params.type && boot_adv.params.min==32 && boot_adv.params.max==32 && boot_adv.params.channels==7);
+    assert(!boot_adv.params.own_type && !memcmp(boot_adv.addr,pub,6));
     assert(sim_advertising.scan_len==15 && !memcmp(sim_advertising.scan+2,"FM-1 Open BLE",13));
     assert(!ble_host_linked() && !ble_host_connected() && !ble_host_midi_room());
     assert(!ble_host_pause_advertising());
     unsigned before_pause=sim_starts;
     sim_advance_us(200000); ble_host_worker(); assert(sim_starts==before_pause);
     ble_host_resume_advertising(); sim_advance_us(101000); ble_host_worker();
-    assert(sim_starts==before_pause+1);
+    assert(sim_starts==before_pause+1 && !memcmp(&sim_advertising,&boot_adv,sizeof boot_adv));
     connected();
     assert(ble_host_linked() && !ble_host_connected() && !ble_host_midi_room());
     assert(ble_host_pause_advertising()==-8);
-    request((uint8_t[]){2,200,0},3,1); assert(att[0]==3 && ble_get16(att+1)==200);
+    request((uint8_t[]){2,200,0},3,1); assert(att[0]==3 && ble_get16(att+1)==517);
+    /* GAP identity, writable name, appearance and mandatory DIS are public
+     * before pairing, while protected MIDI value access rejects the read. */
+    query[0]=8; ble_put16(query+1,1); ble_put16(query+3,0xffff); ble_put16(query+5,0x2a00);
+    request(query,7,1); assert(att[0]==9 && !memcmp(att+4,"FM-1 Open BLE",13));
+    uint16_t name_handle=ble_get16(att+2);
+    query[0]=18; ble_put16(query+1,name_handle); memcpy(query+3,"FM-1 Open BLE",13);
+    request(query,16,1); assert(att[0]==19);
+    query[0]=8; ble_put16(query+1,1); ble_put16(query+3,0xffff); ble_put16(query+5,0x2a01);
+    request(query,7,1); assert(att[0]==9 && !ble_get16(att+4));
+    ble_put16(query+5,0x2a29); request(query,7,1); assert(att[0]==9 && !memcmp(att+4,"M-VAVE",6));
+    ble_put16(query+5,0x2a24); request(query,7,1); assert(att[0]==9 && !memcmp(att+4,"FM-1",4));
     query[0]=6; ble_put16(query+1,1); ble_put16(query+3,0xffff); ble_put16(query+5,0x2800); memcpy(query+7,uuid,16);
     request(query,23,1); assert(att[0]==7 && att_n==5); start=ble_get16(att+1); end=ble_get16(att+3);
     query[0]=8; ble_put16(query+1,start); ble_put16(query+3,end); ble_put16(query+5,0x2803);
     request(query,7,1); assert(att[0]==9 && att[1]==21 && (att[4]&0x16)==0x16); value=ble_get16(att+5);
     query[0]=4; ble_put16(query+1,(uint16_t)(value+1)); ble_put16(query+3,end);
-    request(query,5,1); assert(att[0]==5 && att[1]==1 && ble_get16(att+4)==0x2902); cccd=ble_get16(att+2);
+    request(query,5,1); assert(att[0]==5 && att[1]==1 && ble_get16(att+4)==0x2902); cccd=ble_get16(att+2); (void)cccd;
+#if FELUCCA_BLE_STAGE < 3
     query[0]=10; ble_put16(query+1,value); request(query,3,1); assert(att[0]==11 && att_n==1);
     query[0]=18; ble_put16(query+1,cccd); query[3]=1; query[4]=0;
     request(query,5,1); assert(att[0]==19); ble_host_get_diag(&d); assert(d.subscribed && d.mtu==200);
@@ -133,8 +154,12 @@ int main(void)
     ble_host_midi_out(0x643c9009,0); ble_host_get_diag(&d); assert(d.midi_drop==1);
     for(i=0;i<100 && ble_host_midi_room()!=128;i++) event();
     assert(ble_host_midi_room()==128);
+#else
+    query[0]=10; ble_put16(query+1,value); request(query,3,1);
+    assert(att[0]==1 && att[4]==5); /* unpaired protected MIDI: Insufficient Authentication */
+#endif
     /* Complete the peripheral L2CAP update before a distinct central update. */
-    for(i=0;i<100 && (!l2cap_updates || ble_link.instant_kind);i++) event();
+    for(i=0;i<600 && (!l2cap_updates || ble_link.instant_kind);i++) event();
     assert(l2cap_updates==1 && !ble_link.instant_kind);
     { uint8_t update[12]={0,2,3,0,12,0,0,0,100,0,0,0};
       ble_put16(update+10,(uint16_t)(peer_event_n+8)); control(update,sizeof update);
@@ -144,7 +169,11 @@ int main(void)
     { uint32_t before_ms=ble_port_ms();
       for(i=0;i<40000;i++) event();
       assert(ble_port_ms()-before_ms>=600000u && ble_port_ms()-before_ms<600100u); }
-    ble_host_get_diag(&d); assert(d.running && d.subscribed && !d.resets && !d.acl_drop && !d.event_drop && l2cap_updates==1);
+    ble_host_get_diag(&d); assert(d.running &&
+#if FELUCCA_BLE_STAGE < 3
+        d.subscribed &&
+#endif
+        !d.resets && !d.acl_drop && !d.event_drop && l2cap_updates==1);
     for(cycle=0;cycle<10;cycle++) {
         control((uint8_t[2]){2,0x13},2); event();
         assert(ble_link.state==BLE_LINK_IDLE); sim_advance_us(101000); ble_host_worker();
@@ -163,7 +192,7 @@ int main(void)
     ble_host_enable(0);
     unsigned starts=sim_starts;
     sim_advance_us(1000000); ble_host_worker(); assert(sim_starts==starts && !ble_host_midi_room());
-    ble_host_enable(1); sim_advance_us(101000); ble_host_worker(); assert(sim_starts==starts+1);
+    ble_host_enable(1); sim_advance_us(101000); ble_host_worker(); assert(sim_starts==starts+1 && !memcmp(&sim_advertising,&boot_adv,sizeof boot_adv));
     ble_host_enable(0); /* Stops an active advertisement via real HCI. */
     assert(!ble_host_connected());
     ble_host_get_diag(&d);

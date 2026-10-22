@@ -1,0 +1,22 @@
+Open BLE R2 overnight soak - desktop BlueZ, 2026-10-21 22:37 UTC -> 2026-10-22 06:37 UTC (8.0 h)
+Image 2fbf32de... (R2). tools/ble_overnight_soak.py: encrypted SC bond (fresh pairing), BlueZ MIDI ALSA port,
+aplaymidi notes every 5 s, central connection update every 10 min cycling 15/30/11.25/15 ms, USB sample every 60 s.
+Data: out/open-ble/soak-r2/{samples.jsonl,summary.json} (btmon capture on the desktop).
+
+RESULT: completed, no reboot; ONE LINK DROP BY MIC FAILURE (0x3D) - investigate.
+- 28,800 s, ~2.0 M connection events, 47 central updates (79 applied incl. own), late_instants 0,
+  supervision_fail 0 at the FM-1, nimble_resets 0, error 0, canaries 0.
+- MIDI desktop -> FM-1: 3,964 notes sent, midi_packets_in +7,928 (all), bad 0, drop 0.
+- Audio: late 0, xruns 0, max 156 us. Executor: item max 52 us, over_100 0, own_over_250 0; refill max 45 us.
+- Drop: 05:40:40 UTC (elapsed 25,406 s), link at 30 ms, ~170 s after the 05:37:50 update (not at the instant).
+  FM-1: mic_failures 0 -> 1, last_disconnect_reason 0x3D (D-1 behaviour: stop transmitting); desktop: HCI
+  disconnect reason 0x08 (supervision timeout, as expected when the FM-1 goes silent). Reconnected 6 s later
+  (epoch 32), encrypted, soak continued to the end.
+- Context counters (cumulative since boot): rx_B_crc 1,492; rx_C_repeat / retransmission_rx 1,465;
+  rx_delayed_stamp 3,953. A CRC-24 false accept of a corrupted packet is ~2^-24 per corrupted packet, i.e.
+  ~1e-4 expected over the night: radio corruption is an unlikely explanation; a rare RX/decrypt ordering bug
+  (retransmission, delayed slot, counter) is the leading hypothesis. No per-packet record exists for it.
+- Worker gaps >7.5 ms: 7 over the run, all ~17.7-17.9 ms, state starting, reason radio_start,flash_write
+  (bond/seed write while the radio starts, no link); one followed the MIC drop (re-advertising after the bond
+  flush).
+- Tool: one "USB log incomplete" read error at 03:17:49 (no link impact; fixed in R3 tooling).

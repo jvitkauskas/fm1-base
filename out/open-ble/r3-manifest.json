@@ -1,0 +1,53 @@
+{
+  "identity": "FM-1_1100",
+  "database_generation": 3,
+  "diagnostics_events": 32,
+  "builds": [
+    {
+      "mode": "on",
+      "path": "template/build/template-open.fwsc",
+      "sha256": "42a5b5602d93dcc0cc69cd0d1bb22e732399ebe3905eaabea70822c6b7a12eec",
+      "size": 610136,
+      "log": "out/open-ble/BUILD-R3.log",
+      "app_flash": 194064,
+      "static_ram": 34564,
+      "static_limit": 98304,
+      "pool": 99996,
+      "pool_limit": 344064,
+      "ramtext_code": 3112,
+      "trace": 20480
+    },
+    {
+      "mode": "off",
+      "path": "out/open-ble/r3-diag-off/template-open.fwsc",
+      "sha256": "7dacac7bfe4f313ffb3d5f807cf8ae9703c19de8e69459ac3fc2feb603f42fb7",
+      "size": 610136,
+      "log": "out/open-ble/BUILD-R3-DIAG-OFF.log",
+      "app_flash": 184544,
+      "static_ram": 33756,
+      "static_limit": 98304,
+      "pool": 99228,
+      "pool_limit": 344064,
+      "ramtext_code": 3112,
+      "trace": 0
+    },
+    {
+      "mode": "no-ble",
+      "path": "template/build/template-usb.fwsc",
+      "sha256": "8882b3b00493381c7c66fa25f1c2a0f0594d2a17f768d5a006965d7f40e54e47",
+      "size": 610136,
+      "log": "out/open-ble/BUILD-R3-NO-BLE.log",
+      "app_flash": 80172,
+      "static_ram": 28320,
+      "static_limit": 98304,
+      "pool": 69384,
+      "pool_limit": 344064,
+      "ramtext_code": 3000,
+      "trace": 0
+    }
+  ],
+  "all_ble_suites": "PASS: ASan/UBSan, diagnostics on/off, 17 GATT/SMP client runs",
+  "build_policy": "PASS: 4 offline tests",
+  "hardware": "pending owner R3 bench; R2 overnight result separate",
+  "uncommitted": true
+}

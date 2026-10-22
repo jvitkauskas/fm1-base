@@ -57,19 +57,23 @@ void ble_time_item_end(uint32_t start,ble_work_kind_t kind,uint16_t opcode)
 {
     uint32_t dt=ble_time_own()-start;
     if(!tm.running || kind>=BLE_WORK_COUNT) return;
-    tm.d.kind_count[kind]++;
+    BLE_DIAG_ONLY(tm.d.kind_count[kind]++);
     if(dt>tm.d.item_max) { tm.d.item_max=dt; tm.d.item_kind=(uint8_t)kind; tm.d.item_opcode=opcode; }
-    if(dt>tm.d.kind_max[kind]) { tm.d.kind_max[kind]=dt; tm.d.kind_opcode[kind]=opcode; }
+    BLE_DIAG_ONLY(if(dt>tm.d.kind_max[kind]) { tm.d.kind_max[kind]=dt; tm.d.kind_opcode[kind]=opcode; });
     maximum(&tm.pass_item,dt);
-    if(dt>100u*24u) { tm.d.item_over_100us++; tm.d.kind_over_100us[kind]++; }
+    if(dt>100u*24u) { tm.d.item_over_100us++; BLE_DIAG_ONLY(tm.d.kind_over_100us[kind]++); }
 }
 const char *ble_time_kind_name(unsigned kind)
 {
+#if FM1B_BLE_DIAG
     static const char *const names[BLE_WORK_COUNT]={"service","key","rx","control",
         "housekeep","delivery","resolution","driver","command","stop","adv_prepare",
         "entropy_sample","entropy_reseed","entropy_output","entropy_rekey",
         "control_rx","refill","reset_clear","reset_defaults","reset_stats","reset_complete"};
     return kind<BLE_WORK_COUNT ? names[kind] : "unknown";
+#else
+    (void)kind; return "disabled";
+#endif
 }
 void ble_time_ccm_add(uint32_t ticks) { uint32_t k=ble_port_lock(); tm.ccm+=ticks; ble_port_unlock(k); }
 uint32_t ble_time_ccm_total(void) { return tm.ccm; }

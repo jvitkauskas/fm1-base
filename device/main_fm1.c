@@ -217,12 +217,22 @@ static void log_line_send(const char *t)
     f[n++] = 0xF7;
     ota_wire_send(f, n);
 }
+#if FM1B_BLE_OPEN
+static void open_ble_audio_dump(void)
+{
+    ob_kv("audio_late",(int32_t)fm1b_dbg.late); ob_kv("audio_max_wall_us",(int32_t)fm1b_dbg.max_us);
+    ob_kv("audio_xruns",(int32_t)plat_xruns());
+}
+#endif
 static int log_frame(const uint8_t *p, uint32_t n)
 {
     char b[48], *q;
     int k;
     if (n < 3u || p[0] != 0x7Du || p[1] != 0x4Cu || p[2] != 0x47u)
         return 0;
+#if FM1B_BLE_OPEN
+    if(n==4u && p[3]==1u) { open_ble_health_dump(); log_line_send("end"); return 1; }
+#endif
     if (fm1_crash.magic == FM1_CRASH_MAGIC) {
         const uint32_t v[6] = {fm1_crash.count, fm1_crash.vec, fm1_crash.pc, fm1_crash.rets, fm1_crash.sp,
                                fm1_crash.uptime_ms};

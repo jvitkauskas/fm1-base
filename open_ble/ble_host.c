@@ -29,16 +29,43 @@ extern void ble_hs_pvcy_reset(void); /* pinned host cache, reset at each startup
 #endif
 /* Pinned NimBLE internal query; profile has exactly one connection. */
 extern int ble_sm_num_procs(void);
-static uint32_t security_at;
-static uint8_t security_due,bond_flush_due=1;
+static uint8_t bond_flush_due=1;
+static uint8_t gatt_change_inflight;
+static ble_addr_t gatt_change_peer;
+static uint16_t service_changed_handle;
 extern void ble_sm_alg_ecc_init(void); /* NimBLE's normally generated sysinit hook */
 #endif
 #define MIDI_Q 128u
+/* A maximum 512-byte attribute can expand to 509 USB program changes. */
+#define MIDI_RX_Q 512u
+static struct {
+    uint32_t pkt[MIDI_RX_Q],ms[MIDI_RX_Q];
+    volatile uint32_t w,r;
+} midi_rx __attribute__((section(".pool.ble")));
 static struct {
     uint32_t pkt[MIDI_Q],ms[MIDI_Q];
     volatile uint32_t w,r;
-} midi_rx __attribute__((section(".pool.ble"))),midi_tx __attribute__((section(".pool.ble")));
+} midi_tx __attribute__((section(".pool.ble")));
 static ble_host_diag_t diag;
+#if FM1B_BLE_DIAG
+static ble_host_event_t events[BLE_HOST_EVENT_COUNT];
+static unsigned events_next,events_count;
+static uint32_t event_session;
+void ble_host_event(unsigned kind,uint16_t connection,uint32_t a,uint32_t b,uint32_t c)
+{
+    ble_host_event_t *e=events+events_next;
+    if(kind==BLE_HE_CONNECT) event_session++;
+    *e=(ble_host_event_t){ble_port_ms(),event_session,a,b,c,connection,(uint16_t)kind};
+    events_next=(events_next+1u)%BLE_HOST_EVENT_COUNT;
+    if(events_count<BLE_HOST_EVENT_COUNT) events_count++;
+}
+unsigned ble_host_events(ble_host_event_t out[BLE_HOST_EVENT_COUNT])
+{
+    for(unsigned i=0;i<events_count;i++)
+        out[i]=events[(events_next+BLE_HOST_EVENT_COUNT-events_count+i)%BLE_HOST_EVENT_COUNT];
+    return events_count;
+}
+#endif
 static ble_midi_decoder_t decoder;
 static ble_midi_usb_t usb_decoder;
 static uint16_t midi_handle;
@@ -55,9 +82,9 @@ extern void ble_heap_diag(uint32_t *out);
 void ble_port_host_idle(void);
 static void usb_received(uint32_t pkt,uint16_t ts,void *arg)
 {
-    uint32_t i=midi_rx.w%MIDI_Q;
+    uint32_t i=midi_rx.w%MIDI_RX_Q;
     (void)arg;
-    if(midi_rx.w-midi_rx.r==MIDI_Q) { diag.midi_drop++; return; }
+    if(midi_rx.w-midi_rx.r==MIDI_RX_Q) { diag.midi_drop++; return; }
     midi_rx.pkt[i]=pkt; midi_rx.ms[i]=ts;
     __asm__ volatile("" ::: "memory"); midi_rx.w++;
     if(diag.echo) ble_host_midi_out(pkt,ts);
@@ -65,46 +92,106 @@ static void usb_received(uint32_t pkt,uint16_t ts,void *arg)
 static void byte_received(uint8_t byte,uint16_t ts,void *arg) { ble_midi_usb_byte(&usb_decoder,byte,ts,usb_received,arg); }
 static int midi_access(uint16_t conn,uint16_t attr,struct ble_gatt_access_ctxt *ctxt,void *arg)
 {
-    uint8_t packet[200]; uint16_t n;
+    uint8_t packet[512]; uint16_t n;
     (void)conn; (void)attr; (void)arg;
-    if(ctxt->op==BLE_GATT_ACCESS_OP_READ_CHR) return 0;
+    if(ctxt->op==BLE_GATT_ACCESS_OP_READ_CHR) {
+        ble_host_event(BLE_HE_MIDI_READ,conn,attr,0,0); return 0;
+    }
     if(ctxt->op!=BLE_GATT_ACCESS_OP_WRITE_CHR) return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
     n=OS_MBUF_PKTLEN(ctxt->om);
     if(n>sizeof packet || os_mbuf_copydata(ctxt->om,0,n,packet)) return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
     if(!ble_midi_decode(&decoder,packet,n,byte_received,0)) { diag.midi_bad++; return BLE_ATT_ERR_UNLIKELY; }
     diag.midi_in++; return 0;
 }
+#if FELUCCA_BLE_STAGE >= 3
+#define MIDI_SECURITY (BLE_GATT_CHR_F_READ_ENC|BLE_GATT_CHR_F_WRITE_ENC)
+#else
+#define MIDI_SECURITY 0
+#endif
+#ifndef APP_VERSION
+#define APP_VERSION "open-r3"
+#endif
+static int info_access(uint16_t conn,uint16_t attr,struct ble_gatt_access_ctxt *ctxt,void *arg)
+{
+    (void)conn; (void)attr;
+    if(ctxt->op!=BLE_GATT_ACCESS_OP_READ_CHR) return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    const char *s=arg;
+    return os_mbuf_append(ctxt->om,s,(uint16_t)strlen(s)) ? BLE_ATT_ERR_INSUFFICIENT_RES : 0;
+}
+static const struct ble_gatt_chr_def info_chars[]={
+    {.uuid=BLE_UUID16_DECLARE(0x2a29),.access_cb=info_access,.arg="M-VAVE",.flags=BLE_GATT_CHR_F_READ},
+    {.uuid=BLE_UUID16_DECLARE(0x2a24),.access_cb=info_access,.arg="FM-1",.flags=BLE_GATT_CHR_F_READ},
+    {.uuid=BLE_UUID16_DECLARE(0x2a26),.access_cb=info_access,.arg=APP_VERSION,.flags=BLE_GATT_CHR_F_READ},
+    {.uuid=BLE_UUID16_DECLARE(0x2a28),.access_cb=info_access,.arg="NimBLE 1.9.0 / open R3",.flags=BLE_GATT_CHR_F_READ},
+    {.uuid=0}
+};
 static const struct ble_gatt_chr_def midi_chars[]={
     { .uuid=&midi_characteristic.u,.access_cb=midi_access,.val_handle=&midi_handle,
-      .flags=BLE_GATT_CHR_F_READ|BLE_GATT_CHR_F_WRITE_NO_RSP|BLE_GATT_CHR_F_NOTIFY },
+      .flags=BLE_GATT_CHR_F_READ|BLE_GATT_CHR_F_WRITE_NO_RSP|BLE_GATT_CHR_F_NOTIFY|MIDI_SECURITY },
     { .uuid=0 }
 };
 static const struct ble_gatt_svc_def services[]={
-    { .type=BLE_GATT_SVC_TYPE_PRIMARY,.uuid=&midi_service.u,.characteristics=midi_chars }, { .type=0 }
+    { .type=BLE_GATT_SVC_TYPE_PRIMARY,.uuid=&midi_service.u,.characteristics=midi_chars },
+    /* Append services: keep R1 GAP, GATT / Service Changed, and MIDI handles. */
+    { .type=BLE_GATT_SVC_TYPE_PRIMARY,.uuid=BLE_UUID16_DECLARE(0x180a),.characteristics=info_chars }, { .type=0 }
 };
 static int gap_event(struct ble_gap_event *event,void *arg)
 {
     (void)arg;
     switch(event->type) {
     case BLE_GAP_EVENT_CONNECT:
-        if(!event->connect.status) { diag.connection=event->connect.conn_handle; diag.mtu=23; update_due=1; update_at=ble_port_ms()+1000u; }
+        if(!event->connect.status) { diag.connection=event->connect.conn_handle; diag.mtu=23; update_due=1; update_at=ble_port_ms()+5000u; }
         else { advertise_pending=1; restart_at=ble_port_ms()+100u; }
 #if FELUCCA_BLE_STAGE >= 3
-        if(!event->connect.status) { security_due=host_enabled; security_at=ble_port_ms()+100u; diag.pair_method=diag.sc=0; }
+        if(!event->connect.status) { gatt_change_inflight=0; diag.gatt_peer_version=0; diag.pair_method=diag.sc=0; }
 #endif
+        if(!event->connect.status) {
+            struct ble_gap_conn_desc desc;
+            if(!ble_gap_conn_find(diag.connection,&desc))
+                ble_host_event(BLE_HE_CONNECT,diag.connection,desc.peer_ota_addr.type,
+                    ble_addr_cmp(&desc.peer_id_addr,&desc.peer_ota_addr)!=0,desc.peer_id_addr.type);
+        }
         break;
     case BLE_GAP_EVENT_DISCONNECT:
+        ble_host_event(BLE_HE_DISCONNECT,diag.connection,(uint32_t)event->disconnect.reason&255u,
+            (uint32_t)event->disconnect.reason,0);
 #if FELUCCA_BLE_STAGE >= 3
-        security_due=0; bond_flush_due=1; diag.encrypted=diag.bonded=diag.key_size=0;
+        gatt_change_inflight=0; bond_flush_due=1; diag.encrypted=diag.bonded=diag.key_size=0;
 #endif
         diag.connection=BLE_HS_CONN_HANDLE_NONE; diag.subscribed=0; update_due=0;
         memset(&decoder,0,sizeof decoder); memset(&usb_decoder,0,sizeof usb_decoder);
         midi_tx.r=midi_tx.w; advertise_pending=1; restart_at=ble_port_ms()+100u; break;
     case BLE_GAP_EVENT_SUBSCRIBE:
         if(event->subscribe.attr_handle==midi_handle) diag.subscribed=event->subscribe.cur_notify;
+        if(event->subscribe.reason==BLE_GAP_SUBSCRIBE_REASON_RESTORE)
+            ble_host_event(BLE_HE_CCCD_RESTORE,event->subscribe.conn_handle,
+                event->subscribe.attr_handle+1u,event->subscribe.cur_notify |
+                (event->subscribe.cur_indicate<<1),0);
         break;
-    case BLE_GAP_EVENT_MTU: diag.mtu=event->mtu.value; break;
+    case BLE_GAP_EVENT_MTU:
+        diag.mtu=event->mtu.value;
+        ble_host_event(BLE_HE_MTU,event->mtu.conn_handle,event->mtu.value,0,0); break;
+    case BLE_GAP_EVENT_CONN_UPDATE: {
+        struct ble_gap_conn_desc desc;
+        diag.param_status=(uint32_t)event->conn_update.status;
+        if(!event->conn_update.status && !ble_gap_conn_find(event->conn_update.conn_handle,&desc))
+            ble_host_event(BLE_HE_CONN_UPDATE,event->conn_update.conn_handle,
+                desc.conn_itvl,desc.conn_latency,desc.supervision_timeout);
+        break;
+    }
 #if FELUCCA_BLE_STAGE >= 3
+    case BLE_GAP_EVENT_NOTIFY_TX:
+        if(event->notify_tx.indication && event->notify_tx.attr_handle==service_changed_handle &&
+           event->notify_tx.conn_handle==diag.connection && gatt_change_inflight &&
+           event->notify_tx.status==BLE_HS_EDONE) {
+            gatt_change_inflight=0;
+            if(!ble_bonds_db_confirm(gatt_change_peer.type,gatt_change_peer.val,BLE_GATT_DB_VERSION)) {
+                diag.gatt_peer_version=BLE_GATT_DB_VERSION; bond_flush_due=1;
+                diag.gatt_confirmations++;
+            }
+            ble_host_event(BLE_HE_SC_CONFIRMED,diag.connection,BLE_GATT_DB_VERSION,0,0);
+        }
+        break;
     case BLE_GAP_EVENT_ENC_CHANGE: {
         struct ble_gap_conn_desc desc;
         if(event->enc_change.status) diag.pair_failures++;
@@ -131,11 +218,13 @@ static void advertise(void)
 {
     struct ble_gap_adv_params params;
     static const uint8_t adv[]={2,1,6,17,7,0x00,0xc7,0xc4,0x4e,0xe3,0x6c,0x51,0xa7,0x33,0x4b,0xe8,0xed,0x5a,0x0e,0xb8,0x03};
-    static const uint8_t scan[]={14,9,'F','M','-','1',' ','O','p','e','n',' ','B','L','E'};
+    uint8_t scan[31]; const char *name=ble_svc_gap_device_name();
+    unsigned name_len=(unsigned)strlen(name),n=name_len>29u ? 29u : name_len;
+    scan[0]=(uint8_t)(n+1u); scan[1]=name_len>29u ? 8u : 9u; memcpy(scan+2,name,n);
     int rc=ble_gap_adv_set_data(adv,sizeof adv);
-    if(!rc) rc=ble_gap_adv_rsp_set_data(scan,sizeof scan);
+    if(!rc) rc=ble_gap_adv_rsp_set_data(scan,(int)(n+2u));
     memset(&params,0,sizeof params); params.conn_mode=BLE_GAP_CONN_MODE_UND;
-    params.disc_mode=BLE_GAP_DISC_MODE_GEN; params.itvl_min=params.itvl_max=160;
+    params.disc_mode=BLE_GAP_DISC_MODE_GEN; params.itvl_min=params.itvl_max=32; /* 20 ms, including every restart */
     if(!rc) rc=ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC,0,BLE_HS_FOREVER,&params,gap_event,0);
     if(rc) { diag.error=(uint32_t)rc; restart_at=ble_port_ms()+1000u; }
     else advertise_pending=0;
@@ -149,6 +238,13 @@ static void synced(void)
     extern int ble_hs_hci_cmd_tx(uint16_t,const void *,uint8_t,void *,uint8_t);
     int rc=ble_hs_hci_cmd_tx(0x2001,mask,sizeof mask,0,0);
     if(rc) { diag.error=(uint32_t)rc; advertise_pending=0; ble_hs_sched_reset(rc); return; }
+#endif
+    /* Keep this handle stable for the lifetime of the identity. Cache changes
+     * are per bond; never fan out an update to other peers via chr_updated. */
+#if FELUCCA_BLE_STAGE >= 3
+    if(ble_gatts_find_chr(BLE_UUID16_DECLARE(0x1801),BLE_UUID16_DECLARE(0x2a05),0,&service_changed_handle)) {
+        diag.error=BLE_HS_ENOENT; return;
+    }
 #endif
     diag.error=0; diag.synced=1; diag.syncs++; advertise_pending=1; restart_at=ble_port_ms();
 }
@@ -196,6 +292,16 @@ int ble_host_delete_bond(uint8_t identity_type,const uint8_t identity[6])
     if(!rc) bond_flush_due=1;
     return rc;
 }
+static int store_read(int type,const union ble_store_key *key,union ble_store_value *value)
+{
+    int rc=ble_bonds_read(type,key,value);
+    /* R2 may have left a global pending flag in a disconnected peer's CCCD.
+     * Suppress NimBLE's automatic replay (its range is unset after reboot).
+     * The per-bond generation below is the sole authority for cache changes. */
+    if(!rc && type==BLE_STORE_OBJ_TYPE_CCCD && value->cccd.chr_val_handle==service_changed_handle)
+        value->cccd.value_changed=0;
+    return rc;
+}
 static int store_write(int type,const union ble_store_value *value)
 {
 #if FELUCCA_BLE_S31
@@ -239,6 +345,9 @@ static int store_status(struct ble_store_status_event *event,void *arg)
 static void receive_main(uint8_t type,const uint8_t *packet,uint16_t n)
 {
     if(type==4) {
+        if((n>=6 && packet[0]==8) || (n>=5 && packet[0]==0x30))
+            ble_host_event(packet[0]==8 ? BLE_HE_ENC_START : BLE_HE_ENC_REFRESH,
+                ble_get16(packet+3),packet[2],packet[0]==8 ? packet[5] : 1,0);
         void *event=ble_transport_alloc_evt(0);
         if(!event) { diag.event_drop++; return; }
         memcpy(event,packet,n); ble_transport_to_hs_evt(event);
@@ -301,7 +410,7 @@ void ble_host_start(void)
     ble_hs_cfg.sm_io_cap=BLE_SM_IO_CAP_NO_IO; ble_hs_cfg.sm_bonding=1; ble_hs_cfg.sm_mitm=0; ble_hs_cfg.sm_sc=1;
     ble_hs_cfg.sm_our_key_dist=BLE_SM_PAIR_KEY_DIST_ENC|BLE_SM_PAIR_KEY_DIST_ID;
     ble_hs_cfg.sm_their_key_dist=BLE_SM_PAIR_KEY_DIST_ENC|BLE_SM_PAIR_KEY_DIST_ID;
-    ble_hs_cfg.store_read_cb=ble_bonds_read; ble_hs_cfg.store_write_cb=store_write;
+    ble_hs_cfg.store_read_cb=store_read; ble_hs_cfg.store_write_cb=store_write;
     ble_hs_cfg.store_delete_cb=ble_bonds_delete; ble_hs_cfg.store_status_cb=store_status;
 #endif
     ble_svc_gap_init(); ble_svc_gatt_init();
@@ -328,31 +437,53 @@ void ble_host_worker(void)
         ble_bond_diag_t bd;
         ble_bonds_flush(); ble_bonds_get_diag(&bd); bond_flush_due=bd.pending;
     }
-    if(security_due && (int32_t)(now-security_at)>=0 && diag.connection!=BLE_HS_CONN_HANDLE_NONE) {
-        struct ble_gap_conn_desc desc; ble_security_diag_t enc; int rc;
-        security_due=0; ble_security_get_diag(&enc);
-        if(!ble_gap_conn_find(diag.connection,&desc) && !desc.sec_state.encrypted &&
-            !ble_sm_num_procs() && enc.phase==BLE_ENC_N) {
-            rc=ble_gap_security_initiate(diag.connection); diag.security_requests++;
-            if(rc==BLE_HS_EALREADY) diag.security_already++;
-            else if(rc) diag.error=(uint32_t)rc;
-        } else diag.security_skipped++;
+    if(host_enabled && !gatt_change_inflight && diag.encrypted && diag.bonded &&
+       diag.connection!=BLE_HS_CONN_HANDLE_NONE && !ble_sm_num_procs()) {
+        struct ble_gap_conn_desc desc; uint32_t version; uint8_t flags=0;
+        if(!ble_gap_conn_find(diag.connection,&desc) &&
+           !ble_bonds_db_version(desc.peer_id_addr.type,desc.peer_id_addr.val,&version)) {
+            diag.gatt_peer_version=version;
+            if(version!=BLE_GATT_DB_VERSION &&
+               !ble_gatts_read_cccd(diag.connection,service_changed_handle,&flags) && (flags&2u)) {
+                static const uint8_t range[]={1,0,255,255};
+                struct os_mbuf *om=ble_hs_mbuf_from_flat(range,sizeof range);
+                if(om) {
+                    gatt_change_peer=desc.peer_id_addr;
+                    int rc=ble_gatts_indicate_custom(diag.connection,service_changed_handle,om);
+                    if(!rc) {
+                        gatt_change_inflight=1; diag.gatt_invalidations++;
+                        ble_host_event(BLE_HE_SC_SENT,diag.connection,1,0xffff,version);
+                    }
+                }
+            }
+        }
     }
 #endif
-    if(host_enabled && !advertise_hold && diag.synced && advertise_pending && (int32_t)(now-restart_at)>=0) advertise();
-    if(update_due && (int32_t)(now-update_at)>=0 && diag.connection!=BLE_HS_CONN_HANDLE_NONE) {
+    if(host_enabled && !advertise_hold && !ble_host_linked() && diag.synced && advertise_pending && (int32_t)(now-restart_at)>=0) advertise();
+    if(host_enabled && update_due && (int32_t)(now-update_at)>=0 && diag.connection!=BLE_HS_CONN_HANDLE_NONE
+#if FELUCCA_BLE_STAGE >= 3
+       && !ble_sm_num_procs()
+#endif
+    ) {
         struct ble_gap_upd_params params;
-        memset(&params,0,sizeof params); params.itvl_min=6; params.itvl_max=12;
-        params.supervision_timeout=400;
+        memset(&params,0,sizeof params); params.itvl_min=params.itvl_max=12; /* MIDI: 15 ms, latency zero */
+        params.supervision_timeout=600; /* Apple ADG 2026-09-21: >=6 seconds */
         /* Negotiated octet 0 has no connection-parameter-request bit: NimBLE
          * sends an L2CAP signalling request, never peripheral HCI 2013. */
-        (void)ble_gap_update_params(diag.connection,&params); update_due=0;
+        diag.param_requests++;
+        diag.param_status=(uint32_t)ble_gap_update_params(diag.connection,&params);
+        ble_host_event(BLE_HE_PARAM_SENT,diag.connection,12,600,diag.param_status);
+        if(diag.param_status==BLE_HS_EBUSY || diag.param_status==BLE_HS_EALREADY) update_at=now+1000u;
+        else update_due=0;
     }
     budget=16;
     while(budget-- && midi_tx.r!=midi_tx.w) {
         uint32_t i=midi_tx.r%MIDI_Q; uint8_t packet[8]; int n,rc;
         struct os_mbuf *om;
         if(!host_enabled || !diag.subscribed) { midi_tx.r=midi_tx.w; break; }
+#if FELUCCA_BLE_STAGE >= 3
+        if(!diag.encrypted) break;
+#endif
         n=ble_midi_encode_usb(midi_tx.pkt[i],midi_tx.ms[i],packet,sizeof packet);
         if(!n) { midi_tx.r++; diag.midi_bad++; continue; }
         om=ble_hs_mbuf_from_flat(packet,(uint16_t)n);
@@ -374,13 +505,13 @@ void ble_host_echo(int enabled) { diag.echo=(uint8_t)!!enabled; }
 
 int ble_host_midi_take(uint32_t *pkt,uint32_t *ms)
 {
-    uint32_t i=midi_rx.r%MIDI_Q;
+    uint32_t i=midi_rx.r%MIDI_RX_Q;
     if(midi_rx.r==midi_rx.w) return 0;
     *pkt=midi_rx.pkt[i]; *ms=midi_rx.ms[i]; midi_rx.r++; return 1;
 }
 void ble_host_get_diag(ble_host_diag_t *out)
 {
-    uint32_t heap[3]; ble_heap_diag(heap); *out=diag;
+    uint32_t heap[3]; ble_heap_diag(heap); *out=diag; out->param_pending=update_due;
 #if FELUCCA_BLE_STAGE >= 3
     /* ENC_CHANGE precedes persistence. Query afresh, never another peer's
      * last write; unknown/unbonded links explicitly report method zero. */
@@ -419,9 +550,6 @@ void ble_host_enable(int on)
     host_enabled=(uint8_t)!!on;
     if(!host_enabled) {
         advertise_pending=update_due=0;
-#if FELUCCA_BLE_STAGE >= 3
-        security_due=0;
-#endif
         if(ble_gap_adv_active()) (void)ble_gap_adv_stop();
         if(diag.connection!=BLE_HS_CONN_HANDLE_NONE)
             (void)ble_gap_terminate(diag.connection,BLE_ERR_REM_USER_CONN_TERM);

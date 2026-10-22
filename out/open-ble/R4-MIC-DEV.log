@@ -1,0 +1,4 @@
+random seed=4d494334 events=10000 counter=2441 missed=52 lost_ack=237 zero spontaneous MIC failures: PASS
+corrupted MIC: 0x3d, exact counter/header/history/pressure flags, journal survives stop and HCI Reset: PASS
+DMA reuse during both-full service preserves A/B/C FIFO; lengths 32/255 filtered, 1..4 fail once; four-record journal wraps: PASS
+production HAL RX_ON/RX_OFF: clear/encrypted coalescing, old encrypted terminate before pause marker, new key/counter-zero restart: PASS

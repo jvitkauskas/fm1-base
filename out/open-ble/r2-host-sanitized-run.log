@@ -1,0 +1,8 @@
+/root/fm1/fm1-base-open/include/fastmath.h:58:14: runtime error: left shift of negative value -1
+    #0 0x4028a7 in app_render.cold (/root/fm1/fm1-base-open/template/build/host/template-open_host+0x4028a7) (BuildId: d3dd38d8bd706276c88be84dbf8652a30d201300)
+    #1 0x423228 in run_ms (/root/fm1/fm1-base-open/template/build/host/template-open_host+0x423228) (BuildId: d3dd38d8bd706276c88be84dbf8652a30d201300)
+    #2 0x403555 in main (/root/fm1/fm1-base-open/template/build/host/template-open_host+0x403555) (BuildId: d3dd38d8bd706276c88be84dbf8652a30d201300)
+    #3 0x7d9618860ca7  (/lib/x86_64-linux-gnu/libc.so.6+0x29ca7) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+    #4 0x7d9618860d64 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x29d64) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+    #5 0x408410 in _start (/root/fm1/fm1-base-open/template/build/host/template-open_host+0x408410) (BuildId: d3dd38d8bd706276c88be84dbf8652a30d201300)
+

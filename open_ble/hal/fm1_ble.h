@@ -9,6 +9,7 @@
 #include "../ble_link.h"
 #include "../ble_breadcrumb.h"
 #include "../ble_timing.h"
+#include "../ble_health.h"
 #if FELUCCA_BLE_S31
 #include "../ble_privacy.h"
 #endif
@@ -40,7 +41,7 @@ static void fm1_ble_irq_restore(uint32_t state)
     }
     br_sync(); fm1_icfg_set(state); br_sync();
 }
-static uint32_t fm1_ble_icfg_read(void) { return fm1_icfg(); }
+static inline uint32_t fm1_ble_icfg_read(void) { return fm1_icfg(); }
 #if FELUCCA_BLE_STAGE >= 3
 static inline void fm1_ble_icfg_write(uint32_t state) { br_sync(); fm1_icfg_set(state); br_sync(); }
 #endif
@@ -142,6 +143,9 @@ static void bb_refill_limit(unsigned limit)
         BB_F16(BF_TX_ADV+slot*2)=0;
         BB_F16(BF_TX_DATA+slot*2)=(uint16_t)((BB_F16(BF_TX_DATA+slot*2)&4u)|((uint16_t)n<<8)|(md<<3)|llid);
         BB_F16(BF_FLOW)=(uint16_t)((BB_F16(BF_FLOW)&~64u)|(md<<6));
+#if FELUCCA_BLE_STAGE >= 3
+        ble_security_tx_loaded((BB_F16(BF_TX_DATA+slot*2)>>2)&1u);
+#endif
         bb.tx_id[slot]=(int8_t)id; br_sync(); BB_F8(BF_TX_CTL+slot)&=(uint8_t)~1u; br_sync();
         loads++;
     }
@@ -153,6 +157,7 @@ static void bb_refill(void) { bb_refill_limit(2); }
 static void bb_connection(const ble_conn_t *c,uint8_t header,uint32_t now)
 {
     if(!ble_ll_create(c,now)) { br_diag.connect_ignored++; return; }
+    ble_health_connect(1);
     bb_mark(BLE_STAGE_CONNECT,c->interval);
     unsigned slot,t=BB_F16(BF_TX_TOGGLE)&1u;
     uint16_t w=ble_widen(c);
@@ -208,7 +213,13 @@ static void bb_connected_rx(uint32_t stamp,int recovery)
     } while(a!=b);
     first=a&1u;
     for(j=0;j<2;j++) if(a&(2u<<(first^j))) slots[held++]=first^j;
-    if(marker && (!held || !ble_ll_rx_reserve(held,1))) { ble_port_pend(); return; }
+    if(marker && (!held || !ble_ll_rx_reserve(held,1))) {
+        /* Reservation can block before the per-slot loop. Retain that wait
+         * just like ordinary backlog pressure: later IRQ service must use
+         * t_free, and diagnostics must not call the held packet prompt. */
+        for(j=0;j<held;j++) bb.rx_delayed[slots[j]]=1;
+        ble_port_pend(); return;
+    }
     for(j=0;j<held;j++) {
         unsigned slot=slots[j];
         status[j]=BB_F16(BF_RX_STAT+2*slot); header[j]=BB_F16(BF_RX_DATA+2*slot); n[j]=header[j]>>8;
@@ -223,6 +234,8 @@ static void bb_connected_rx(uint32_t stamp,int recovery)
     ble_entropy_sample(0,BB_F32(316),0);
     for(j=0;j<held;j++) {
         unsigned slot=slots[j]; int delayed=recovery || bb.rx_delayed[slot] || held==2;
+        uint8_t flags=(uint8_t)((bb.rx_delayed[slot] ? BLE_RX_PRESSURE : 0) |
+            (held==2 ? BLE_RX_BOTH_FULL : 0) | (recovery ? BLE_RX_RECOVERY : 0));
         uint32_t ts=delayed ? bb.rx_stamp[slot] : stamp;
         if(marker && position==j) { if(!ble_ll_rx_marker(marker)) { ble_ll_close(0x3d); return; } marker=0; }
         if(delayed && has_older && (int32_t)(older-ts)>0) ts=older;
@@ -230,7 +243,7 @@ static void bb_connected_rx(uint32_t stamp,int recovery)
         BB_F16(BF_RX_PTR+2*slot)=(uint16_t)(slot ? BB_RX1 : BB_RX0);
         br_sync(); BB_F8(BF_RX_CTL+slot)&=(uint8_t)~1u; br_sync();
         bb.rx_stamp[slot]=fm1_ticks(); bb.rx_delayed[slot]=0; older=ts; has_older=1;
-        ble_ll_rx_delayed(status[j],header[j],copy[j],ts,event,delayed);
+        ble_ll_rx_slot(status[j],header[j],copy[j],ts,event,delayed,(uint8_t)slot,flags);
     }
     if(marker && !ble_ll_rx_marker(marker)) ble_ll_close(0x3d);
     bb_refill();
@@ -329,6 +342,7 @@ static void bb_rx_pending(void)
         br_diag.scan_req++;
         for (i=0;i<3;i++) BB_F16(BF_PEER+2*i)=ble_get16(payload+2*i);
     } else if (type==5) {
+        ble_health_connect(0);
         ble_conn_t c;
         uint8_t h=(uint8_t)BB_F16(BF_RX_ADV+2*slot);
         if(bb.adv.params.type==0 && ((h>>7)&1u)==bb.adv.params.own_type &&
@@ -419,6 +433,7 @@ static void fm1_ble_attach(void)
 static void fm1_ble_startup(ble_cal_t *cal)
 {
     unsigned i;
+    if(bb.state || (ble_link.state!=BLE_LINK_IDLE && ble_link.state!=BLE_LINK_STOPPED)) { br_error(10); return; }
     memset(&ble_dma,0,sizeof ble_dma);
     for (i=0;i<4;i++) ble_dma.canary[i]=0x4252444du;
     br_diag.dma_base=(uint32_t)(uintptr_t)ble_dma.bb;
@@ -475,7 +490,9 @@ static int fm1_ble_adv_start(const ble_adv_t *adv)
     BR_R(0x2802cu)=257;
     BR_R(0x2804cu)=(BR_R(0x2804cu)&255u)|256u;
     BR_R(0x28028u)|=257; BR_R(0x2804cu)=(BR_R(0x2804cu)&255u)|1u;
-    bb.state=1;
+    /* RX acceptance state precedes the first hardware enable. Both TX
+     * descriptors, identity, data and CONNECT_IND decoder are ready now. */
+    bb.state=1; ble_health_adv_begin(fm1_ticks());
     bb_anchor(0,7,0); bb_anchor(0,0,0); bb_anchor(0,14,0);
     bb_anchor(0,0,0);
     br_diag.enable_ticks=fm1_ticks(); br_diag.first_event_ticks=0;
@@ -494,6 +511,7 @@ static void fm1_ble_stop_begin(void)
 {
     uint32_t k=fm1_ble_irq_save();
     if (bb.state!=1 && bb.state!=4) { fm1_ble_irq_restore(k); return; }
+    ble_health_begin(BLE_GAP_RADIO_STOP);
     bb.state=2; /* closing and refill exclusion under the same lock */
     bb_anchor(0,14,0); bb.stop_start=fm1_ticks();
     bb.stop_bound=ble_link.state!=BLE_LINK_IDLE ? (uint32_t)ble_link.conn.interval*2500u : (uint32_t)bb.adv.params.max*1250u;
@@ -512,6 +530,7 @@ static int fm1_ble_stop_poll(void)
     if (BR_R(0x28038u)&2u) {
         if ((uint32_t)(fm1_ticks()-bb.stop_start)<bb.stop_bound) return 0;
         /* Quarantine retains the frame, window and every buffer. No abort. */
+        ble_health_end(BLE_GAP_RADIO_STOP);
         bb.state=3; br_diag.stop_timeouts++; br_error(7); return -1;
     }
     k=fm1_ble_irq_save();
@@ -523,7 +542,8 @@ static int fm1_ble_stop_poll(void)
     fm1_ble_irq_restore(k);
     /* Reclaim only after busy cleared and the source was masked/ACKed.
      * Zero the active descriptor only: do not burn an IRQ budget on 3.3 KB. */
-    memset(ble_dma.bb+BB_FRAME,0,BLE_FRAME_SIZE); bb.state=0;
+    memset(ble_dma.bb+BB_FRAME,0,BLE_FRAME_SIZE);
+    k=fm1_ble_irq_save(); bb.state=0; ble_health_end(BLE_GAP_RADIO_STOP); fm1_ble_irq_restore(k);
     return 1;
 }
 static void fm1_ble_service(void)
@@ -587,17 +607,17 @@ static void fm1_ble_worker_pend(void)
 }
 static void fm1_ble_worker_timer_start(void)
 {
-    uint32_t before=br_diag.worker_timer_calls,start=fm1_ticks();
+    uint32_t before=ble_health.calls,start=fm1_ticks();
     ble_llx_testing=ble_llx_enabled=1; fm1_ble_line_enable(4); fm1_ble_worker_pend();
-    while(*(volatile uint32_t *)&br_diag.worker_timer_calls==before && (uint32_t)(fm1_ticks()-start)<24000u) ;
+    while(*(volatile uint32_t *)&ble_health.calls==before && (uint32_t)(fm1_ticks()-start)<24000u) ;
     ble_llx_testing=0;
-    if(*(volatile uint32_t *)&br_diag.worker_timer_calls!=before+1u) {
+    if(*(volatile uint32_t *)&ble_health.calls!=before+1u) {
         ble_llx_enabled=0; fm1_irq_mask(4); br_error(10); return;
     }
     br_diag.executor_selftest=1; fm1_ble_worker_timer_arm(6000u);
 }
 static void fm1_ble_worker_timer_ack(void) { BR_R(0x10400u)=0x4000u; }
-static void fm1_ble_worker_timer_readback(uint32_t out[4])
+static inline void fm1_ble_worker_timer_readback(uint32_t out[4])
 {
     out[0]=BR_R(0x10400u); out[1]=BR_R(0x10404u); out[2]=BR_R(0x10408u);
     out[3]=(FM1_ICFG(4)>>16)&15u;

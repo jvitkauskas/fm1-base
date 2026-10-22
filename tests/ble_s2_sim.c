@@ -17,7 +17,10 @@ void (*sim_lock_hook)(void);
 int sim_stop_result=1,sim_slot[2]={-1,-1},sim_latency_enabled;
 int sim_start_steps,sim_start_failure;
 ble_adv_t sim_advertising;
-static int refilling,stopping;
+static int stopping;
+#ifndef BLE_MIC_RADIO
+static int refilling;
+#endif
 static uint32_t clock_last,clock_ms,clock_fraction;
 uint32_t ble_port_ticks(void) { return sim_ticks; }
 uint32_t ble_port_ms(void)
@@ -49,6 +52,9 @@ uint32_t ble_port_lock(void)
     return 0;
 }
 void ble_port_unlock(uint32_t key) { (void)key; }
+#ifdef BLE_MIC_RADIO
+#include "ble_mic_radio.inc"
+#else
 static void refill(unsigned limit)
 {
     unsigned i;
@@ -66,6 +72,7 @@ static void refill(unsigned limit)
 void ble_port_refill(void) { refill(2); }
 void ble_port_refill_one(void) { refill(1); }
 void ble_port_rx_recover(void) { }
+#endif
 void ble_port_window(uint32_t us) { sim_windows=us; }
 void ble_port_instant(uint8_t kind,uint16_t instant,const ble_conn_t *c) { (void)kind; (void)c; sim_registered_instant=instant; }
 void ble_port_apply(uint8_t kind,const ble_conn_t *c,uint16_t w,uint32_t win)
@@ -80,6 +87,9 @@ void ble_port_host_idle(void) { sim_advance_us(100); ble_worker(); }
 void sim_advance_us(uint32_t us) { sim_ticks+=us*24u; ble_ll_worker(); if(sim_executor_enabled) ble_worker(); }
 void sim_ack(unsigned slot)
 {
+#ifdef BLE_MIC_RADIO
+    sim_radio_ack(slot);
+#else
     int id=sim_slot[slot]; sim_slot[slot]=-1;
     if(id>=0) {
 #if FELUCCA_BLE_STAGE >= 3
@@ -89,12 +99,18 @@ void sim_ack(unsigned slot)
         ble_ll_tx_ack((unsigned)id);
     }
     ble_port_refill();
+#endif
 }
 void sim_reset(void)
 {
     sim_ticks=24000; clock_last=sim_ticks; clock_ms=1; clock_fraction=0; sim_starts=sim_stops=sim_windows=sim_applies=0;
     sim_stop_result=1; sim_start_steps=sim_start_failure=0; stopping=0;
-    sim_latency_enabled=0; sim_slot[0]=sim_slot[1]=-1; refilling=0; sim_lock_hook=0; ble_ll_init();
+    sim_latency_enabled=0; sim_slot[0]=sim_slot[1]=-1; sim_lock_hook=0; ble_ll_init();
+#ifdef BLE_MIC_RADIO
+    sim_radio_reset();
+#else
+    refilling=0;
+#endif
     memset(&sim_applied,0,sizeof sim_applied); sim_apply_kind=0;
     sim_apply_event=sim_registered_instant=0; sim_apply_ticks=0;
 }

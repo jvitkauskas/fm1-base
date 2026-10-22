@@ -28,13 +28,16 @@ static struct {
     uint16_t overflow_op[128]; uint8_t overflow_r,overflow_w,overflow_count;
 } ctl;
 _Static_assert(sizeof(ble_trace_t)==40,"trace wire/storage layout");
+#if FM1B_BLE_DIAG
 static ble_trace_t trace[BLE_TRACE_N] __attribute__((section(".ble_trace"),aligned(4)));
 static uint32_t trace_w,trace_used;
 static uint8_t trace_frozen;
+#endif
 static struct { uint8_t active,waiting,type,own_type,random[6]; uint16_t expected; } driver;
 
 static void trace_add(uint8_t type,const uint8_t *p,uint16_t n,uint8_t status)
 {
+#if FM1B_BLE_DIAG
     ble_trace_t *r;
     if (trace_frozen) { ctl.diag.trace_frozen_drops++; return; }
     r=&trace[trace_w++%BLE_TRACE_N];
@@ -51,6 +54,9 @@ static void trace_add(uint8_t type,const uint8_t *p,uint16_t n,uint8_t status)
 #endif
     if (trace_used<BLE_TRACE_N) trace_used++;
     ctl.diag.trace_count++;
+#else
+    (void)type; (void)p; (void)n; (void)status;
+#endif
 }
 static void driver_receive(uint8_t type,const uint8_t *p,uint16_t n)
 {
@@ -68,7 +74,7 @@ static void complete(uint16_t opcode,uint8_t status,const uint8_t *data,uint8_t 
     b[0]=14; b[1]=(uint8_t)(4+n); b[2]=1;
     ble_put16(b+3,opcode); b[5]=status;
     if (n) memcpy(b+6,data,n);
-    ctl.diag.replies++; ctl.diag.last_opcode=opcode; ctl.diag.last_status=status;
+    BLE_DIAG_ONLY(ctl.diag.replies++); ctl.diag.last_opcode=opcode; ctl.diag.last_status=status;
     trace_add(4,b,(uint16_t)(6+n),0);
     if (ctl.host) ctl.host(4,b,(uint16_t)(6+n));
 }
@@ -89,7 +95,7 @@ static void defaults(void)
 void ble_init(const uint8_t *public_addr,ble_host_fn host)
 {
     memset(&ctl,0,sizeof ctl); memset(&driver,0,sizeof driver);
-    trace_w=trace_used=0; trace_frozen=0;
+    BLE_DIAG_ONLY(trace_w=trace_used=0; trace_frozen=0);
     defaults(); ble_ll_init();
     if (ble_public_valid(public_addr)) memcpy(ctl.pub,public_addr,6);
     ctl.host=host;
@@ -107,7 +113,7 @@ int ble_hci_send(uint8_t type,const uint8_t *packet,uint16_t n)
         return 1;
     }
     key=ble_port_lock();
-    if (!ctl.diag.commands && !ctl.diag.replies) ctl.diag.first_command_ticks=ble_port_ticks();
+    BLE_DIAG_ONLY(if (!ctl.diag.commands && !ctl.diag.replies) ctl.diag.first_command_ticks=ble_port_ticks());
     trace_add(129,packet,n,0);
     if (ctl.count==4) {
         ctl.diag.overflow++;
@@ -120,7 +126,7 @@ int ble_hci_send(uint8_t type,const uint8_t *packet,uint16_t n)
         for(i=0;i<ctl.count;i++) ctl.q[(ctl.r+i)%4].cancel=1;
     }
     memcpy(ctl.q[ctl.w].data,packet,n); ctl.q[ctl.w].n=n; ctl.q[ctl.w].cancel=0;
-    ctl.w=(ctl.w+1u)%4; ctl.count++; ctl.diag.commands++;
+    ctl.w=(ctl.w+1u)%4; ctl.count++; BLE_DIAG_ONLY(ctl.diag.commands++);
     ble_port_unlock(key); ble_port_pend(); return 0;
 }
 static int command_length(uint16_t op)
@@ -172,9 +178,11 @@ static void supported(uint8_t *out)
 static void reset_defaults(void)
 {
     uint8_t power=ctl.adv.power;
+#if FM1B_BLE_DIAG
     uint32_t first=ctl.diag.first_command_ticks,trace_count=ctl.diag.trace_count,drops=ctl.diag.trace_frozen_drops;
+#endif
     memset(&ctl.diag,0,sizeof ctl.diag);
-    ctl.diag.first_command_ticks=first; ctl.diag.trace_count=trace_count; ctl.diag.trace_frozen_drops=drops;
+    BLE_DIAG_ONLY(ctl.diag.first_command_ticks=first; ctl.diag.trace_count=trace_count; ctl.diag.trace_frozen_drops=drops);
     defaults(); ctl.adv.power=power;
 }
 static void reset_step(void)
@@ -205,7 +213,7 @@ static void reset_step(void)
 static void command_status(uint16_t opcode,uint8_t status)
 {
     uint8_t b[6]={15,4,status,1,0,0}; ble_put16(b+4,opcode);
-    ctl.diag.replies++; ctl.diag.last_opcode=opcode; ctl.diag.last_status=status;
+    BLE_DIAG_ONLY(ctl.diag.replies++); ctl.diag.last_opcode=opcode; ctl.diag.last_status=status;
     trace_add(4,b,6,0); if(ctl.host) ctl.host(4,b,6);
 }
 static void execute(const command_t *cmd)
@@ -444,12 +452,22 @@ void ble_driver_start(uint8_t type,const uint8_t *random_addr)
 }
 void ble_driver_stop(void) { driver.active=driver.waiting=0; }
 void ble_get_diag(ble_diag_t *out) { *out=ctl.diag; }
-void ble_trace_freeze(int freeze) { trace_frozen=(uint8_t)!!freeze; }
-uint32_t ble_trace_size(void) { return trace_used; }
+void ble_trace_freeze(int freeze) { (void)freeze; BLE_DIAG_ONLY(trace_frozen=(uint8_t)!!freeze); }
+uint32_t ble_trace_size(void) {
+#if FM1B_BLE_DIAG
+    return trace_used;
+#else
+    return 0;
+#endif
+}
 const ble_trace_t *ble_trace_record(uint32_t oldest_index)
 {
+#if FM1B_BLE_DIAG
     if (!trace_frozen || oldest_index>=trace_used) return 0;
     return &trace[(trace_w-trace_used+oldest_index)%BLE_TRACE_N];
+#else
+    (void)oldest_index; return 0;
+#endif
 }
 void ble_set_power(uint8_t level)
 {

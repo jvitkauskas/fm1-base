@@ -50,6 +50,7 @@
 #include "fm1_lcd_hw.h"
 #if FM1B_BLE_OPEN
 #include "../open_ble/ble_store.h"
+#include "../open_ble/ble_health.h"
 #endif
 #include "fm1_flash.h"
 #include "fm1_xip.h"
@@ -140,13 +141,27 @@ static int st_erase(uint32_t off)
     if (!FL_STORE_OK(off, 0x1000u))
         return -8;
     audio_silence();
-    return fl_erase4k(off, &took);
+#if FM1B_BLE_OPEN
+    uint32_t k=irq_save(); ble_health_begin(BLE_GAP_FLASH); irq_restore(k);
+#endif
+    int rc=fl_erase4k(off, &took);
+#if FM1B_BLE_OPEN
+    k=irq_save(); ble_health_end(BLE_GAP_FLASH); irq_restore(k);
+#endif
+    return rc;
 }
 static int st_prog(uint32_t off, const void *src, uint32_t n)
 {
     if (!FL_STORE_OK(off, n))
         return -8;
-    return fl_write(off, src, n);
+#if FM1B_BLE_OPEN
+    uint32_t k=irq_save(); ble_health_begin(BLE_GAP_FLASH); irq_restore(k);
+#endif
+    int rc=fl_write(off, src, n);
+#if FM1B_BLE_OPEN
+    k=irq_save(); ble_health_end(BLE_GAP_FLASH); irq_restore(k);
+#endif
+    return rc;
 }
 #include "storage.c"
 

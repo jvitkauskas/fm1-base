@@ -48,15 +48,22 @@ typedef struct {
     uint8_t win,outcome,reason;
 } ble_update_diag_t;
 typedef struct {
-    uint32_t epoch,created,accepted,invalid,events,rx_class[4],repetitions,rx_backpressure;
-    uint32_t acl_in,acl_out,acl_rejected,acknowledged,ncp,flushed,ctrl_drop,ignored;
+    uint32_t epoch,created,invalid,events,rx_backpressure;
+#if FM1B_BLE_DIAG
+    uint32_t accepted,repetitions,acl_in,acl_out,acknowledged,ncp,flushed,ignored,rx_delayed,worker_calls,epoch_markers;
+#endif
+    uint32_t acl_rejected,ctrl_drop;
     uint32_t establishment_fail,supervision_fail,disconnects,updates,map_updates,late_instants;
-    uint32_t worker_gap_ticks,worker_max_ticks,worker_over_gap,rx_delayed,worker_calls,terminate_timeouts;
-    uint32_t epoch_markers;
+    uint32_t worker_gap_ticks,worker_max_ticks,worker_over_gap,terminate_timeouts;
+#if FM1B_BLE_DIAG
+    uint32_t rx_class[4];
+#endif
     uint16_t interval,latency,timeout,event,rx_used,tx_used,rx_peak;
     uint8_t state,established,reason,peer_features[8];
+#if FM1B_BLE_DIAG
     uint32_t ignore_reasons[BLE_IGNORE_COUNT],update_serial;
     ble_update_diag_t update[4];
+#endif
     ble_conn_t pending;
     uint16_t instant,received,ignored_event;
     uint8_t instant_kind,programmed,ignored_opcode,ignored_reason;
@@ -103,6 +110,8 @@ int ble_ll_create(const ble_conn_t *c,uint32_t now);
 int ble_ll_rx_room(void);
 int ble_ll_rx_marker(uint8_t marker);
 int ble_ll_rx_delayed(uint16_t status,uint16_t header,const uint8_t *data,uint32_t stamp,uint16_t event,int delayed);
+int ble_ll_rx_slot(uint16_t status,uint16_t header,const uint8_t *data,uint32_t stamp,uint16_t event,
+                   int delayed,uint8_t slot,uint8_t flags);
 int ble_ll_rx(uint16_t status,uint16_t header,const uint8_t *data,uint32_t stamp,uint16_t event);
 void ble_ll_event(uint16_t event,uint32_t now);
 void ble_ll_worker(void);

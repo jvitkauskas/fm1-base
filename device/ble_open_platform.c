@@ -6,6 +6,7 @@
 /* fm1-base adapter over felucca-bsp. Register access stays in open_ble/hal.
  * BSP wrappers account nested baseband/audio/TIMER5 preemption once. */
 #include "../open_ble/ble_s1.h"
+#include "../open_ble/ble_health.h"
 static ble_cal_t ble_cal;
 static uint8_t ble_random_config[6],ble_started,ble_store_valid;
 #include "../open_ble/ble_host.h"
@@ -31,16 +32,16 @@ void ble_port_host_idle(void) { fm1_wdt_feed(); }
 void fm1_ble_worker_irq(void)
 {
     static uint32_t chain_start;
-    uint32_t key=fm1_ble_irq_save(),start=fm1_ticks(),gap=start-br_diag.worker_timer_last_ticks;
+    uint32_t key=fm1_ble_irq_save(),start=fm1_ticks();
+    uint8_t state=ble_link.state!=BLE_LINK_IDLE && ble_link.state!=BLE_LINK_STOPPED ? BLE_HEALTH_LINK :
+        bb.state==1 ? BLE_HEALTH_ADVERTISING : bb.start_phase ? BLE_HEALTH_STARTING : ble_health.phase;
+    ble_health_sample(start,state,ble_link.epoch);
     fm1_ble_worker_timer_ack(); ble_llx_running=1;
     if(ble_llx_pending) {
         ble_time_dispatch(ble_llx_request_ticks,start);
     }
     ble_llx_pending=0;
     ble_llx_request_ticks=0;
-    if(br_diag.worker_timer_calls && gap>br_diag.worker_timer_gap_ticks) br_diag.worker_timer_gap_ticks=gap;
-    if(br_diag.worker_timer_calls && gap>7500u*24u) br_diag.worker_timer_over_gap++;
-    br_diag.worker_timer_calls++; br_diag.worker_timer_last_ticks=start;
     ble_time_pass_begin(start);
     fm1_ble_irq_restore(key);
     if(!ble_llx_testing) {
@@ -67,7 +68,13 @@ void fm1_ble_worker_irq(void)
 
 uint32_t ble_port_ticks(void) { return fm1_ticks(); }
 uint32_t ble_port_ms(void) { return fm1_ms; }
-int ble_port_start(const ble_adv_t *adv) { return fm1_ble_adv_start(adv); }
+int ble_port_start(const ble_adv_t *adv)
+{
+    uint32_t k=fm1_ble_irq_save(); ble_health_begin(BLE_GAP_RADIO_START); fm1_ble_irq_restore(k);
+    int rc=fm1_ble_adv_start(adv);
+    if(rc<=0) { k=fm1_ble_irq_save(); ble_health_end(BLE_GAP_RADIO_START); fm1_ble_irq_restore(k); }
+    return rc;
+}
 void ble_port_update(const ble_adv_t *adv) { fm1_ble_adv_update(adv); }
 void ble_port_stop_begin(void) { bb.restart=0; fm1_ble_stop_begin(); }
 int ble_port_stop_poll(void) { return fm1_ble_stop_poll(); }
@@ -80,8 +87,6 @@ void ble_port_reset_stats(void)
     br_diag.rx_max_ticks=br_diag.event_max_ticks=br_diag.irq_over_budget=0;
     br_diag.event_work_max_ticks=br_diag.event_over_150us=0;
     br_diag.worker_gap_ticks=0; bb.last_worker=0;
-    br_diag.worker_timer_calls=br_diag.worker_timer_last_ticks=0;
-    br_diag.worker_timer_gap_ticks=br_diag.worker_timer_over_gap=0;
     ble_time_reset();
     fm1_ble_irq_restore(k);
 }
@@ -122,18 +127,19 @@ int ble_port_object_save(const void *src,uint32_t n)
 static void ble_platform_irq_probe(void)
 {
     uint32_t outer=fm1_ble_irq_save(),before,inner;
-    br_diag.irq_probe[0]=fm1_ble_icfg_read();
-    inner=fm1_ble_irq_save(); br_diag.irq_probe[1]=fm1_ble_icfg_read();
-    fm1_ble_irq_restore(inner); br_diag.irq_probe[2]=fm1_ble_icfg_read();
+    BLE_DIAG_ONLY(br_diag.irq_probe[0]=fm1_ble_icfg_read());
+    inner=fm1_ble_irq_save(); BLE_DIAG_ONLY(br_diag.irq_probe[1]=fm1_ble_icfg_read());
+    fm1_ble_irq_restore(inner); BLE_DIAG_ONLY(br_diag.irq_probe[2]=fm1_ble_icfg_read());
     before=fm1_ms;
     fm1_delay_us(1200);
     br_diag.irq_ticks_while_masked=fm1_ms-before;
-    fm1_ble_irq_restore(outer); br_diag.irq_probe[3]=fm1_ble_icfg_read();
+    fm1_ble_irq_restore(outer); BLE_DIAG_ONLY(br_diag.irq_probe[3]=fm1_ble_icfg_read());
     if(br_diag.irq_ticks_while_masked) fm1_ble_fail(9);
 }
 /* P2 before audio/USB, regardless of APP_BLE_AT_BOOT. */
 static void ble_platform_prepare(void)
 {
+    ble_health_init(fm1_ticks(),fm1_ms); ble_health_begin(BLE_GAP_BOOT);
     ble_breadcrumb_init(&fm1_ble_breadcrumb); bb_mark(BLE_STAGE_PREPARE,0);
     ble_read_cal(ble_flash_plain,&ble_cal);
     ble_store_valid=(uint8_t)fm1_ble_store_map_valid();
@@ -141,16 +147,23 @@ static void ble_platform_prepare(void)
     uint32_t r64[2]; fm1_ble_r64_snapshot(r64);
     ble_seed_boot(ble_cal.public_addr,(uint32_t)fm1_boot.p3_rst|(fm1_boot.rst_src<<8),r64[0],r64[1]);
     br_clock_probe();
+    ble_health_end(BLE_GAP_BOOT);
 }
 static int ble_platform_start(void)
 {
+    /* Calibration runs once, before the executor or any advertising instance.
+     * Re-enable never enters this path, even after five off/on cycles. */
+    if(ble_started || !ble_port_storage_idle()) return -1;
+    ble_health_begin(BLE_GAP_BOOT|BLE_GAP_RADIO_START);
     ble_platform_irq_probe();
     if(!ble_port_failed()) fm1_ble_startup(&ble_cal);
-    if(ble_port_failed() || !ble_public_valid(ble_cal.public_addr)) return -1;
+    if(ble_port_failed() || !ble_public_valid(ble_cal.public_addr)) { ble_health_end(BLE_GAP_BOOT|BLE_GAP_RADIO_START); return -1; }
     ble_seed_diag_t seed; ble_seed_get_diag(&seed);
-    if(seed.state==BLE_SEED_FAILED) return -1;
+    if(seed.state==BLE_SEED_FAILED) { ble_health_end(BLE_GAP_BOOT|BLE_GAP_RADIO_START); return -1; }
     ble_init(ble_cal.public_addr,0);
+    ble_health_ms(fm1_ticks());
     fm1_ble_worker_timer_start();
+    uint32_t key=fm1_ble_irq_save(); ble_health_end(BLE_GAP_BOOT|BLE_GAP_RADIO_START); fm1_ble_irq_restore(key);
     if(ble_port_failed()) return -1;
     ble_host_start(); ble_started=1; bb_mark(BLE_STAGE_READY,0); return 0;
 }

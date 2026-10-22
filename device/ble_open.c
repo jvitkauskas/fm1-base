@@ -3,6 +3,7 @@
 /* fm1-base peripheral seam. Host work and all lifecycle changes run in main. */
 #include "../open_ble/ble_host.h"
 #include "../open_ble/ble_store.h"
+#include "../open_ble/ble_health.h"
 #if FM1B_BLE_CENTRAL
 #error "ble = open supports peripheral BLE-MIDI only; disable ble_central"
 #endif
@@ -60,11 +61,15 @@ int plat_ble_connected(void) { return ble_wanted && ble_started && ble_host_conn
 static void ble_poll(void)
 {
     if(ble_polling) return;
+    if(ble_health.initialized) {
+        uint32_t k=ble_port_lock(); ble_health_ms(fm1_ticks()); ble_port_unlock(k);
+    }
     ble_polling=1;
     if(ble_wanted && !ble_started && ble_state!=BLE_FAILED) {
         open_log_init(); open_log.total=0; open_log.active=1;
         open_log.crash_seen=fm1_crash.magic==FM1_CRASH_MAGIC ? fm1_crash.count : 0;
         plat_log("open BLE S3.1d / NimBLE 1.9.0 starting");
+        ble_health.phase=BLE_HEALTH_STARTING;
         radio_quiet=1;
         if(ble_platform_start()) {
             ble_state=BLE_FAILED; plat_log("open BLE FAILED (see USB log counters)");
@@ -79,7 +84,7 @@ static void ble_poll(void)
         }
         ble_host_worker();
         if(!ble_wanted) {
-            ble_state=BLE_OFF;
+            ble_state=BLE_OFF; ble_health.phase=BLE_HEALTH_OFF;
             if(ble_port_storage_idle() && !ble_host_linked()) open_log.active=0;
         } else {
             ble_host_diag_t d; ble_host_get_diag(&d);
@@ -107,9 +112,17 @@ int plat_ble_device(void) { return BLE_DEV_OFF; }
  * The RAM flash driver rechecks idle atomically at every issued operation. */
 static int ble_open_store_begin(void)
 {
-    if(!ble_started) return ble_port_storage_idle() ? 0 : -8;
+    if(!ble_started) {
+        if(!ble_port_storage_idle()) return -8;
+        uint32_t k=ble_port_lock(); ble_health_begin(BLE_GAP_FLASH); ble_port_unlock(k); return 0;
+    }
     if(ble_host_pause_advertising()) return -8;
     if(!ble_port_storage_idle()) { ble_host_resume_advertising(); return -8; }
+    uint32_t k=ble_port_lock(); ble_health_begin(BLE_GAP_FLASH); ble_port_unlock(k);
     return 0;
 }
-static void ble_open_store_end(void) { if(ble_started) ble_host_resume_advertising(); }
+static void ble_open_store_end(void)
+{
+    uint32_t k=ble_port_lock(); ble_health_end(BLE_GAP_FLASH); ble_port_unlock(k);
+    if(ble_started) ble_host_resume_advertising();
+}

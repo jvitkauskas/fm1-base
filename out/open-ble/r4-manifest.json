@@ -1,0 +1,48 @@
+{
+  "identity": "FM-1_1100",
+  "database_generation": 3,
+  "uncommitted": true,
+  "soak_mic_root_cause": "unproven",
+  "fix": "Remember slot delay/backpressure when marker reservation blocks before slot loop; no CCM counter algorithm change",
+  "journal_records": 4,
+  "stress_events": 10000000,
+  "stress_seed": "4d494334",
+  "stress_accepted_encrypted": 2280220,
+  "hardware": "No device access; eight-hour owner soak pending after R3 bench",
+  "images": {
+    "template/build/template-open.fwsc": {
+      "sha256": "42a5b5602d93dcc0cc69cd0d1bb22e732399ebe3905eaabea70822c6b7a12eec",
+      "bytes": 610136
+    },
+    "template/build/template-open-r4.fwsc": {
+      "sha256": "8866ab78df218f4a9c89c4b409e9fce9c3b2d4d4b49aeb2574ef94f85ed6fe06",
+      "bytes": 610136
+    },
+    "template/build/template-open-r4-no-diag.fwsc": {
+      "sha256": "4da4d456aefb6e58b6c2fded86a4659666e2e1b40544db2bd9478b327bde6e76",
+      "bytes": 610136
+    }
+  },
+  "diagnostics_on": {
+    "app_flash": 195648,
+    "static_ram": 34584,
+    "pool": 101212,
+    "ramtext": 3112,
+    "trace": 20480
+  },
+  "diagnostics_off": {
+    "app_flash": 184624,
+    "static_ram": 33756,
+    "pool": 99228,
+    "ramtext": 3112,
+    "trace": 0
+  },
+  "validation": {
+    "aggregate_ble_suites": "PASS ASan/UBSan",
+    "final_hal_10m_events": "PASS ASan/UBSan",
+    "marker_wait_regression": "fails with the isolated flag-store removed; passes restored",
+    "felucca_suites": "S1/S2/S3/S3.1 and MIC directed suite PASS ASan/UBSan",
+    "builds": "diagnostics on/off and source-only policy PASS",
+    "R3_package": "original hash and byte-for-byte backup match"
+  }
+}

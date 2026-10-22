@@ -49,21 +49,51 @@ class Fixtures(unittest.TestCase):
                 b.clear()
                 b.update(saved)
 
+    def test_partial_results_after_usb_error(self):
+        import json
+        import sys
+        from unittest.mock import MagicMock
+        with tempfile.TemporaryDirectory(dir=ROOT/'build') as directory:
+            output=Path(directory)/'bench'
+            argv=['bench','--address','00:11:22:33:44:55','--usb-port','fake',
+                  '--output',str(output),'--soak-seconds','0']
+            sample=(0,dict(conn_interval_1250us=12,conn_updates=0,link_epoch=1))
+            with patch.object(sys,'argv',argv), patch.object(bench.socket,'socket'), \
+                 patch.object(bench.subprocess,'Popen',return_value=MagicMock(poll=lambda: None)), \
+                 patch.object(bench,'Console'), patch.object(bench,'bluez'), \
+                 patch.object(bench,'connect',return_value=1), patch.object(bench,'update'), \
+                 patch.object(bench,'stable',return_value=sample), patch.object(bench.time,'sleep'), \
+                 patch.object(bench,'measure',side_effect=[dict(label='initial',measured_ms=15),
+                     RuntimeError('USB log incomplete (missing end)')]):
+                with self.assertRaisesRegex(RuntimeError,'USB log incomplete'):
+                    bench.main()
+            self.assertEqual(json.loads((output/'measurements.json').read_text()),
+                             [dict(label='initial',measured_ms=15)])
+            status=json.loads((output/'status.json').read_text())
+            self.assertFalse(status['completed'])
+            self.assertIn('missing end',status['error']['detail'])
+
     def test_console_parser(self):
-        raw = b'ble\r\nconn_event 65535\r\nworker_timer_last_ticks 0xF403A1CD\r\npending_proc kind 0 instant 0\r\nvco_limits 47 47\r\n> '
+        raw = ('log: conn_event 65535\nlog: link_epoch 2\nlog: conn_interval_1250us 12\n'
+               'log: conn_events 90\nlog: enc_enabled 1\n'
+               'log: worker_timer_last_ticks 0xF403A1CD\nlog: pending_proc kind 0 instant 0\n')
+        values = bench.parse_counters(raw)
+        self.assertEqual(values['conn_event'], 65535)
+        self.assertEqual(values['worker_timer_last_ticks'], 0xF403A1CD)
+        self.assertEqual(values['pending_kind'], 0)
+        with self.assertRaisesRegex(RuntimeError, 'incomplete'):
+            bench.parse_counters('conn_event 0\n')
+        class Remote:
+            def read_log(self, compact):
+                assert compact
+                return raw
         with tempfile.TemporaryDirectory(dir=ROOT/'build') as directory:
             console = bench.Console.__new__(bench.Console)
-            console.fd, console.directory, console.sequence = 123, Path(directory), 0
-            with patch.object(bench.termios, 'tcflush'), patch.object(bench.os, 'write'), \
-                    patch.object(bench.os, 'read', return_value=raw), \
-                    patch.object(bench.select, 'select', return_value=([123], [], [])), \
-                    patch.object(bench.time, 'monotonic', side_effect=(1, 1, 1.1)):
+            console.remote, console.directory, console.sequence, console.full = Remote(), Path(directory), 0, False
+            with patch.object(bench.time, 'monotonic', side_effect=(1, 1.1)):
                 stamp, values = console.sample()
             self.assertAlmostEqual(stamp, 1.05)
-            self.assertEqual(values['conn_event'], 65535)
-            self.assertEqual(values['worker_timer_last_ticks'], 0xF403A1CD)
-            self.assertEqual(values['pending_kind'], 0)
-            self.assertTrue((Path(directory)/'console-001.txt').is_file())
+            self.assertTrue((Path(directory)/'usb-0001.txt').is_file())
 
 
 if __name__ == '__main__':

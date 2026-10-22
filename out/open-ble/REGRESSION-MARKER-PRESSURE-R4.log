@@ -1,0 +1,2 @@
+mic-stress: tests/ble_mic_stress.c:62: begin: Assertion `sim_radio_full()==1 && sim_radio_pressure==pressure+1u' failed.
+EXPECTED FAILURE with only reservation-wait marking removed: held slot failed the pressure-state assertion.

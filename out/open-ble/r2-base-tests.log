@@ -1,0 +1,46 @@
+  ok   encoder
+  ok   trs
+  ok   storage
+  FAIL fastmath (see template/build/tests/fastmath.log)
+       tests/../include/fastmath.h:58:14: runtime error: left shift of negative value -126
+           #0 0x4011a9 in main.cold (/root/fm1/fm1-base-open/template/build/tests/fastmath_test+0x4011a9) (BuildId: d492292ace4ee8d7d1f4299ae88339347ac8ad2d)
+           #1 0x7af56d275ca7  (/lib/x86_64-linux-gnu/libc.so.6+0x29ca7) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+           #2 0x7af56d275d64 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x29d64) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+           #3 0x4023b0 in _start (/root/fm1/fm1-base-open/template/build/tests/fastmath_test+0x4023b0) (BuildId: d492292ace4ee8d7d1f4299ae88339347ac8ad2d)
+       
+  ok   installer
+  ok   backup
+  ok   backup-tool
+  ok   backup-page
+  skip update path (no template/build/template.fwsc: tools/build.py template)
+  ok   host-build
+  FAIL mirror (see template/build/tests/mirror.log)
+       tests/../device/mirror.c:179:39: runtime error: index 988 out of bounds for type 'uint8_t [988]'
+           #0 0x40d14b in mirror_blit (/root/fm1/fm1-base-open/template/build/tests/mirror_test+0x40d14b) (BuildId: 3fd4d3945c17f221ef266ea8209a8042ac0a468d)
+           #1 0x40e4ea in blit_all (/root/fm1/fm1-base-open/template/build/tests/mirror_test+0x40e4ea) (BuildId: 3fd4d3945c17f221ef266ea8209a8042ac0a468d)
+           #2 0x40feca in session (/root/fm1/fm1-base-open/template/build/tests/mirror_test+0x40feca) (BuildId: 3fd4d3945c17f221ef266ea8209a8042ac0a468d)
+           #3 0x403e5a in main (/root/fm1/fm1-base-open/template/build/tests/mirror_test+0x403e5a) (BuildId: 3fd4d3945c17f221ef266ea8209a8042ac0a468d)
+           #4 0x77ccfd49aca7  (/lib/x86_64-linux-gnu/libc.so.6+0x29ca7) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+           #5 0x77ccfd49ad64 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x29d64) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+           #6 0x405ea0 in _start (/root/fm1/fm1-base-open/template/build/tests/mirror_test+0x405ea0) (BuildId: 3fd4d3945c17f221ef266ea8209a8042ac0a468d)
+       
+  FAIL mirror-viewer (see template/build/tests/mirror-viewer.log)
+       FAIL the screen: 200 rows differ from the device's (screen.bin)
+       FAIL remote answers: [{"seq":7,"op":1,"ok":false},{"seq":8,"op":1,"ok":false}]
+       FAIL no report of SEL held with keys 5 and 9
+       FAIL the turns: 0,0,0,0,0,0,0 (K1 3, PRESETS -2, K2 4)
+       FAIL MASTER 2048
+       FAIL PLAY never lit (green)
+       FAIL fed again in other pieces: 0 bad, 0 missing
+       FAILED: 414463 bytes, 569 frames (554 rects, 2 fills, 10 input reports), turns 0 0 0 0 0 0 0
+  ok   mirror-png
+  FAIL template (see template/build/tests/template.log)
+       /root/fm1/fm1-base-open/include/fastmath.h:58:14: runtime error: left shift of negative value -1
+           #0 0x4028a7 in app_render.cold (/root/fm1/fm1-base-open/template/build/host/template_host+0x4028a7) (BuildId: 497e4aadee43915d3871741e5a72aeb0cfe0c0b6)
+           #1 0x423ae3 in run_ms (/root/fm1/fm1-base-open/template/build/host/template_host+0x423ae3) (BuildId: 497e4aadee43915d3871741e5a72aeb0cfe0c0b6)
+           #2 0x403535 in main (/root/fm1/fm1-base-open/template/build/host/template_host+0x403535) (BuildId: 497e4aadee43915d3871741e5a72aeb0cfe0c0b6)
+           #3 0x7e5e089faca7  (/lib/x86_64-linux-gnu/libc.so.6+0x29ca7) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+           #4 0x7e5e089fad64 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x29d64) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+           #5 0x4083f0 in _start (/root/fm1/fm1-base-open/template/build/host/template_host+0x4083f0) (BuildId: 497e4aadee43915d3871741e5a72aeb0cfe0c0b6)
+       
+TESTS FAILED

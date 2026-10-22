@@ -1,0 +1,14 @@
+[
+  {
+    "document": "Apple-Accessory-Design-Guidelines.pdf",
+    "url": "https://developer.apple.com/accessories/Accessory-Design-Guidelines.pdf",
+    "sha256": "b631b8b25d6b4fba85f90dff494a7a7edc9996e357cbc97093aedc9d9bd6f2c9",
+    "bytes": 32775473
+  },
+  {
+    "document": "BLE-MIDI-1.0.pdf",
+    "url": "https://drive.google.com/file/d/15jF6H78kMS0jEBQ7JpH0W6MHf_yxoE5r/view",
+    "sha256": "70cae8df6d440c64423f0376970653d74a622c8e1dd564a833fef328bc8fc9e0",
+    "bytes": 413465
+  }
+]

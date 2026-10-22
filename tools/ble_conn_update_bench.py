@@ -3,9 +3,9 @@
 # Copyright (c) 2026 Julius Vitkauskas
 """OWNER ONLY: Linux desktop single-update bench; never invoked by builds/tests.
 Requires root/CAP_NET_RAW, btmon, bluetoothctl, an already bonded FM-1, and its
-CDC console with other console clients closed. Does not flash or remove bonds.
+USB-MIDI log port with other USB log clients closed (mido + python-rtmidi). Does not flash or remove bonds.
 Example: sudo python3 tools/ble_conn_update_bench.py --address FD:60:52:C0:DF:6C \
-    --console /dev/ttyACM0 --output out/s31d-owner
+    --usb-port "TEMPLATE FM-1:TEMPLATE FM-1 MIDI 1 24:0" --output out/s31d-owner
 """
 import argparse
 import json
@@ -17,50 +17,40 @@ import signal
 import socket
 import struct
 import subprocess
-import termios
 import time
 
 
+def parse_counters(text):
+    text = re.sub(r'^log: ?', '', text, flags=re.M)
+    values = {k: int(v, 0) for k, v in re.findall(
+        r'^([a-zA-Z0-9_]+) (-?(?:0x[0-9A-Fa-f]+|[0-9]+))\r?$', text, re.M)}
+    pending = re.search(r'^pending_proc kind (\d+)', text, re.M)
+    if pending:
+        values['pending_kind'] = int(pending[1])
+    required = ('pending_kind', 'link_epoch', 'conn_interval_1250us', 'enc_enabled', 'conn_events')
+    if any(k not in values for k in required):
+        raise RuntimeError('incomplete BLE counters; install round-2 open firmware and close other USB clients')
+    return values
+
+
 class Console:
-    def __init__(self, path, directory):
-        self.fd = os.open(path, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
-        self.saved = termios.tcgetattr(self.fd)
-        config = termios.tcgetattr(self.fd)
-        config[:4] = [0, 0, termios.CS8 | termios.CREAD | termios.CLOCAL, 0]
-        config[4:6] = [termios.B115200, termios.B115200]
-        config[6][termios.VMIN] = config[6][termios.VTIME] = 0
-        termios.tcsetattr(self.fd, termios.TCSANOW, config)
-        self.directory, self.sequence = directory, 0
+    """USB-MIDI transport. The retained name keeps existing measurement callers simple."""
+    def __init__(self, port, directory, full=False):
+        from fm1_remote import FM1
+        self.remote = FM1(port)
+        self.directory, self.sequence, self.full = directory, 0, full
 
     def close(self):
-        termios.tcsetattr(self.fd, termios.TCSANOW, self.saved)
-        os.close(self.fd)
+        self.remote.close()
 
     def sample(self):
-        termios.tcflush(self.fd, termios.TCIFLUSH)
         start = time.monotonic()
-        os.write(self.fd, b'ble\r')
-        raw = b''
-        deadline = start + 8
-        while time.monotonic() < deadline:
-            if select.select([self.fd], [], [], 0.1)[0]:
-                raw += os.read(self.fd, 65536)
-                if b'vco_limits ' in raw and raw.rstrip().endswith(b'>'):
-                    break
-        else:
-            raise RuntimeError('console dump timed out; close other serial clients')
+        text = self.remote.read_log(compact=not self.full)
         stop = time.monotonic()
-        text = raw.decode(errors='replace')
         self.sequence += 1
-        (self.directory / f'console-{self.sequence:03d}.txt').write_text(
+        (self.directory / f'usb-{self.sequence:04d}.txt').write_text(
             f'monotonic_start {start:.9f}\nmonotonic_end {stop:.9f}\n{text}')
-        values = {k: int(v, 0) for k, v in re.findall(
-            r'^([a-zA-Z0-9_]+) (-?(?:0x[0-9A-Fa-f]+|[0-9]+))\r?$', text, re.M)}
-        pending = re.search(r'^pending_proc kind (\d+)', text, re.M)
-        if not pending:
-            raise RuntimeError('round-4 pending_proc diagnostics missing')
-        values['pending_kind'] = int(pending[1])
-        return (start + stop) / 2, values
+        return (start + stop) / 2, parse_counters(text)
 
 
 def next_event(radio, deadline):
@@ -120,7 +110,7 @@ def stable(console, interval=None):
         signature = (values['link_epoch'], values['conn_interval_1250us'], values['conn_updates'])
         if (values['link_state_idle_created_up_closing_stopped'] == 2 and
                 values['enc_enabled'] == 1 and values['pending_kind'] == 0 and
-                values['conn_latency'] == 0 and (interval is None or signature[1] == interval) and
+                values['conn_latency'] == 0 and not values.get('param_pending', 1) and (interval is None or signature[1] == interval) and
                 signature == previous):
             return stamp, values
         previous = signature
@@ -151,7 +141,8 @@ def measure(console, interval, seconds, label):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--address', required=True)
-    parser.add_argument('--console', required=True)
+    parser.add_argument('--usb-port', required=True, help='exact USB-MIDI input/output name; do not select the BLE port')
+    parser.add_argument('--full-log', action='store_true', help='use fm1_remote log instead of the fast ble readout')
     parser.add_argument('--index', type=int, default=0)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--measure-seconds', type=float, default=10)
@@ -162,51 +153,64 @@ def main():
         parser.error('measure for at least 5 seconds; soak must be nonnegative')
     args.output.mkdir(parents=True, exist_ok=False)
     results = []
-    with (args.output / 'btmon.txt').open('w') as log, socket.socket(
-            socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI) as radio:
-        radio.bind((args.index,))
-        radio.setsockopt(0, 2, struct.pack('<IIIH2x', 1 << 4, 0xffffffff, 0xffffffff, 0))
-        monitor = subprocess.Popen(['btmon', '-i', f'hci{args.index}', '-w', str(args.output/'capture.btsnoop')],
-                                   stdout=log, stderr=subprocess.STDOUT)
-        console = None
-        try:
-            time.sleep(0.5)
-            if monitor.poll() is not None:
-                raise RuntimeError('btmon failed; inspect btmon.txt')
-            console = Console(args.console, args.output)
-            bluez(args.address, False)
-            time.sleep(1)
-            handle = connect(radio, args.address)
-            _, current = stable(console)
-            if current['conn_interval_1250us'] != 12:
-                update(radio, handle, 12)  # separately captured normalization
-            results.append(measure(console, 12, args.measure_seconds, 'initial 15 ms'))
-            time.sleep(args.soak_seconds)
-            results.append(measure(console, 12, args.measure_seconds, '15 ms after soak'))
-            for old, new in ((12, 6), (6, 12), (12, 24), (24, 12)):
-                _, before = stable(console, old)
-                update(radio, handle, new)
-                _, after = stable(console, new)
-                if after['conn_updates'] != before['conn_updates'] + 1:
-                    raise RuntimeError('FM-1 must apply exactly one update; inspect update records')
-                results.append(measure(console, new, args.measure_seconds, f'{old*1.25:g}->{new*1.25:g} ms'))
-            _, before = stable(console, 12)
-            bluez(args.address, False)
-            time.sleep(1)
-            handle = connect(radio, args.address)
-            _, after = stable(console)
-            if after['link_epoch'] == before['link_epoch']:
-                raise RuntimeError('connection epoch did not change')
-            if after['conn_interval_1250us'] != 12:
-                update(radio, handle, 12)
-            results.append(measure(console, 12, args.measure_seconds, '15 ms after disconnect/reconnect'))
-            (args.output/'measurements.json').write_text(json.dumps(results, indent=2)+'\n')
-            bluez(args.address, False)
-        finally:
-            if console:
-                console.close()
-            monitor.send_signal(signal.SIGINT)
-            monitor.wait(timeout=10)
+    error = None
+    completed = False
+    try:
+        with (args.output / 'btmon.txt').open('w') as log, socket.socket(
+                socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI) as radio:
+            radio.bind((args.index,))
+            radio.setsockopt(0, 2, struct.pack('<IIIH2x', 1 << 4, 0xffffffff, 0xffffffff, 0))
+            monitor = subprocess.Popen(['btmon', '-i', f'hci{args.index}', '-w', str(args.output/'capture.btsnoop')],
+                                       stdout=log, stderr=subprocess.STDOUT)
+            console = None
+            try:
+                time.sleep(0.5)
+                if monitor.poll() is not None:
+                    raise RuntimeError('btmon failed; inspect btmon.txt')
+                console = Console(args.usb_port, args.output, args.full_log)
+                bluez(args.address, False)
+                time.sleep(1)
+                handle = connect(radio, args.address)
+                _, current = stable(console)
+                if current['conn_interval_1250us'] != 12:
+                    update(radio, handle, 12)  # separately captured normalization
+                results.append(measure(console, 12, args.measure_seconds, 'initial 15 ms'))
+                time.sleep(args.soak_seconds)
+                results.append(measure(console, 12, args.measure_seconds, '15 ms after soak'))
+                for old, new in ((12, 6), (6, 9), (9, 12), (12, 24), (24, 12)):
+                    _, before = stable(console, old)
+                    update(radio, handle, new)
+                    _, after = stable(console, new)
+                    if after['conn_updates'] != before['conn_updates'] + 1:
+                        raise RuntimeError('FM-1 must apply exactly one update; inspect update records')
+                    results.append(measure(console, new, args.measure_seconds, f'{old*1.25:g}->{new*1.25:g} ms'))
+                _, before = stable(console, 12)
+                bluez(args.address, False)
+                time.sleep(1)
+                handle = connect(radio, args.address)
+                _, after = stable(console)
+                if after['link_epoch'] == before['link_epoch']:
+                    raise RuntimeError('connection epoch did not change')
+                if after['conn_interval_1250us'] != 12:
+                    update(radio, handle, 12)
+                results.append(measure(console, 12, args.measure_seconds, '15 ms after disconnect/reconnect'))
+                bluez(args.address, False)
+            finally:
+                if console:
+                    console.close()
+                monitor.send_signal(signal.SIGINT)
+                monitor.wait(timeout=10)
+        completed = True
+    except BaseException as exc:
+        error = dict(type=type(exc).__name__, detail=str(exc))
+        raise
+    finally:
+        # Preserve every completed measurement even if setup, reconnect, USB,
+        # a later measurement or monitor cleanup fails (also Ctrl-C).
+        (args.output/'measurements.json').write_text(json.dumps(results, indent=2)+'\n')
+        (args.output/'status.json').write_text(json.dumps(dict(
+            completed=completed, measurements=len(results), error=error), indent=2)+'\n')
+
 
 
 if __name__ == '__main__':

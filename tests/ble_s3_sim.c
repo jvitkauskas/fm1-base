@@ -11,6 +11,10 @@ uint8_t sim_flash[12288];
 int sim_flash_fault,sim_flash_idle=1,sim_flash_mismatch,sim_aes_fault;
 unsigned sim_erases[3],sim_programs[3];
 static struct tc_aes_key_sched_struct aes;
+#ifdef BLE_MIC_RADIO
+static int aes_busy;
+static uint32_t aes_lock;
+#endif
 uint32_t sim_sha_compressions,sim_sha_cost_ticks;
 uint32_t sim_aes_blocks,sim_aes_cost_ticks,sim_memory_cost_ticks;
 void *__real_memset(void *,int,size_t);
@@ -44,6 +48,9 @@ int __wrap_tc_sha256_final(uint8_t *p,TCSha256State_t s)
 }
 int ble_port_aes_begin(const uint8_t key[16])
 {
+#ifdef BLE_MIC_RADIO
+    aes_lock=ble_port_lock(); assert(!aes_busy); aes_busy=1;
+#endif
     uint32_t cost=sim_memory_cost_ticks; int rc;
     sim_memory_cost_ticks=0; rc=!sim_aes_fault && tc_aes128_set_encrypt_key(&aes,key);
     sim_memory_cost_ticks=cost; return rc;
@@ -57,7 +64,11 @@ int ble_port_aes_block(const uint8_t in[16],uint8_t out[16])
     sim_memory_cost_ticks=0; rc=!sim_aes_fault && tc_aes_encrypt(out,in,&aes);
     sim_memory_cost_ticks=cost; return rc;
 }
-void ble_port_aes_end(void) { }
+void ble_port_aes_end(void) {
+#ifdef BLE_MIC_RADIO
+    assert(aes_busy); aes_busy=0; ble_port_unlock(aes_lock);
+#endif
+}
 int ble_port_storage_idle(void) { return sim_flash_idle && ble_link.state==BLE_LINK_IDLE; }
 int ble_port_flash_read(uint32_t off,uint8_t *out,uint32_t n)
 {

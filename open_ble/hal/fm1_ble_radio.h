@@ -51,8 +51,8 @@ static int br_wait(uint32_t addr,uint32_t mask,uint32_t expected)
 static void br_stage(unsigned n)
 {
     uint32_t t=fm1_ticks();
-    if (br_diag.stage) br_diag.step_ticks[br_diag.stage-1]+=t-br_mark;
-    br_mark=t; br_diag.stage=n;
+    BLE_DIAG_ONLY(if (br_diag.stage) br_diag.step_ticks[br_diag.stage-1]+=t-br_mark);
+    (void)t; br_mark=t; br_diag.stage=n;
     fm1_wdt_feed();
 }
 static void br_phy_write(unsigned r,uint8_t data)
@@ -218,7 +218,7 @@ static void br_vco(void)
         fm1_wdt_feed();
     }
     br_af(15,255u<<5,121u<<5); br_af(14,127u<<19,(br_bank_for(121)&127u)<<19);
-    br_af(16,1u<<24,0); memcpy(br_diag.vco,br_limits,48);
+    br_af(16,1u<<24,0); BLE_DIAG_ONLY(memcpy(br_diag.vco,br_limits,48));
 }
 static void br_gain(unsigned code)
 {
@@ -475,7 +475,7 @@ static void br_sequencer(const uint8_t *pa)
     for (i=0;i<6;i++) BR_R(0x14028u)=0;
     BR_R(0x14028u)=0x10000;
 }
-static void br_p33_snapshot(uint8_t *out)
+static inline void br_p33_snapshot(uint8_t *out)
 {
     unsigned i,n=0;
     for (i=0;i<=0x17;i++) out[n++]=fm1_p33_read(i);
@@ -492,8 +492,8 @@ static void br_clock_probe(void)
     dt=fm1_ticks()-t; br_diag.loop_ticks=dt;
     if (!dt) br_error(10);
     else br_diag.loop_iters_per_us_x1000=2400000000u/dt;
-    br_diag.clocks[0]=BR_R(0x1000cu); br_diag.clocks[1]=BR_R(0x10010u);
-    br_diag.clocks[2]=BR_R(0x10014u); br_diag.clocks[3]=BR_R(0x10008u); /* SYS_DIV, public WL82.h */
+    BLE_DIAG_ONLY(br_diag.clocks[0]=BR_R(0x1000cu); br_diag.clocks[1]=BR_R(0x10010u););
+    BLE_DIAG_ONLY(br_diag.clocks[2]=BR_R(0x10014u); br_diag.clocks[3]=BR_R(0x10008u); /* SYS_DIV, public WL82.h */);
 }
 static void br_collect_trim(uint8_t *out)
 {
@@ -532,9 +532,9 @@ static void br_radio_init(ble_cal_t *cal,uint32_t *modem)
     static const uint8_t mcs_default[12]={0x20,0x20,0x20,0x20,0x20,0x2b,0x26,0x20,0x20,0x2b,0x26,0x20};
     unsigned i;
     uint32_t start=fm1_ticks();
-    br_diag.clocks[0]=BR_R(0x1000cu); br_diag.clocks[1]=BR_R(0x10010u);
-    br_diag.clocks[2]=BR_R(0x10014u); br_diag.clocks[3]=BR_R(0x10008u);
-    br_p33_snapshot(br_diag.p33_before);
+    BLE_DIAG_ONLY(br_diag.clocks[0]=BR_R(0x1000cu); br_diag.clocks[1]=BR_R(0x10010u););
+    BLE_DIAG_ONLY(br_diag.clocks[2]=BR_R(0x10014u); br_diag.clocks[3]=BR_R(0x10008u););
+    BLE_DIAG_ONLY(br_p33_snapshot(br_diag.p33_before););
     br_stage(1);
     br_field(0x10010u,3u<<14,0);
     for (i=0;i<5;i++) BR_R(0x14040u+4*i)=0;
@@ -619,7 +619,7 @@ static void br_radio_init(ble_cal_t *cal,uint32_t *modem)
         uint32_t error=br_diag.error;
         br_diag.error=0; BR_A(20)=0; br_mode(5); br_sync(); br_diag.error=error;
     }
-    br_p33_snapshot(br_diag.p33_after);
+    BLE_DIAG_ONLY(br_p33_snapshot(br_diag.p33_after););
 }
 
 #pragma clang diagnostic pop

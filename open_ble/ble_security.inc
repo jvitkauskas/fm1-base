@@ -7,7 +7,50 @@ static struct {
     ble_security_diag_t d;
     uint8_t skd[16],iv[8],key[16],ltk[16],request[10];
     uint8_t waiting,ltk_event,reply_pending,rejecting,ever_encrypted,encryption_event,random_pending;
+#if FM1B_BLE_DIAG
+    ble_mic_pdu_t rx[4],tx[2];
+    uint8_t rx_count,tx_count;
+    uint64_t prepared_counter;
+    uint8_t prepared_length,prepared_encrypted;
+#endif
 } security __attribute__((section(".pool.ble")));
+#if FM1B_BLE_DIAG
+/* Separate from session/key state: survives disconnect, reconnect and HCI
+ * Reset. Bounded journal retains the last four failures until power-off. */
+static ble_mic_record_t mic_records[BLE_MIC_RECORDS] __attribute__((section(".pool.ble")));
+static uint32_t mic_serial;
+static void security_history(ble_mic_pdu_t *p,unsigned capacity,uint8_t *count,
+                             uint8_t sn,uint64_t counter,uint8_t length)
+{
+    unsigned n=*count;
+    if(n==capacity) { for(unsigned i=1;i<n;i++) p[i-1]=p[i]; n--; }
+    p[n].sn=sn; p[n].counter=counter; p[n].length=length; *count=(uint8_t)(n+1u);
+}
+static void security_mic_record(const rx_t *r,uint64_t counter)
+{
+    uint32_t serial=++mic_serial;
+    ble_mic_record_t *d=&mic_records[(serial-1u)%BLE_MIC_RECORDS];
+    memset(d,0,sizeof *d); d->serial=serial; d->ms=ble_port_ms(); d->epoch=r->epoch;
+    d->received_ms=r->received_ms; d->since_update_ms=r->since_update_ms;
+    d->event=(r->flags&BLE_RX_EVENT_UNKNOWN) ? 0xffff : r->event;
+    d->service_event=r->event;
+    d->interval=r->interval; d->header=r->header; d->status=r->status;
+    d->counter=counter; d->slot=r->slot; d->flags=r->flags;
+    d->rx_count=security.rx_count; d->tx_count=security.tx_count;
+    memcpy(d->rx,security.rx,sizeof d->rx); memcpy(d->tx,security.tx,sizeof d->tx);
+}
+unsigned ble_security_mic_records(ble_mic_record_t out[BLE_MIC_RECORDS])
+{
+    uint32_t key=ble_port_lock(),n=mic_serial<BLE_MIC_RECORDS ? mic_serial : BLE_MIC_RECORDS;
+    for(unsigned i=0;i<n;i++) out[i]=mic_records[(mic_serial-n+i)%BLE_MIC_RECORDS];
+    ble_port_unlock(key); return (unsigned)n;
+}
+void ble_security_tx_loaded(uint8_t sn)
+{
+    if(security.prepared_encrypted)
+        security_history(security.tx,2,&security.tx_count,sn,security.prepared_counter,security.prepared_length);
+}
+#endif
 static void security_init(void) { ble_entropy_cancel(BLE_RANDOM_LINK); ble_secure_zero(&security,sizeof security); }
 static void security_new(void)
 {
@@ -65,8 +108,11 @@ static int security_receive_inner(rx_t *r)
     if(!r->n && llid==1) return 0;
     if(security.d.rx_on && r->n) {
         uint64_t count=security.d.rx_counter++;
-        if(count>BLE_CCM_LAST || r->n<5 || !ble_ccm(security.key,security.iv,count,1,(uint8_t)llid,r->data,(uint8_t)(r->n-4u),1))
+        if(count>BLE_CCM_LAST || r->n<5 || !ble_ccm(security.key,security.iv,count,1,(uint8_t)llid,r->data,(uint8_t)(r->n-4u),1)) {
+            BLE_DIAG_ONLY(security_mic_record(r,count));
             return security_auth_failure(1);
+        }
+        BLE_DIAG_ONLY(security_history(security.rx,4,&security.rx_count,(r->header>>3)&1u,count,r->n));
         r->n=(uint8_t)(r->n-4u);
     }
     if(!r->n || !llid) {
@@ -189,11 +235,13 @@ int ble_ll_tx_prepare(unsigned id,uint8_t out[31],uint8_t *n)
 {
     tx_t *t=&queues.tx[id]; uint64_t count;
     *n=t->n; memcpy(out,t->data,*n);
+    BLE_DIAG_ONLY(security.prepared_encrypted=0);
     if(!security.d.tx_on || !*n) return 1;
     count=security.d.tx_counter;
     if(count>BLE_CCM_LAST || (count==BLE_CCM_LAST && !t->terminate)) { ble_ll_close(0x16); return 0; }
     security.d.tx_counter++;
     if(!ble_ccm(security.key,security.iv,count,0,t->llid,out,*n,0)) { ble_ll_close(0x1f); return 0; }
+    BLE_DIAG_ONLY(security.prepared_counter=count; security.prepared_length=(uint8_t)(*n+4u); security.prepared_encrypted=1);
     *n=(uint8_t)(*n+4u); return 1;
 }
 static int security_poll(uint8_t *p,uint16_t *n)

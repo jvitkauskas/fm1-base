@@ -1,0 +1,38 @@
+Open BLE R4 owner bench - Apple first pairing / retained bonds, 2026-10-22 ~12:00-12:25 (EEST)
+Image 8866ab78df218f4a9c89c4b409e9fce9c3b2d4d4b49aeb2574ef94f85ed6fe06 (R4 = R3 Service Changed policy
++ MIC journal + slot-wait fix), flashed from the desktop (backup ~/backups/fm1-20261022-115855.bin).
+One central at a time (Bluetooth off on the others). FM-1 readouts over USB (tools/fm1_remote.py).
+
+RESULT: PASS on all five centrals. The R2 Apple first-connect drop is gone.
+
+Bond capacity: BLE_STORE_MAX_BONDS is 2. Before the flash the FM-1 held only the desktop and one other
+identity, so the Mac, iPhone 1 and Android bonds had already been evicted; for those the retained-bond
+upgrade test became a first pairing (Mac, iPhone 1 after Forget; Android re-paired by itself after one
+negative LTK reply). Every pairing evicts another. Raise the capacity (7 centrals on this bench).
+
+PASS  Desktop BlueZ (retained SC bond, the only retained-bond case): auto-reconnected 1.3 s after boot,
+      encrypted with the stored LTK, CCCDs restored, Service Changed sent exactly once and confirmed
+      (gatt_invalidations 1 / confirmations 1, peer version -> 3), MTU 517, MIDI service read, both CCCDs
+      written, ALSA port "FM-1 Open BLE Bluetooth" present, our 15 ms/0/6 s request accepted. No re-pair.
+INFO  Mac (macOS 26.7.1) with its evicted bond: Connect in Audio MIDI Setup -> FM-1 negative LTK reply,
+      Mac log "TS_LE_EncryptionCompleteCb ... STATUS 706", "Clearing database cache", "no longer paired to
+      us", 0x13 after ~210 ms, button back to Connect. Expected for a missing key; Forget fixes it.
+PASS  Mac first pairing after Forget: one prompt, connected first time and stayed connected. SC (method 2,
+      key 16), identity public, MTU 185, CCCD -> protected read rejected -> SMP -> encrypted -> MIDI read ->
+      CCCD; no Service Changed on the new bond; Mac set 7.5 ms after accepting our 15 ms request.
+      Mac -> FM-1 16/16 messages; FM-1 -> Mac 263/263 (note_on/polytouch/note_off), drop 0, bad 0.
+PASS  Android (HONOR Magic V3, Android 16) after eviction: first attempt negative LTK -> 0x13; Android
+      re-paired, ONE consent prompt (S3 bench had two). Identity 44:90:46:83:9A:6F resolved, MTU 517, 15 ms.
+      FM-1 -> Android 99 packets (MIDI Scope), Android -> FM-1 16/16 (MIDI Keyboard, 8 keys).
+FINDING Android paired LEGACY again (method 1): its Pairing Request AuthReq was 0x05 (bond+MITM, no SC bit);
+      Apple sends 0x2D. Android's choice, not ours; reason unknown (S3 note: phone bond legacy too).
+PASS  iPhone 2 (never paired, GarageBand): one prompt, connected first time. SC, identity EC:0D:51:EA:DA:BB,
+      MTU 185, 7.5 ms. FM-1 pads play GarageBand (628 packets out). GarageBand disconnect/connect toggles
+      the MIDI CCCD only (link stays up, no re-pair). GarageBand does not send MIDI out (input counter flat).
+PASS  iPhone 1 (Forget, then GarageBand): one prompt, connected first time, SC, identity 78:96:0D:CF:7C:1A,
+      MTU 185, 7.5 ms, pads play.
+
+Totals at the end (sample_ms ~1.31 M): mic_failures 0, supervision_fail 0, late_instants 0, pair_failures 0,
+nimble_event_drop 0, midi_drop 0, midi_bad 0, bond_failures 0 (bond_erases 4), executor_item_over_100us 0,
+refill_over_80us 0. worker_timer_over_7500us 4, all 17.7-17.8 ms, state starting, "radio_start,flash_write"
+(no link; known). Full log: out/open-ble/r4-apple-final-log.txt.

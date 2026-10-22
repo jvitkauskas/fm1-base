@@ -1,0 +1,8 @@
+# Third-party specifications (Apple ADG, MMA BLE-MIDI): reference copies only
+specs/
+# Build outputs and pre-round snapshots (images, maps, symbols); hashes are in the manifests
+r2-diag-off/
+r2-update/
+r3-diag-off/
+r3-diag-on/
+r4-baseline/

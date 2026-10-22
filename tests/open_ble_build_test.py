@@ -26,10 +26,28 @@ class BuildPolicy(unittest.TestCase):
                 self.assertTrue(b.BLE_OPEN and b.BLE)
                 self.assertFalse(b.CONF['ble_central'])
                 self.assertEqual(b.STEM,'test-open')
+            with patch.object(sys,'argv',['build.py',d,'--host','--open-ble','--ble-diag','off']), patch.object(b,'generate'), patch.object(b,'build_host',return_value=0):
+                self.assertEqual(b.main(),0)
+                self.assertIs(b.CONF['ble_diag'],False)
             with patch.object(sys,'argv',['build.py',d,'--host','--no-ble']), patch.object(b,'generate'), patch.object(b,'build_host',return_value=0):
                 self.assertEqual(b.main(),0)
                 self.assertFalse(b.BLE_OPEN or b.BLE)
             self.assertIs(b.read_conf(ROOT/'template/fm1.toml')['ble'],True)
+    def test_diagnostics_selection(self):
+        b.APP=ROOT/'template'; b.ROOT=ROOT; b.OUT=ROOT/'template/build'
+        b.CONF={'ble':'open','ble_diag':False}
+        units,_,libs=b.open_ble_units()
+        self.assertFalse(libs)
+        self.assertTrue(all('-DFM1B_BLE_DIAG=0' in u for u in units))
+        b.CONF={'ble':'open'}
+        units,_,_=b.open_ble_units()
+        self.assertTrue(all('-DFM1B_BLE_DIAG=1' in u for u in units))
+        version=b.VERSION
+        try:
+            b.VERSION='2.3'
+            units,_,_=b.open_ble_units()
+            self.assertTrue(all('-DAPP_VERSION="2.3"' in u for u in units))
+        finally: b.VERSION=version
     def test_mmio_boundary(self):
         b.APP=ROOT/'template'; b.ROOT=ROOT; b.CONF={}
         original=Path.read_text

@@ -1,0 +1,22 @@
+{
+  "on": {
+    "diag": true,
+    "flash": 192880,
+    "ram": 34564,
+    "pool": 99212,
+    "ramtext_code": 3112,
+    "trace": 20480,
+    "sha256": "2fbf32deec62b261c93629c88668c30a95c337532f5d22db0952539a51a66e29",
+    "package_bytes": 610136
+  },
+  "off": {
+    "diag": false,
+    "flash": 184368,
+    "ram": 33756,
+    "pool": 99212,
+    "ramtext_code": 3112,
+    "trace": 0,
+    "sha256": "5570219ee60be1eb0c9d935943c200beda84e563cd3561357dd46afccdb30994",
+    "package_bytes": 610136
+  }
+}

@@ -5,6 +5,7 @@
 #define FELUCCA_BLE_S1_H
 #include <stdint.h>
 #include <stddef.h>
+#include "ble_diag.h"
 
 #define BLE_FRAME_SIZE 324u
 #define BLE_BB_SIZE 3352u
@@ -59,8 +60,8 @@ typedef struct {
 } ble_adv_t;
 
 typedef struct {
-    uint32_t loop_iters_per_us_x1000, loop_ticks, clocks[4], irq_probe[4], irq_ticks_while_masked, p33_timeouts;
-    uint32_t bringup_ticks, bringup_end_ticks, step_ticks[16], error, stage, failure_stage, calibration;
+    uint32_t loop_iters_per_us_x1000, loop_ticks, irq_ticks_while_masked, p33_timeouts;
+    uint32_t bringup_ticks, bringup_end_ticks, error, stage, failure_stage, calibration;
     uint32_t event_irqs, rx_irqs, adv_events, scan_req, connect_ignored;
     uint32_t bad_rx, rx_max_ticks, event_max_ticks, irq_over_budget;
     uint32_t event_work_max_ticks, event_over_150us, critical_max_ticks, critical_over_390us;
@@ -69,7 +70,10 @@ typedef struct {
     uint32_t executor_selftest,executor_dispatch_ticks,executor_pass_ticks,executor_over_budget,executor_starvation;
     uint32_t refill_max_ticks,refill_over_60us;
     uint32_t dma_base, dma_end, modem_base, canary_errors;
+#if FM1B_BLE_DIAG
+    uint32_t clocks[4],irq_probe[4],step_ticks[16];
     uint8_t p33_before[38], p33_after[38], vco[48];
+#endif
 } ble_hw_diag_t;
 
 typedef struct {
@@ -80,7 +84,10 @@ typedef struct {
 } ble_trace_t;
 
 typedef struct {
-    uint32_t commands, replies, rejected, overflow, trace_count, trace_frozen_drops, first_command_ticks;
+#if FM1B_BLE_DIAG
+    uint32_t commands,replies,trace_count,trace_frozen_drops,first_command_ticks;
+#endif
+    uint32_t rejected,overflow;
     uint8_t enabled, stopping, driver_step, driver_error, last_status;
     uint16_t last_opcode;
 } ble_diag_t;
