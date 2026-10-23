@@ -635,7 +635,9 @@ Owner-authored stack/port/test files carry **MIT OR MPL-2.0**, Copyright (c)
 original notices. NimBLE remains Apache-2.0; bundled TinyCrypt keeps BSD notices.
 See `LICENSING.md`, `CREDITS.md`, `LICENSES/MIT-BLE.txt`, and the vendor pin /
 change note. The radio tables have the owner's Apache-2.0 attribution verbatim
-in their header. **The open application links nothing of JieLi's except those
+in their header, followed by each table's source: they are JieLi SDK data (one SDK
+source table, the rest constants of the compiled radio libraries read by the
+specification side), not independently derived. **The open application links nothing of JieLi's except those
 transcribed tables.** Runtime factory calibration reads are not linked data.
 The package still carries the existing three SDK package-data files; open
 builds never invoke the closed SDK radio source/library-copy path.

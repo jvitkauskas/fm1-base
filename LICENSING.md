@@ -39,6 +39,16 @@ tables in `open_ble/hal/fm1_ble_tables.h`, **Apache-2.0**. Their attribution is:
 
 > Values transcribed from the JieLi AC79 SDK, Copyright (c) JIELI (Zhuhai Jieli Technology Co., Ltd.), under the Apache License 2.0 (LICENSES/Apache-2.0.txt): br_seq is the SDK's wl_rfd_ram_lut (apps/common/net/wifi_conf.c); the other tables are values of the SDK's radio libraries.
 
+Provenance: `br_seq` is SDK source. The other tables are constant data of the
+SDK's compiled Bluetooth controller (`br_agc`) and Wi-Fi RF library (the rest).
+The specification side of the clean room read them from an SDK-built firmware
+image and recorded them in the frozen spec (r2 part 01, appendices A.1 to A.6).
+The file's author worked from the spec only and read no vendor binary. The clean
+room covers the code; these tables are vendor data used under the SDK's
+Apache-2.0 licence, not independently derived. The SDK repository carries a
+single top-level Apache-2.0 licence with no separate terms for its libraries.
+The table header lists the source of each table.
+
 `third_party/nimble/` contains Apache **NimBLE 1.9.0**, Apache-2.0
 (`LICENSE`, `NOTICE`), and **TinyCrypt**, BSD-3-Clause with its original notices
 (`ext/tinycrypt/LICENSE`, `AUTHORS` and source headers). The pin and the single

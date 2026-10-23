@@ -1,8 +1,20 @@
 /* Values transcribed from the JieLi AC79 SDK, Copyright (c) JIELI (Zhuhai Jieli Technology Co., Ltd.), under the Apache License 2.0 (LICENSES/Apache-2.0.txt): br_seq is the SDK's wl_rfd_ram_lut (apps/common/net/wifi_conf.c); the other tables are values of the SDK's radio libraries. */
 /* SPDX-License-Identifier: Apache-2.0 */
-/* Numeric hardware configuration facts transcribed from frozen r2 part 01
- * A.1, A.2 (24 MHz), A.3.1-5, A.4, A.6. No vendor binary input.
- * Provenance is recorded in docs/OPEN-BLE.md. */
+/* Provenance, table by table (frozen spec r2 part 01, appendices and its
+ * dataset provenance table):
+ * - br_seq (A.2, 24 MHz): the SDK source table wl_rfd_ram_lut in
+ *   apps/common/net/wifi_conf.c, value for value (the variant the SDK compiles,
+ *   after its #else).
+ * - br_agc (A.1): constant data of the SDK's compiled Bluetooth controller.
+ * - br_c8, br_d4, br_cc, br_d0 (A.3), br_cfr_a, br_cfr_b (A.3.5), br_dagc,
+ *   br_rapp (A.4) and br_vga (A.6): constant data of the SDK's compiled Wi-Fi
+ *   RF library.
+ * The specification side of the clean room read the compiled values from an
+ * SDK-built firmware image and recorded them in the spec as numeric hardware
+ * configuration facts. This file was written from the spec alone; its author
+ * read no vendor binary, disassembly or library. The tables are therefore
+ * vendor data used under the SDK's licence, not independently derived values.
+ * See also LICENSING.md and docs/OPEN-BLE.md. */
 static const br_pair_t br_agc[] = {
     {0x008000B6u,0x00F0u},
     {0x008009B5u,0x00F0u},
