@@ -1,0 +1,106 @@
+monotonic_start 70273.931958860
+monotonic_end 70273.992516418
+ble_diag 1
+sample_ms 9529913
+peripheral_state 2
+peripheral_linked 0
+link_state_idle_created_up_closing_stopped 0
+link_epoch 31
+conn_interval_1250us 12
+conn_latency 0
+conn_timeout_10ms 500
+conn_event 65399
+conn_events 631508
+conn_updates 33
+pending_kind 0
+supervision_fail 1
+late_instants 0
+disconnects 15
+enc_enabled 0
+mic_failures 1
+nimble_bonded 0
+nimble_subscribed 0
+nimble_mtu 517
+nimble_resets 0
+nimble_error 0
+param_pending 0
+param_requests 9
+param_status 0
+gatt_invalidations 1
+gatt_confirmations 1
+gatt_peer_version 3
+bond_pending 0
+bond_failures 0
+midi_packets_in 2238
+midi_packets_out 1228
+midi_bad 0
+midi_drop 0
+error 0
+dma_canary_errors 0
+executor_selftest 1
+executor_dispatch_live_max_us 218
+executor_item_max_us 69
+executor_item_over_100us 0
+executor_own_over_250us 0
+executor_over_250us_plus_item 0
+refill_max_us 51
+refill_over_80us 0
+worker_timer_calls 9637079
+worker_timer_max_gap_us 17812
+worker_timer_over_7500us 7
+worker_gap_max ms 797302 us 17812 state starting end_state starting reason radio_start,flash_write, epoch 15
+worker_gap ms 1270459 us 17728 state starting end_state starting reason radio_start,flash_write, epoch 17
+worker_gap ms 1401714 us 17772 state starting end_state starting reason radio_start,flash_write, epoch 21
+worker_gap ms 1510036 us 17729 state starting end_state starting reason radio_start,flash_write, epoch 25
+worker_gap ms 7760045 us 17775 state starting end_state starting reason radio_start,flash_write, epoch 29
+adv_session 16
+connect_seen 0
+connect_accepted 0
+adv_session_record id 13 ms 1510148 seen 1 accepted 1
+adv_session_record id 14 ms 1518128 seen 1 accepted 1
+adv_session_record id 15 ms 7760158 seen 1 accepted 1
+adv_session_record id 16 ms 9524978 seen 0 accepted 0
+audio_late 0
+audio_max_wall_us 155
+audio_xruns 0
+ble_event ms 1518732 session 14 conn 80 cccd_write a 9 b 2 c 0
+ble_event ms 1518762 session 14 conn 80 midi_read a 16 b 0 c 0
+ble_event ms 1523241 session 14 conn 80 l2cap_request a 12 b 600 c 0
+ble_event ms 1523262 session 14 conn 80 l2cap_result a 0 b 0 c 0
+ble_event ms 1523366 session 14 conn 80 conn_update a 12 b 0 c 600
+ble_event ms 2108201 session 14 conn 80 conn_update a 12 b 0 c 500
+ble_event ms 2710362 session 14 conn 80 conn_update a 24 b 0 c 500
+ble_event ms 3308307 session 14 conn 80 conn_update a 9 b 0 c 500
+ble_event ms 3908636 session 14 conn 80 conn_update a 12 b 0 c 500
+ble_event ms 4508157 session 14 conn 80 conn_update a 12 b 0 c 500
+ble_event ms 5108187 session 14 conn 80 conn_update a 24 b 0 c 500
+ble_event ms 5709777 session 14 conn 80 conn_update a 9 b 0 c 500
+ble_event ms 6308116 session 14 conn 80 conn_update a 12 b 0 c 500
+ble_event ms 6908156 session 14 conn 80 conn_update a 12 b 0 c 500
+ble_event ms 7508096 session 14 conn 80 conn_update a 24 b 0 c 500
+ble_event ms 7760117 session 14 conn 80 disconnect a 8 b 520 c 0
+ble_event ms 7760301 session 15 conn 80 connect a 0 b 0 c 0
+ble_event ms 7760412 session 15 conn 80 enc_start a 0 b 1 c 0
+ble_event ms 7760412 session 15 conn 80 cccd_restore a 9 b 2 c 0
+ble_event ms 7760412 session 15 conn 80 cccd_restore a 17 b 1 c 0
+ble_event ms 7760443 session 15 conn 80 mtu a 517 b 0 c 0
+ble_event ms 7760472 session 15 conn 80 midi_read a 16 b 0 c 0
+ble_event ms 7760562 session 15 conn 80 cccd_write a 17 b 1 c 0
+ble_event ms 7760727 session 15 conn 80 cccd_write a 9 b 2 c 0
+ble_event ms 7760757 session 15 conn 80 midi_read a 16 b 0 c 0
+ble_event ms 7765301 session 15 conn 80 l2cap_request a 12 b 600 c 0
+ble_event ms 7765317 session 15 conn 80 l2cap_result a 0 b 0 c 0
+ble_event ms 7765422 session 15 conn 80 conn_update a 12 b 0 c 600
+ble_event ms 8109942 session 15 conn 80 conn_update a 9 b 0 c 500
+ble_event ms 8708135 session 15 conn 80 conn_update a 12 b 0 c 500
+ble_event ms 9308276 session 15 conn 80 conn_update a 12 b 0 c 500
+ble_event ms 9524967 session 15 conn 80 disconnect a 61 b 573 c 0
+mic_records 1
+mic_record serial 1 ms 9524966 epoch 30 received_ms 9524966 event 65400 service_event 65400 interval 12 since_update_ms 00034E72
+mic_pdu serial 1 slot 0 flags 00 status 5101 llid 3 sn 0 nesn 0 md 0 length 5 counter 000000026D
+mic_rx serial 1 index 0 sn 0 counter 0000000269 length 16
+mic_rx serial 1 index 1 sn 0 counter 000000026A length 16
+mic_rx serial 1 index 2 sn 1 counter 000000026B length 16
+mic_rx serial 1 index 3 sn 0 counter 000000026C length 16
+mic_tx serial 1 index 0 sn 0 counter 000000007F length 6
+mic_tx serial 1 index 1 sn 1 counter 0000000080 length 6

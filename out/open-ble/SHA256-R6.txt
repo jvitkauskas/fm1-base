@@ -1,0 +1,1 @@
+d071b0238adabfbc9777a7afdf36005c7c52de7db59c8850f30dfebb9452908e  template/build/template-open-r6.fwsc

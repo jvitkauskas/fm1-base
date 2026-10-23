@@ -128,13 +128,19 @@ static void bb_refill_limit(unsigned limit)
         #if FELUCCA_BLE_STAGE >= 3
         if(bb.tx_id[slot]>=0 && ble_ll_tx_boundary((unsigned)bb.tx_id[slot])) continue;
 #endif
-        if(bb.tx_id[slot]>=0) { id=bb.tx_id[slot]; bb.tx_id[slot]=-1; ble_ll_tx_ack((unsigned)id); }
+        if(bb.tx_id[slot]>=0) {
+#if FELUCCA_BLE_STAGE >= 3
+            ble_radio_tx(BLE_RADIO_ACK,BB_F16(BF_EVT),slot,bb.tx_id[slot],BB_F16(BF_TX_DATA+2*slot),1);
+#endif
+            id=bb.tx_id[slot]; bb.tx_id[slot]=-1; ble_ll_tx_ack((unsigned)id); }
         if(bb.state!=4 || ble_link.state>=BLE_LINK_CLOSING) continue;
         if(loads==limit) continue;
         id=ble_ll_tx_pick();
         if(id<0) { BB_F16(BF_FLOW)&=(uint16_t)~64u; continue; }
         n=ble_ll_tx_len((unsigned)id); llid=ble_ll_tx_llid((unsigned)id); md=(unsigned)ble_ll_acl_waiting();
 #if FELUCCA_BLE_STAGE >= 3
+        ble_radio_tx(BLE_RADIO_PREP,BB_F16(BF_EVT),slot,id,BB_F16(BF_TX_DATA+2*slot),
+                     (uint16_t)(BB_F8(BF_TX_CTL+slot)|(BB_F16(BF_TX_TOGGLE)<<8)));
         if(!ble_ll_tx_prepare((unsigned)id,ble_dma.bb+(slot ? BB_TX1 : BB_TX0),&n)) break;
 #else
         memcpy(ble_dma.bb+(slot ? BB_TX1 : BB_TX0),ble_ll_tx_data((unsigned)id),n);
@@ -145,6 +151,10 @@ static void bb_refill_limit(unsigned limit)
         BB_F16(BF_FLOW)=(uint16_t)((BB_F16(BF_FLOW)&~64u)|(md<<6));
 #if FELUCCA_BLE_STAGE >= 3
         ble_security_tx_loaded((BB_F16(BF_TX_DATA+slot*2)>>2)&1u);
+#endif
+#if FELUCCA_BLE_STAGE >= 3
+        ble_radio_tx(BLE_RADIO_LOAD,BB_F16(BF_EVT),slot,id,BB_F16(BF_TX_DATA+2*slot),
+                     (uint16_t)(BB_F8(BF_TX_CTL+slot)|(BB_F16(BF_TX_TOGGLE)<<8)));
 #endif
         bb.tx_id[slot]=(int8_t)id; br_sync(); BB_F8(BF_TX_CTL+slot)&=(uint8_t)~1u; br_sync();
         loads++;
@@ -212,7 +222,11 @@ static void bb_connected_rx(uint32_t stamp,int recovery)
         b=(BB_F16(BF_RX_TOGGLE)&1u)|((BB_F8(BF_RX_CTL)&1u)<<1)|((BB_F8(BF_RX_CTL+1)&1u)<<2);
     } while(a!=b);
     first=a&1u;
-    for(j=0;j<2;j++) if(a&(2u<<(first^j))) slots[held++]=first^j;
+    for(j=0;j<2;j++) {
+        if(a&6u) ble_radio_tx(BLE_RADIO_TX_STATE,event,j,bb.tx_id[j],BB_F16(BF_TX_DATA+2*j),
+                     (uint16_t)(BB_F8(BF_TX_CTL+j)|(BB_F16(BF_TX_TOGGLE)<<8)));
+        if(a&(2u<<(first^j))) slots[held++]=first^j;
+    }
     if(marker && (!held || !ble_ll_rx_reserve(held,1))) {
         /* Reservation can block before the per-slot loop. Retain that wait
          * just like ordinary backlog pressure: later IRQ service must use
@@ -226,7 +240,9 @@ static void bb_connected_rx(uint32_t stamp,int recovery)
         if(n[j]<=31) memcpy(copy[j],ble_dma.bb+(slot ? BB_RX1 : BB_RX0),n[j]);
     }
     if(marker) {
-        int id=bb.tx_id[boundary_slot]; bb.tx_id[boundary_slot]=-1; ble_ll_tx_ack((unsigned)id);
+        int id=bb.tx_id[boundary_slot];
+        ble_radio_tx(BLE_RADIO_ACK,event,(unsigned)boundary_slot,id,BB_F16(BF_TX_DATA+2*boundary_slot),1);
+        bb.tx_id[boundary_slot]=-1; ble_ll_tx_ack((unsigned)id);
         position=held==1 ? 0 : held;
         if(held==2) for(j=0;j<held;j++)
             if(ble_ll_rx_after_marker(marker,status[j],header[j],copy[j])) { position=j; break; }

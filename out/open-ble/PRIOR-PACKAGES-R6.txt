@@ -1,0 +1,2 @@
+8866ab78df218f4a9c89c4b409e9fce9c3b2d4d4b49aeb2574ef94f85ed6fe06  template/build/template-open-r4.fwsc
+ebf0dfb3b7ff0b75e37417fceb0998ad6d7917153c09ac90362e33222106986f  template/build/template-open-r5.fwsc

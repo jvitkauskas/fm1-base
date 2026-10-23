@@ -1,0 +1,1 @@
+Synthetic FMOB v1 / FLBD v1 object from the documented R1–R4 encoder layout (208ebfb). Two identities, both security directions with LTK/IRK/CSRK, SC and legacy, both CCCDs, GATT generations 3 and 0, valid WLSD seed sequence 17. All key bytes are deterministic test data; no device contents were read.

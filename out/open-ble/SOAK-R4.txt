@@ -1,0 +1,20 @@
+Open BLE R4 soak - desktop BlueZ (Intel), 2026-10-22 12:24 -> 20:24 EEST (8.0 h), image 8866ab78 (R4).
+Same traffic as R2: notes every ~7 s central->FM-1, central update every 10 min (15/30/11.25/15 ms), USB sample 60 s.
+Data: soak-r4/{samples.jsonl,summary.json,btmon.txt,usb-01{34,35,36,82,83,84}.txt}, r4-{before,after}-{ble,log}.txt.
+
+RESULT: completed, two link drops, both encryption (MIC) failures, one in each direction.
+- 14:08:30 at 30 ms: the CENTRAL reported 0x3D (it rejected an FM-1 TX PDU); the FM-1 then timed out (0x08).
+- 14:38:04 at 15 ms: the FM-1 rejected a central PDU (0x3D, journal serial 1: LLID 3, length 5, SN 0, slot 0,
+  flags 00, counter 0x26D directly after 0x26C); the central reported 0x08.
+- Otherwise clean: 7,918 MIDI messages in, drop 0, bad 0; 47 updates, late_instants 0; nimble_resets 0; audio
+  late/xruns 0; executor_item_over_100us 0 (max 69 us); refill max 51 us.
+- The FM-1 announces only LE Encryption (no LE Ping). BlueZ sets APTO 30 s and the FM-1 sends no authenticated
+  payload, so the Intel controller sends LL_PING_REQ about every 14 s; the FM-1 answers LL_UNKNOWN_RSP (TX length 6).
+  Those replies are its only encrypted TX PDUs; ~2,400 control PDUs over the night.
+- Event-counter wrap checked: one failure near a wrap, R2's was not -> not the cause.
+
+PING STRESS (ping-r4/, 21:01-21:08): APTO set to 100 ms with a raw HCI command (apto.py) -> ~12.7 pings/s.
+3 more FM-1 MIC failures in ~5 min (~1 per 1,000-1,300 pings, the same per-ping rate as the soak) and 2 more FM-1
+supervision failures. Journal serials 2-4 match serial 1: failing PDU length 5 (ping), slot 0, SN 0, NESN 0,
+flags 00, counter one past the last accepted ping. Reproducible in minutes -> round 6 (clientRequestId
+fm1-base-open-ble-round6-mic-ping). Run stopped at 4 records so the soak record was not overwritten.

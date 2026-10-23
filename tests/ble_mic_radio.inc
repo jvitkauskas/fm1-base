@@ -75,3 +75,45 @@ static void sim_radio_ack(unsigned slot)
     BB_F16(BF_TX_TOGGLE)=(uint16_t)(slot^1u);
     bb_refill(); sim_radio_mirror(); /* boundaries remain pending until RX */
 }
+/* Independent from the central: two one-bit ARQ machines and an immutable
+ * last transmitted PDU, including automatic empty packets. The documented
+ * register bus does not specify how a newly loaded slot interlocks with a
+ * hardware-generated empty PDU that is still awaiting acknowledgment. */
+static struct {
+    uint8_t rx_sn,tx_sn,valid,loaded,slot,length,llid,md,data[31];
+} core_air;
+uint32_t sim_core_empty_pending_loads;
+uint8_t sim_core_start(uint8_t rx_sn)
+{
+    memset(&core_air,0,sizeof core_air);
+    core_air.rx_sn=rx_sn; core_air.tx_sn=(uint8_t)(BB_F16(BF_TX_TOGGLE)&1u);
+    sim_core_empty_pending_loads=0; return core_air.tx_sn;
+}
+int sim_core_receive(uint16_t header,const uint8_t *data,uint16_t event,int crc)
+{
+    unsigned fresh=((header>>3)&1u)==core_air.rx_sn;
+    if(crc && core_air.valid && ((header>>2)&1u)!=core_air.tx_sn) {
+        if(core_air.loaded) BB_F8(BF_TX_CTL+core_air.slot)=1;
+        else if(!(BB_F8(BF_TX_CTL+core_air.slot)&1u)) sim_core_empty_pending_loads++;
+        core_air.tx_sn^=1u; BB_F16(BF_TX_TOGGLE)^=1u; core_air.valid=0;
+    }
+    unsigned cls=crc ? (fresh ? 1u : 9u) : (fresh ? 5u : 13u);
+    int stored=sim_radio_receive((uint16_t)cls,header,data,event);
+    if(stored && crc && fresh) core_air.rx_sn^=1u;
+    return stored && crc && fresh;
+}
+void sim_core_transmit(uint16_t *header,uint8_t data[31])
+{
+    if(!core_air.valid) {
+        unsigned slot=BB_F16(BF_TX_TOGGLE)&1u;
+        core_air.slot=(uint8_t)slot; core_air.loaded=!(BB_F8(BF_TX_CTL+slot)&1u);
+        core_air.length=core_air.loaded ? (uint8_t)(BB_F16(BF_TX_DATA+2*slot)>>8) : 0;
+        core_air.llid=core_air.loaded ? (uint8_t)(BB_F16(BF_TX_DATA+2*slot)&3u) : 1;
+        core_air.md=core_air.loaded ? (uint8_t)((BB_F16(BF_TX_DATA+2*slot)>>3)&1u) : 0;
+        if(core_air.length) memcpy(core_air.data,ble_dma.bb+(slot ? BB_TX1 : BB_TX0),core_air.length);
+        core_air.valid=1;
+    }
+    *header=(uint16_t)((core_air.length<<8)|core_air.llid|(core_air.tx_sn<<3)|
+                      (core_air.rx_sn<<2)|(core_air.md<<4));
+    if(core_air.length) memcpy(data,core_air.data,core_air.length);
+}

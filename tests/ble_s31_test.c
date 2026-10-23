@@ -83,7 +83,7 @@ static void privacy(void)
     assert(hci(0x2027,b,38)==0x12 && hci(0x2028,b,6)==0x12 && hci(0x2029,b,1)==0x12);
     assert(hci(0x202a,b,1)==0x12 && hci(0x202d,0,0)==0x12 && hci(0x204e,b,7)==0x12);
     for(i=1;i<=BLE_RL_CAPACITY;i++) { add(b,i); assert(!hci(0x2027,b,39)); }
-    add(b,5); assert(hci(0x2027,b,39)==7);
+    add(b,BLE_RL_CAPACITY+1u); assert(hci(0x2027,b,39)==7);
     add(b,1); assert(hci(0x2027,b,39)==0x12); /* duplicate before full */
     b[1]=99; assert(hci(0x2027,b,39)==0x12); /* duplicate non-zero IRK */
     assert(hci(0x2028,b,7)==2 && hci(0x204e,(uint8_t[8]){0,99,0,0,0,0,0,1},8)==2);

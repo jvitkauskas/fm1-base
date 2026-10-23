@@ -14,6 +14,7 @@
 static uint8_t sk[16],iv[8],sn,expected_sn;
 static uint64_t next_counter,accepted_counter;
 static int start_pressure_mode;
+static uint16_t start_interval=12;
 static uint32_t rng=0x4d494334u,sequence,delivered,crc_errors,repeats,missed,ack_lost;
 static uint32_t random32(void) { rng^=rng<<13; rng^=rng>>17; rng^=rng<<5; return rng; }
 static void work(void) { for(unsigned i=0;i<8;i++) ble_ll_worker(); }
@@ -34,7 +35,7 @@ static void direct(const uint8_t *p,uint8_t n,uint8_t llid,uint16_t event,int en
 static uint32_t begin(void)
 {
     ble_conn_t c=sim_connection(); uint8_t req[23]={3},ltk[16],skd[16],le[16]; int slot;
-    sim_reset(); sim_storage_reset(); sim_seed(); c.interval=12;
+    sim_reset(); sim_storage_reset(); sim_seed(); c.interval=start_interval;
     assert(ble_ll_create(&c,sim_ticks)); sim_radio_start();
     sn=expected_sn=0; next_counter=accepted_counter=0;
     sim_ticks=ble_link.time.first;
@@ -96,6 +97,7 @@ static void acknowledge_all(void)
 }
 static void randomized(uint32_t events)
 {
+    rng=0x4d494334u; /* Preserve the inherited stress stream independently of ping tests. */
     uint32_t anchor=begin(),updates=0,delay=0;
     uint16_t interval=12,new_interval=12,instant=0;
     unsigned update_active=0,pending=0,new_update=0;
@@ -180,6 +182,9 @@ static void randomized(uint32_t events)
     assert(!ble_link.diag.late_instants && !ble_link.diag.supervision_fail);
     printf("random seed=4d494334 events=%u counter=%" PRIu64 " missed=%u lost_ack=%u zero spontaneous MIC failures: PASS\n",events,d.rx_counter,missed,ack_lost);
 }
+#include "ble_central_ccm.inc"
+#include "ble_ping_stress.inc"
+#include "ble_radio_trace_test.inc"
 static void corruption(void)
 {
     /* Force both software tiers full and both DMA slots held. The final PDU
@@ -324,13 +329,17 @@ static void update_age_record(void)
     printf("MIC after update/tick wrap: event=%u interval=%u age_ms=%u exact counter=%" PRIu64 ": PASS\n",
         r->event,r->interval,r->since_update_ms,r->counter);
 }
-static char dump[8192]; static unsigned dump_used;
+static char dump[131072]; static unsigned dump_used;
 static void ob_putc(char c) { assert(dump_used+1u<sizeof dump); dump[dump_used++]=c; dump[dump_used]=0; }
 static void ob_puts(const char *p) { while(*p) ob_putc(*p++); }
 static void ob_dec(int32_t value) { char b[16]; snprintf(b,sizeof b,"%" PRId32,value); ob_puts(b); }
 static void ob_hex(uint32_t value,unsigned n) { while(n--) ob_putc("0123456789ABCDEF"[(value>>(n*4u))&15u]); }
 static void ob_kv(const char *name,int32_t value) { ob_puts(name); ob_putc(' '); ob_dec(value); ob_putc('\n'); }
 #include "mic_dump_seam.inc"
+#define BRD_PUTS ob_puts
+#define BRD_DEC ob_dec
+#define BRD_HEX ob_hex
+#include "../open_ble/ble_radio_dump.inc"
 static void dump_test(void)
 {
     open_ble_mic_dump(); assert(strstr(dump,"mic_records 4\n") && strstr(dump,"mic_rx serial "));
@@ -339,10 +348,15 @@ static void dump_test(void)
     unsigned line=0;
     for(const char *p=dump;*p;p++) { if(*p=='\n') line=0; else assert(++line<188u); }
     assert(!strstr(dump,"key") && !strstr(dump,"plaintext"));
+    ble_radio_dump();
+    assert(strstr(dump,"radio_frozen 1 reason 3D events ") && strstr(dump,"radio_tx_source descriptor_only"));
+    assert(strstr(dump," decision 6 ctr 0000000002") && strstr(dump," decision 2 ctr none"));
+    for(const char *p=dump;*p;p++) { if(*p=='\n') line=0; else assert(++line<188u); }
     puts("production USB/CDC MIC formatter: complete fields, 39-bit hex counters, all logical rows fit USB frame: PASS");
 }
 int main(int argc,char **argv)
 {
+    if(argc>1 && !strcmp(argv[1],"--trace-timeout")) { radio_timeout_test(); return 0; }
     uint32_t events=argc>1 ? (uint32_t)strtoul(argv[1],0,0) : 10000000u;
-    randomized(events); corruption(); slot_race_and_lengths(); pause_restart(); update_age_record(); dump_test(); return 0;
+    central_ccm_test(); ping_stress(events/2u,12); ping_stress(events/2u,24); randomized(events); radio_trace_test(); corruption(); slot_race_and_lengths(); pause_restart(); update_age_record(); dump_test(); return 0;
 }

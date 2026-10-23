@@ -1,0 +1,104 @@
+log: ble_diag 1
+log: sample_ms 32283877
+log: peripheral_state 2
+log: peripheral_linked 1
+log: link_state_idle_created_up_closing_stopped 2
+log: link_epoch 34
+log: conn_interval_1250us 9
+log: conn_latency 0
+log: conn_timeout_10ms 500
+log: conn_event 58763
+log: conn_events 2132197
+log: conn_updates 68
+log: pending_kind 0
+log: supervision_fail 1
+log: late_instants 0
+log: disconnects 16
+log: enc_enabled 1
+log: mic_failures 1
+log: nimble_bonded 1
+log: nimble_subscribed 1
+log: nimble_mtu 517
+log: nimble_resets 0
+log: nimble_error 0
+log: param_pending 0
+log: param_requests 10
+log: param_status 0
+log: gatt_invalidations 1
+log: gatt_confirmations 1
+log: gatt_peer_version 3
+log: bond_pending 0
+log: bond_failures 0
+log: midi_packets_in 7954
+log: midi_packets_out 1228
+log: midi_bad 0
+log: midi_drop 0
+log: error 0
+log: dma_canary_errors 0
+log: executor_selftest 1
+log: executor_dispatch_live_max_us 220
+log: executor_item_max_us 69
+log: executor_item_over_100us 0
+log: executor_own_over_250us 0
+log: executor_over_250us_plus_item 0
+log: refill_max_us 51
+log: refill_over_80us 0
+log: worker_timer_calls 32700470
+log: worker_timer_max_gap_us 17812
+log: worker_timer_over_7500us 7
+log: worker_gap_max ms 797302 us 17812 state starting end_state starting reason radio_start,flash_write, epoch 15
+log: worker_gap ms 1270459 us 17728 state starting end_state starting reason radio_start,flash_write, epoch 17
+log: worker_gap ms 1401714 us 17772 state starting end_state starting reason radio_start,flash_write, epoch 21
+log: worker_gap ms 1510036 us 17729 state starting end_state starting reason radio_start,flash_write, epoch 25
+log: worker_gap ms 7760045 us 17775 state starting end_state starting reason radio_start,flash_write, epoch 29
+log: adv_session 17
+log: connect_seen 1
+log: connect_accepted 1
+log: adv_session_record id 14 ms 1518128 seen 1 accepted 1
+log: adv_session_record id 15 ms 7760158 seen 1 accepted 1
+log: adv_session_record id 16 ms 9524978 seen 1 accepted 1
+log: adv_session_record id 17 ms 9532088 seen 1 accepted 1
+log: audio_late 0
+log: audio_max_wall_us 155
+log: audio_xruns 0
+log: ble_event ms 11109626 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 11708111 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 12308141 session 17 conn 80 conn_update a 24 b 0 c 500
+log: ble_event ms 12909747 session 17 conn 80 conn_update a 9 b 0 c 500
+log: ble_event ms 13508105 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 14108111 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 14709686 session 17 conn 80 conn_update a 24 b 0 c 500
+log: ble_event ms 15308216 session 17 conn 80 conn_update a 9 b 0 c 500
+log: ble_event ms 15908045 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 16508066 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 17108082 session 17 conn 80 conn_update a 24 b 0 c 500
+log: ble_event ms 17709657 session 17 conn 80 conn_update a 9 b 0 c 500
+log: ble_event ms 18308096 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 18908066 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 19508112 session 17 conn 80 conn_update a 24 b 0 c 500
+log: ble_event ms 20108217 session 17 conn 80 conn_update a 9 b 0 c 500
+log: ble_event ms 20709579 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 21308096 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 21908097 session 17 conn 80 conn_update a 24 b 0 c 500
+log: ble_event ms 22508157 session 17 conn 80 conn_update a 9 b 0 c 500
+log: ble_event ms 23108022 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 23709567 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 24308037 session 17 conn 80 conn_update a 24 b 0 c 500
+log: ble_event ms 24908187 session 17 conn 80 conn_update a 9 b 0 c 500
+log: ble_event ms 25508075 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 26108096 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 26709597 session 17 conn 80 conn_update a 24 b 0 c 500
+log: ble_event ms 27308186 session 17 conn 80 conn_update a 9 b 0 c 500
+log: ble_event ms 27908071 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 28508052 session 17 conn 80 conn_update a 12 b 0 c 500
+log: ble_event ms 29108112 session 17 conn 80 conn_update a 24 b 0 c 500
+log: ble_event ms 29709567 session 17 conn 80 conn_update a 9 b 0 c 500
+log: mic_records 1
+log: mic_record serial 1 ms 9524966 epoch 30 received_ms 9524966 event 65400 service_event 65400 interval 12 since_update_ms 00034E72
+log: mic_pdu serial 1 slot 0 flags 00 status 5101 llid 3 sn 0 nesn 0 md 0 length 5 counter 000000026D
+log: mic_rx serial 1 index 0 sn 0 counter 0000000269 length 16
+log: mic_rx serial 1 index 1 sn 0 counter 000000026A length 16
+log: mic_rx serial 1 index 2 sn 1 counter 000000026B length 16
+log: mic_rx serial 1 index 3 sn 0 counter 000000026C length 16
+log: mic_tx serial 1 index 0 sn 0 counter 000000007F length 6
+log: mic_tx serial 1 index 1 sn 1 counter 0000000080 length 6

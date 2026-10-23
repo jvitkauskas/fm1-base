@@ -2,18 +2,15 @@
 <!-- Copyright (c) 2026 Julius Vitkauskas -->
 # Open BLE-MIDI for fm1-base
 
-This ports the clean-room WL82/AC79 controller from
-`/root/fm1/Felucca-ble` (S3.1d `dfdd8dc`) using the frozen
-`/root/wl82-ble-spec-snapshots/r7/`. Round 1 is committed as `3b1e677` and
-`f08c9c2`, with BSP `62a01ca`. The owner's R1 bench passed boot, Android legacy
-and BlueZ SC pairing, bidirectional MIDI, durable RPA reconnects, and off/on;
-see `out/open-ble/BENCH-R1.txt`. The owner's R2 bench (`out/open-ble/BENCH-R2.txt`)
-passed encrypted Android/Apple reconnects, MIDI, exact connection updates and
-five off/on cycles, but found first-pair Apple disconnects and a stale BlueZ
-cache. R3 remains uncommitted, with offline results in
-`out/open-ble/RESULTS-R3.md` and owner checks in `out/open-ble/OWNER-BENCH-R3.md`.
-No devices were accessed or flashed by the R3 implementer; no commits or pushes
-were made. The overnight R2 soak result is pending separately.
+This is the clean-room WL82/AC79 controller from `/root/fm1/Felucca-ble`,
+now implementing frozen specification **r8** for round 5. The R2–R4 base is
+committed at **208ebfb** (`open-ble`); R4 passed the owner's Mac, two iPhones,
+Android and BlueZ first-pair/MIDI bench. R5 adds eight durable LRU bonds and a
+ten-entry resolving list. Its changes are uncommitted. Results, sizes, tests,
+format/migration rules and limits: [RESULTS-R5](../out/open-ble/RESULTS-R5.md).
+Owner hardware procedure: [OWNER-BENCH-R5](../out/open-ble/OWNER-BENCH-R5.md).
+No device, host on the bench network, flash, commit or push was accessed by the
+R5 implementer. Earlier round-specific sections below remain historical evidence.
 
 ## Build and application interface
 
@@ -48,7 +45,7 @@ switching stacks does not migrate pairing, and saving in either format
 replaces the other format.
 
 The profile is one peripheral BLE-MIDI link, ATT MTU up to 517 (attribute values up to 512 bytes), legacy and
-Secure Connections Just Works pairing, two peer bonds, peer-RPA resolution,
+Secure Connections Just Works pairing, eight peer bonds with durable LRU, peer-RPA resolution,
 encrypted reconnects, and central-initiated map/connection updates. There is
 no central/scanner role or WiFi. Advertising name: **FM-1 Open BLE**.
 
@@ -280,14 +277,13 @@ ordinary code fixes and readable value changes do not require a bump. This
 profile registers a static database once, so a manually maintained generation
 has a clear scope.
 
-Each identity's OUR_SEC record stores the confirmed generation in reserved
-payload bytes 68..71 (little endian; bytes 80..83 of its 128-byte FLBD record).
-The record stays v1 and remains covered by the existing record CRC and atomic
-A/B object CRC. R1/R2 zero-filled bytes mean **unknown/stale**, so those keys and
-CCCDs migrate without re-pairing. Newly created security records start at the
-current generation. Security rewrites preserve an existing generation; deleting
-and replacing a bond creates a new current one. There is no extra bond slot,
-flash sector, key-format conversion, or per-reconnect flash write.
+Each compact identity stores the confirmed generation at peer bytes 9..12
+(little endian). R1–R4 FLBD payload bytes 68..71 migrate into this field;
+R1/R2 zero means **unknown/stale**. Newly created OUR_SEC starts at the current
+generation; rewrites of a retained record preserve its generation. Deleting
+and recreating a bond starts current, including a same-address re-pair. R5
+keeps generation **3**, attribute handles, Service Changed decisions and the
+Apple flow. No schema bump accompanies capacity alone.
 
 After encryption, bonded-state restoration and completion of SMP, the host
 looks up the connected identity's generation and actual 0x2A05 CCCD. Only a
@@ -442,9 +438,8 @@ Field meanings (handles/parameters are numeric decimal in the USB output):
 Use `out/open-ble/OWNER-BENCH-R3.md`. Capture the event ring immediately after
 each setup/disconnect; 32 events can wrap across several sessions. Existing
 bonds need to be exercised before any intentional Forget operation for that
-peer. The firmware keeps two bonds, so do not assume four devices' bonds all
-remain stored at once; rotate preserved A/B store snapshots/devices as the
-owner's previous bench permits, or explicitly record a peer as newly paired.
+peer. R3/R4 kept two bonds; R5 keeps eight. Use the R5 procedure to test capacity
+and preserve each central's keys until the expected eviction check.
 
 ## USB bench, overnight soak and diagnostics option
 
@@ -515,14 +510,42 @@ are in `out/open-ble/RESULTS-R3.md`; the final package is diagnostics **on**.
 
 The original fixed seed sectors `0x94000`/`0x95000` and bond sector `0x96000`
 are **not written by the open stack**. They remain application XDATA0 space.
-OBJ_BLE is an fm1-base A/B object with an explicit 1,108-byte payload:
+OBJ_BLE remains an fm1-base A/B object. R5 has a **1,236-byte** payload,
+including the seed, inside `PLAT_STORE_MAX = 3840`:
 
 | Payload offset | Contents |
 | --- | --- |
-| 0..15 | `FMOB`, version 1, zero reserved fields |
-| 16..79 | Unchanged r7 64-byte `WLSD` seed record, including CRC/flags/credit/sequence |
-| 80..1103 | Eight canonical 128-byte `FLBD` records; absent slots are FF |
-| 1104..1107 | CRC-32 of the preceding payload |
+| 0..15 | `FMOB`, version 2, capacity 8, peer stride 144, reserved zero; replacement counter at 8..11 |
+| 16..79 | Unchanged 64-byte `WLSD` seed, CRC/flags/credit/sequence included |
+| 80..1231 | Eight 144-byte compact identities; unused peers are zero |
+| 1232..1235 | CRC-32 of the preceding payload |
+
+Each peer contains one normalized identity (7 B), presence bits (1 B), MRU
+rank (1 B; 1 newest), confirmed GATT generation (4 B), OUR_SEC and PEER_SEC
+(60 B each: size/flags/EDIV/Rand/LTK/IRK/CSRK), two CCCDs (5 B each:
+value handle/flags/value_changed), and one reserved zero byte. Both CCCDs fit
+for all eight peers; no ABI structures, duplicate addresses or record CRCs are
+stored per direction. Only the keys marked present are retained.
+
+The live cache in `ble_bond_capacity.inc` keeps **no saved-record shadows**. A CRC and replacement-counter
+baseline detect net changes; flush canonicalizes absent fields and ranks and
+skips a state equal to that baseline. Successful encrypted use or pairing moves
+an identity to rank 1; only a changed order becomes dirty. Three or any number
+of repeat sessions with the MRU peer, and net CCCD unsubscribe/resubscribe,
+write nothing. Actual overflow selects the oldest disconnected identity,
+uses the existing host deletion path (2028 first), and counts a replacement;
+new peer keys still produce 2027/204E. The pessimistic SMP FULL preflight does
+not delete a bond. Connected identities are excluded. A third CCCD for an
+existing identity is refused rather than evicting unrelated bonds.
+
+R1–R4's 1,108-byte FMOB v1 / eight FLBD v1 records translate **in RAM** on load.
+The next ordinary seed or bond write persists v2; there is no migration-only
+write. Normal boot seed advancement is retained and often supplies that write.
+The old format has no use history, so initial order follows first valid record
+slot, later identity newer; true LRU starts with the next use. The old R4 parser
+rejects v2, including through its truncated 1,108-byte platform read. Downgrade
+can lose bonds, as r8 permits, but cannot reinterpret the new bytes as keys.
+See the actual `208ebfb` parser test and R4 synthetic fixture in the results.
 
 The existing store erases the inactive sector, writes the payload from +256,
 then writes its CRC-protected 32-byte header last and verifies the result.
@@ -530,7 +553,7 @@ Load validates both headers/payloads and falls back to the previous valid
 copy. Its final 256 bytes remain blank, avoiding the loader update-marker
 shape. No raw NimBLE structs or private radio addresses become durable keys.
 Public and random-static identities (including normalized identity types)
-key OUR_SEC / PEER_SEC / CCCD records. Orphan CCCDs are discarded at snapshot;
+key OUR_SEC / PEER_SEC / CCCD records. Orphan CCCDs are discarded at load/snapshot;
 delete/recreate and subscribe churn that return to the durable net state do
 not write. Failed commits do not advance the durable cache baseline.
 
@@ -759,3 +782,38 @@ Use a new output directory per session; keep an initial `ble` and full `log`.
     indication must recur. If the old client never subscribed, record that
     fact, forget/re-pair once, then repeat with subscription enabled. Record
     `gatt_invalidations`, discovery handles, CCCD and confirmation evidence.
+
+## R5 capacity and footprint
+
+R5 raises the shared resolving list from 4 to **10** in both deployments.
+Resolution retains the R4 resumable quantum of one entry / at most one AES
+block per executor item; only the next item after completion formats the
+connection event. Reset clears the enlarged list in 128-byte slices, preserving
+the existing per-item bound. The full-list model checks both a miss and a last
+entry match (9 blocks with the local zero-IRK entry, and 10 without it,
+across 10 items), with a deliberately pessimistic 52 us/AES
+cost: maximum 1,260 ticks (52.5 us). This is a model, not new hardware timing.
+The R4 measured maximum was 355 ticks per resolution item; batching nine such
+items could take about 133 us, so no whole-list batching is introduced.
+
+Both `ble` and `log` print `bond_count`, `bond_capacity`, persistent
+`bond_replacements`, and `bond_identity ADDRESS type T rank R SC|legacy cccd
+HANDLE=FLAGS cccd HANDLE=FLAGS`. Rank 1 is MRU. CCCD handles are characteristic
+value handles (Service Changed 0008, MIDI 0010 for this database); flag 0002
+indicates, flag 0001 notifies, and handle 0000 is absent. No keys are printed.
+`log` also reports bond writes/erases/pending/failures, resolving-list size and
+entries, LTK negatives and per-kind executor timing. With diagnostics off,
+identity metadata and capacity still appear in the compact `ble` readout.
+
+R4→R5 deltas (bytes; pool includes DMA and the host pools):
+
+| Diagnostics | App flash | .data + .bss | Pool | Total data RAM |
+| --- | ---: | ---: | ---: | ---: |
+| on | +2064 | 0 | +208 | +208 |
+| off | +2080 | +4 | +208 | +212 |
+
+The unchanged trace adds 20480 B on / zero off. RAMTEXT code remains 3112 B.
+Full R4/R5 sizes and package hashes are in RESULTS-R5. `template-open-r5.fwsc`
+is the diagnostics-on owner image; `template-open-r4.fwsc` remains unchanged.
+Felucca's sector-journal host retains **N_BOND=2**, permitted by r8; it shares
+the ten-entry list, one-entry resolution steps and sliced Reset clearing.

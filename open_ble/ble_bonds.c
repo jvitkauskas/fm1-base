@@ -13,6 +13,9 @@
 #if FM1B_BLE_OPEN
 #include "ble_store.h"
 #endif
+#if FM1B_BLE_OPEN
+#include "ble_bond_capacity.inc"
+#else
 #define BOND_BASE 0x96000u
 #define BOND_COUNT 8
 static struct {
@@ -249,3 +252,5 @@ void ble_bonds_get_diag(ble_bond_diag_t *out)
     unsigned i; *out=bonds.d; out->records=0;
     for(i=0;i<BOND_COUNT;i++) out->records+=bonds.entry[i].active;
 }
+
+#endif /* original two-peer sector journal */

@@ -19,6 +19,7 @@ static struct {
  * Reset. Bounded journal retains the last four failures until power-off. */
 static ble_mic_record_t mic_records[BLE_MIC_RECORDS] __attribute__((section(".pool.ble")));
 static uint32_t mic_serial;
+#include "ble_radio_diag.inc"
 static void security_history(ble_mic_pdu_t *p,unsigned capacity,uint8_t *count,
                              uint8_t sn,uint64_t counter,uint8_t length)
 {
@@ -109,9 +110,11 @@ static int security_receive_inner(rx_t *r)
     if(security.d.rx_on && r->n) {
         uint64_t count=security.d.rx_counter++;
         if(count>BLE_CCM_LAST || r->n<5 || !ble_ccm(security.key,security.iv,count,1,(uint8_t)llid,r->data,(uint8_t)(r->n-4u),1)) {
+            BLE_DIAG_ONLY(radio_auth(r->radio_id,count,0));
             BLE_DIAG_ONLY(security_mic_record(r,count));
             return security_auth_failure(1);
         }
+        BLE_DIAG_ONLY(radio_auth(r->radio_id,count,1));
         BLE_DIAG_ONLY(security_history(security.rx,4,&security.rx_count,(r->header>>3)&1u,count,r->n));
         r->n=(uint8_t)(r->n-4u);
     }
@@ -235,10 +238,11 @@ int ble_ll_tx_prepare(unsigned id,uint8_t out[31],uint8_t *n)
 {
     tx_t *t=&queues.tx[id]; uint64_t count;
     *n=t->n; memcpy(out,t->data,*n);
-    BLE_DIAG_ONLY(security.prepared_encrypted=0);
+    BLE_DIAG_ONLY(t->radio_counter=BLE_RADIO_NO_COUNTER; security.prepared_encrypted=0);
     if(!security.d.tx_on || !*n) return 1;
     count=security.d.tx_counter;
     if(count>BLE_CCM_LAST || (count==BLE_CCM_LAST && !t->terminate)) { ble_ll_close(0x16); return 0; }
+    BLE_DIAG_ONLY(t->radio_counter=count);
     security.d.tx_counter++;
     if(!ble_ccm(security.key,security.iv,count,0,t->llid,out,*n,0)) { ble_ll_close(0x1f); return 0; }
     BLE_DIAG_ONLY(security.prepared_counter=count; security.prepared_length=(uint8_t)(*n+4u); security.prepared_encrypted=1);

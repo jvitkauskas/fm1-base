@@ -1,0 +1,96 @@
+log: ble_diag 1
+log: sample_ms 1507586
+log: peripheral_state 2
+log: peripheral_linked 1
+log: link_state_idle_created_up_closing_stopped 2
+log: link_epoch 24
+log: conn_interval_1250us 12
+log: conn_latency 0
+log: conn_timeout_10ms 600
+log: conn_event 3114
+log: conn_events 105526
+log: conn_updates 17
+log: pending_kind 0
+log: supervision_fail 0
+log: late_instants 0
+log: disconnects 11
+log: enc_enabled 1
+log: mic_failures 0
+log: nimble_bonded 1
+log: nimble_subscribed 1
+log: nimble_mtu 517
+log: nimble_resets 0
+log: nimble_error 0
+log: param_pending 0
+log: param_requests 6
+log: param_status 0
+log: gatt_invalidations 1
+log: gatt_confirmations 1
+log: gatt_peer_version 3
+log: bond_pending 1
+log: bond_failures 0
+log: midi_packets_in 36
+log: midi_packets_out 1228
+log: midi_bad 0
+log: midi_drop 0
+log: error 0
+log: dma_canary_errors 0
+log: executor_selftest 1
+log: executor_dispatch_live_max_us 173
+log: executor_item_max_us 57
+log: executor_item_over_100us 0
+log: executor_own_over_250us 0
+log: executor_over_250us_plus_item 0
+log: refill_max_us 51
+log: refill_over_80us 0
+log: worker_timer_calls 1544840
+log: worker_timer_max_gap_us 17812
+log: worker_timer_over_7500us 5
+log: worker_gap_max ms 797302 us 17812 state starting end_state starting reason radio_start,flash_write, epoch 15
+log: worker_gap ms 524562 us 17745 state starting end_state starting reason radio_start,flash_write, epoch 11
+log: worker_gap ms 797302 us 17812 state starting end_state starting reason radio_start,flash_write, epoch 15
+log: worker_gap ms 1270459 us 17728 state starting end_state starting reason radio_start,flash_write, epoch 17
+log: worker_gap ms 1401714 us 17772 state starting end_state starting reason radio_start,flash_write, epoch 21
+log: adv_session 12
+log: connect_seen 1
+log: connect_accepted 1
+log: adv_session_record id 9 ms 1270571 seen 1 accepted 1
+log: adv_session_record id 10 ms 1280786 seen 1 accepted 1
+log: adv_session_record id 11 ms 1401826 seen 1 accepted 1
+log: adv_session_record id 12 ms 1441118 seen 1 accepted 1
+log: audio_late 0
+log: audio_max_wall_us 155
+log: audio_xruns 0
+log: ble_event ms 1304742 session 10 conn 80 enc_start a 0 b 1 c 0
+log: ble_event ms 1304773 session 10 conn 80 smp_result a 0 b 2 c 0
+log: ble_event ms 1304774 session 10 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 1304892 session 10 conn 80 cccd_write a 17 b 1 c 0
+log: ble_event ms 1304952 session 10 conn 80 cccd_write a 17 b 1 c 0
+log: ble_event ms 1307427 session 10 conn 80 l2cap_request a 12 b 600 c 0
+log: ble_event ms 1307443 session 10 conn 80 l2cap_result a 0 b 0 c 0
+log: ble_event ms 1307494 session 10 conn 80 conn_update a 12 b 0 c 600
+log: ble_event ms 1307614 session 10 conn 80 conn_update a 6 b 0 c 200
+log: ble_event ms 1401785 session 10 conn 80 disconnect a 19 b 531 c 0
+log: ble_event ms 1438272 session 11 conn 80 connect a 0 b 0 c 0
+log: ble_event ms 1438397 session 11 conn 80 enc_start a 0 b 1 c 0
+log: ble_event ms 1438397 session 11 conn 80 cccd_restore a 9 b 2 c 0
+log: ble_event ms 1438407 session 11 conn 80 mtu a 517 b 0 c 0
+log: ble_event ms 1438437 session 11 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 1438527 session 11 conn 80 cccd_write a 17 b 1 c 0
+log: ble_event ms 1438677 session 11 conn 80 cccd_write a 9 b 2 c 0
+log: ble_event ms 1438707 session 11 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 1438992 session 11 conn 80 cccd_write a 17 b 0 c 0
+log: ble_event ms 1441107 session 11 conn 80 disconnect a 19 b 531 c 0
+log: ble_event ms 1457336 session 12 conn 80 connect a 0 b 0 c 0
+log: ble_event ms 1457442 session 12 conn 80 smp_start a 1 b 41 c 0
+log: ble_event ms 1458072 session 12 conn 80 enc_start a 0 b 1 c 0
+log: ble_event ms 1458072 session 12 conn 80 smp_result a 0 b 2 c 0
+log: ble_event ms 1458162 session 12 conn 80 mtu a 517 b 0 c 0
+log: ble_event ms 1459647 session 12 conn 80 cccd_write a 9 b 2 c 0
+log: ble_event ms 1459917 session 12 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 1460007 session 12 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 1460097 session 12 conn 80 cccd_write a 17 b 1 c 0
+log: ble_event ms 1462336 session 12 conn 80 l2cap_request a 12 b 600 c 0
+log: ble_event ms 1462437 session 12 conn 80 l2cap_result a 0 b 0 c 0
+log: ble_event ms 1462752 session 12 conn 80 conn_update a 12 b 0 c 600
+log: mic_records 0

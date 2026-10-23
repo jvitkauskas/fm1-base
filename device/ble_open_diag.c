@@ -49,7 +49,31 @@ static void ob_gap(const char *label,const ble_gap_event_t *e)
     if(e->reasons&BLE_GAP_FLASH) ob_puts("flash_write,");
     ob_puts(" epoch "); ob_dec((int32_t)e->epoch); ob_putc('\n');
 }
+/* Freeze identity metadata before USB output yields to host callbacks. */
+static void open_ble_bonds_dump(void)
+{
+    ble_bond_diag_t d; ble_bond_peer_diag_t peer[BLE_BOND_CAPACITY]; unsigned count=0;
+    ble_bonds_get_diag(&d);
+    while(count<BLE_BOND_CAPACITY && !ble_bonds_peer(count,&peer[count])) count++;
+    ob_kv("bond_count",d.count); ob_kv("bond_capacity",d.capacity);
+    ob_kv("bond_replacements",(int32_t)d.replacements);
+    for(unsigned i=0;i<count;i++) {
+        const ble_bond_peer_diag_t *p=&peer[i];
+        ob_puts("bond_identity ");
+        for(unsigned n=6;n>0;n--) { ob_hex(p->addr[n-1u],2); if(n>1) ob_putc(':'); }
+        ob_puts(" type "); ob_dec(p->type); ob_puts(" rank "); ob_dec(p->rank);
+        ob_puts(p->sc ? " SC" : " legacy");
+        for(unsigned c=0;c<2;c++) {
+            ob_puts(" cccd "); ob_hex(p->cccd_handle[c],4); ob_putc('='); ob_hex(p->cccd_flags[c],4);
+        }
+        ob_putc('\n');
+    }
+}
 #if FM1B_BLE_DIAG
+#define BRD_PUTS ob_puts
+#define BRD_DEC ob_dec
+#define BRD_HEX ob_hex
+#include "../open_ble/ble_radio_dump.inc"
 static void open_ble_mic_dump(void)
 {
     /* Snapshot before USB output yields: failures cannot tear a readout. */
@@ -131,6 +155,7 @@ static void open_ble_health_dump(void)
     ob_kv("gatt_confirmations",(int32_t)host.gatt_confirmations);
     ob_kv("gatt_peer_version",(int32_t)host.gatt_peer_version);
     ob_kv("bond_pending",bond.pending); ob_kv("bond_failures",(int32_t)bond.failures);
+    open_ble_bonds_dump();
     ob_kv("midi_packets_in",(int32_t)host.midi_in); ob_kv("midi_packets_out",(int32_t)host.midi_out);
     ob_kv("midi_bad",(int32_t)host.midi_bad); ob_kv("midi_drop",(int32_t)host.midi_drop);
     ob_kv("error",(int32_t)br_diag.error); ob_kv("dma_canary_errors",(int32_t)br_diag.canary_errors);
@@ -156,6 +181,7 @@ static void open_ble_health_dump(void)
 #if FM1B_BLE_DIAG
     open_ble_events_dump();
     open_ble_mic_dump();
+    ble_radio_dump();
 #endif
 }
 #if FM1B_BLE_DIAG
@@ -211,6 +237,7 @@ static void open_ble_dump(void)
         ob_kv("seed_credit_bits",seed.credit); ob_kv("seed_malformed",(int32_t)seed.malformed); ob_kv("seed_conflicts",(int32_t)seed.conflicts);
         ob_kv("seed_flash_failures",(int32_t)seed.flash_failures); ob_kv("le_rand_calls",(int32_t)seed.rand_calls);
         ob_kv("entropy_bytes",(int32_t)seed.bytes); ob_kv("reseed_attempts",(int32_t)seed.reseed_attempts);
+        open_ble_bonds_dump();
         ob_kv("bond_records",bond.records); ob_kv("bond_pending",bond.pending); ob_kv("bond_writes",(int32_t)bond.writes);
         ob_kv("bond_erases",(int32_t)bond.erases); ob_kv("bond_failures",(int32_t)bond.failures); ob_kv("bond_malformed",(int32_t)bond.malformed);
         ob_kv("bond_private_refused",(int32_t)bond.private_refused);

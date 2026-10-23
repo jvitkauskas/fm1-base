@@ -19,7 +19,9 @@
 #if FELUCCA_BLE_S31
 #include "../open_ble/ble_privacy.h"
 #endif
-static const uint8_t pub[6]={0x58,0x65,0x67,0x8b,0x40,0x62},central[6]={1,0,0,0,0,0};
+static const uint8_t pub[6]={0x58,0x65,0x67,0x8b,0x40,0x62};
+static uint8_t central[6]={1,0,0,0,0,0};
+static int missing_expected,missing_seen;
 static uint8_t smp[32][70],smp_len[32],l2[524],att[524];
 static unsigned smp_n,l2_n,l2_want,att_n,fragments65,sc_indications;
 static uint8_t sc_ack_due;
@@ -50,6 +52,7 @@ static void take_slot(unsigned slot)
             for(i=0;i<16;i++) sk[i]=keyle[15u-i];
         } else if(p[0]==5) start_req_seen=1;
         else if(p[0]==6) started=1;
+        else if(p[0]==13 && p[1]==6 && missing_expected) missing_seen=1;
         else if(p[0]==13 || p[0]==2) { fprintf(stderr,"unexpected LL reject/terminate %u reason %u\n",p[0],p[1]); assert(0); }
     } else {
         if(llid==2) { l2_n=0; l2_want=ble_get16(p)+4u; assert(l2_want<=sizeof l2); }
@@ -247,8 +250,14 @@ static void pair_link(int sc,int rpa,uint8_t saved_ltk[16],uint8_t rand_ediv[10]
     pump(); ble_host_get_diag(&d);
     assert(d.encrypted && d.key_size==16 && d.bonded && d.pair_method==(sc ? 2 : 1) && !d.pair_failures );
 }
+#if FM1B_BLE_OPEN
+#include "ble_bond_capacity_test.inc"
+#endif
 int main(int argc,char **argv)
 {
+#if FM1B_BLE_OPEN
+    if(argc>1 && !strcmp(argv[1],"f29")) { capacity_test(); return 0; }
+#endif
     uint8_t packet[70],saved_ltk[16],rand_ediv[10]={0};
     (void)packet;
     int repeat=argc>1 && (!strcmp(argv[1],"repeat-legacy") || !strcmp(argv[1],"repeat-sc"));
@@ -498,6 +507,16 @@ int main(int argc,char **argv)
         /* Exercise the installed replacement callback via a real capacity
          * overflow, then explicit application unpair (including absent IRK).
          * The encrypted connection must remain usable throughout. */
+#if FM1B_BLE_OPEN
+        { struct ble_store_value_sec extra={0}; union ble_store_key k={0}; union ble_store_value v;
+          extra.key_size=16; extra.ltk_present=1; extra.ltk[0]=0xa5;
+          for(unsigned id=3;id<=9;id++) { extra.peer_addr.val[0]=(uint8_t)id; assert(!ble_store_write_our_sec(&extra)); }
+          k.sec.peer_addr.val[0]=2; assert(ble_bonds_read(1,&k,&v)==BLE_HS_ENOENT);
+          k.sec.peer_addr.val[0]=1; assert(!ble_bonds_read(1,&k,&v)); /* connected oldest is protected */
+          assert(!ble_host_delete_bond(0,central) && !ble_host_delete_bond(0,central));
+          privacy_ready(1); l2send(4,(uint8_t[]){2,200,0},3); assert(att_n==3 && att[0]==3);
+          ble_host_get_diag(&d); assert(d.connection==BLE_HANDLE && d.encrypted && !d.pair_failures && !d.error); }
+#else
         { struct ble_store_value_sec third={0}; ble_addr_t peers[2]; int count;
           union ble_store_key k={0}; union ble_store_value v;
           assert(!ble_store_util_bonded_peers(peers,&count,2) && count==2);
@@ -507,6 +526,7 @@ int main(int argc,char **argv)
           assert(!ble_host_delete_bond(0,central) && !ble_host_delete_bond(0,central));
           privacy_ready(1); l2send(4,(uint8_t[]){2,200,0},3); assert(att_n==3 && att[0]==3);
           ble_host_get_diag(&d); assert(d.connection==BLE_HANDLE && d.encrypted && !d.pair_failures && !d.error); }
+#endif
         puts("F-28: real NimBLE repeat pairing, same IRK, changed IRK with old RPA, changed IRK with new unresolved RPA, OTA c1/f5/f6, 2028 before 2027 without disconnect, three fresh-RPA encrypted reconnects each: PASS");
     }
 #endif

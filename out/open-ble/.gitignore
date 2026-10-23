@@ -6,3 +6,6 @@ r2-update/
 r3-diag-off/
 r3-diag-on/
 r4-baseline/
+# Raw HCI captures (btmon, btsnoop) contain link keys; keep them local
+*/btmon.txt
+*.btsnoop

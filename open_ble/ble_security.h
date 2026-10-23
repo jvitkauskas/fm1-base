@@ -28,8 +28,37 @@ typedef struct {
 } ble_mic_record_t;
 unsigned ble_security_mic_records(ble_mic_record_t out[BLE_MIC_RECORDS]);
 void ble_security_tx_loaded(uint8_t sn);
+/* R6 descriptor observations; no claim of an on-air TX sniffer. */
+enum { BLE_RADIO_EVENTS=32, BLE_RADIO_ROWS=64 };
+enum { BLE_RADIO_RX=1, BLE_RADIO_LOAD, BLE_RADIO_ACK, BLE_RADIO_TX_STATE, BLE_RADIO_PREP };
+enum { BLE_RADIO_ACCEPT=1, BLE_RADIO_DUPLICATE, BLE_RADIO_CRC, BLE_RADIO_OTHER,
+       BLE_RADIO_AUTH_OK, BLE_RADIO_AUTH_BAD };
+#define BLE_RADIO_NO_COUNTER UINT64_MAX
+typedef struct {
+    uint64_t counter;
+    uint32_t ticks;
+    uint16_t header,status;
+    uint8_t kind,slot,id,decision,flags;
+} ble_radio_row_t;
+typedef struct {
+    uint32_t serial,epoch;
+    uint16_t event,count,overflow;
+    uint8_t closed;
+    ble_radio_row_t row[BLE_RADIO_ROWS];
+} ble_radio_event_t;
+typedef struct { uint32_t first,last; uint8_t frozen,reason; } ble_radio_summary_t;
+void ble_radio_event(uint16_t event,int closed);
+uint64_t ble_radio_rx(uint16_t event,uint16_t status,uint16_t header,uint8_t slot,uint8_t flags);
+void ble_radio_tx(uint8_t kind,uint16_t event,unsigned slot,int id,uint16_t header,uint16_t status);
+void ble_radio_freeze(uint8_t reason);
+void ble_radio_summary(ble_radio_summary_t *out);
+int ble_radio_read(uint32_t serial,ble_radio_event_t *out);
 #else
 #define ble_security_tx_loaded(sn) ((void)(sn))
+#define ble_radio_event(event,closed) ((void)0)
+#define ble_radio_rx(event,status,header,slot,flags) 0u
+#define ble_radio_tx(kind,event,slot,id,header,status) ((void)0)
+#define ble_radio_freeze(reason) ((void)0)
 #endif
 uint8_t ble_ll_ltk_reply(uint16_t handle,const uint8_t *ltk,int negative);
 int ble_ll_tx_prepare(unsigned id,uint8_t out[31],uint8_t *n);

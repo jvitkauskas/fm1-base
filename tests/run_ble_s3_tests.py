@@ -47,7 +47,14 @@ def run(name,objects,args=()):
                     '-Wl,--wrap=tc_sha256_update,--wrap=tc_sha256_final,--wrap=memset,--wrap=memcpy,--wrap=ble_secure_zero',*map(str,objects),'-o',str(exe)],check=True)
     subprocess.run([str(exe),*args],check=True)
 base=[compile(Path('open_ble')/(n+'.c'),nb.flags(vendor=False)) for n in ('ble_logic','ble_controller','ble_link_logic','ble_link','ble_midi','ble_heap','ble_crypto','ble_seed','ble_bonds','ble_timing','ble_privacy')]
-if objects: base+=[compile(Path('open_ble/ble_store.c'),nb.flags(vendor=False))]
+if objects:
+    base+=[compile(Path('open_ble/ble_store.c'),nb.flags(vendor=False))]
+    old=out/'r4-store'; old.mkdir(exist_ok=True)
+    for filename in ('ble_store.c','ble_store.h'):
+        (old/filename).write_bytes(subprocess.check_output(['git','show','208ebfb:open_ble/'+filename]))
+    names=('init','seed_load','seed_save','bond_load','bonds_save')
+    base+=[compile(old/'ble_store.c',[*nb.flags(vendor=False),
+        *['-Dble_object_'+n+'=r4_ble_object_'+n for n in names]])]
 sim=[compile(Path('tests')/(n+'.c'),nb.flags(vendor=False)) for n in ('ble_s2_sim','ble_s3_sim')]
 if objects: sim+=[compile(Path('tests/ble_open_sim_store.c'),nb.flags(vendor=False))]
 vendor=[compile(p,[*nb.flags(),"-Wno-old-style-declaration",*(['-fno-sanitize=shift-base'] if p.name=='aes_encrypt.c' else [])]) for p in nb.sources()]
@@ -55,8 +62,13 @@ port=[compile(Path('open_ble')/(n+'.c'),nb.flags(vendor=False)) for n in ('ble_n
 if mic:
     run('mic-stress',[*base,*sim,*vendor,*port,compile(Path('tests/ble_mic_stress.c'),nb.flags(vendor=False))],
         [os.environ.get('BLE_MIC_EVENTS','10000000')])
+    subprocess.run([str(out/'mic-stress'),'--trace-timeout'],check=True)
     sys.exit(0)
-if not objects and not release: run('logic',[*base,*sim,*vendor,*port,compile(Path('tests/ble_s3_test.c'),nb.flags(vendor=False))])
+if '--capacity-only' in sys.argv:
+    assert objects and s31
+    run('pairing-f29', [*base,*sim,*vendor,*port,compile(Path('tests/ble_s3_integration.c'),nb.flags(vendor=False))],['f29'])
+    sys.exit(0)
+if not objects and not release: run('logic' ,[*base,*sim,*vendor,*port,compile(Path('tests/ble_s3_test.c'),nb.flags(vendor=False))])
 run('s2-regression',[*base,*sim,*vendor,*port,compile(Path('tests/ble_s2_integration.c'),nb.flags(vendor=False))])
 if not release: run('connection-updates', [*base,*sim,*vendor,*port,compile(Path('tests/ble_conn_update_test.c'),nb.flags(vendor=False))])
 integration=compile(Path('tests/ble_s3_integration.c'),nb.flags(vendor=False))
@@ -64,6 +76,6 @@ if s31 and not objects and not release:
     run('privacy-store-timing', [*base,*sim,*vendor,*port,compile(Path('tests/ble_s31_test.c'),nb.flags(vendor=False))])
 if s31 and not release:
     run('resumable-steps', [*base,*sim,*vendor,*port,compile(Path('tests/ble_s31_steps.c'),nb.flags(vendor=False))])
-if objects and not release: run('object-store', [*base,*sim,*vendor,*port,compile(Path('tests/ble_open_store_test.c'),nb.flags(vendor=False))])
-for mode in (('legacy','sc','rpa','repeat-legacy','repeat-sc') if s31 else ('legacy','sc')):
+if objects: run('object-store', [*base,*sim,*vendor,*port,compile(Path('tests/ble_open_store_test.c'),nb.flags(vendor=False))])
+for mode in ((('f29',) if objects and s31 else ())+('legacy','sc','rpa','repeat-legacy','repeat-sc') if s31 else ('legacy','sc')):
     run('pairing-'+mode,[*base,*sim,*vendor,*port,integration],[mode])

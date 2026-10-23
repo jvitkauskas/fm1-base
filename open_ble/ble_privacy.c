@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT OR MPL-2.0 */
 /* Copyright (c) 2026 Julius Vitkauskas */
-/* r5 03 §3.6. Peer privacy only (D-6); no local RPA generation. */
+/* r8 03 §3.6. Peer privacy only (D-6); no local RPA generation. */
 #include "ble_privacy.h"
 #include "ble_crypto.h"
 #include "ble_memory.h"
@@ -18,6 +18,13 @@ static int find(const uint8_t *p)
     return -1;
 }
 void ble_privacy_reset(void) { ble_secure_zero(&rl,sizeof rl); }
+int ble_privacy_reset_step(unsigned offset)
+{
+    if(!offset) rl.d.enabled=rl.d.count=0;
+    if(offset>=sizeof rl) return 1;
+    unsigned n=sizeof rl-offset; if(n>128u) n=128u;
+    ble_secure_zero((uint8_t *)&rl+offset,n); return offset+n==sizeof rl;
+}
 uint8_t ble_privacy_command(uint16_t op,const uint8_t *p,int advertising)
 {
     int i; unsigned j;
@@ -55,6 +62,8 @@ int ble_privacy_accept(const ble_conn_t *c)
 }
 int ble_privacy_resolve_step(void)
 {
+    /* Keep the R4 one-entry quantum as the list grows to ten. In particular,
+     * never turn this into a whole-list AES loop in an executor item. */
     unsigned i=ble_link.resolve_index++;
     uint8_t hash[3];
     if(ble_link.resolve_done) return 1;

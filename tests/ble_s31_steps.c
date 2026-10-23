@@ -249,4 +249,36 @@ static void split_control(void)
     sim_aes_cost_ticks=0;
     puts("r7 failed control MIC: opcode FFFF (unavailable), no dispatch/refill: PASS");
 }
-int main(void) { resets(); split_control(); return 0; }
+static void full_resolution(void)
+{
+    for(unsigned local=0;local<2;local++) for(unsigned hit=0;hit<2;hit++) {
+        init();
+        uint8_t b[39]={0}; if(local) command(0x2027,b,39); /* profile local zero IRK */
+        for(unsigned i=local;i<BLE_RL_CAPACITY;i++) {
+            memset(b,0,39); b[1]=(uint8_t)(i+1); b[7]=(uint8_t)(i+1); command(0x2027,b,39);
+            uint8_t mode[8]={0}; mode[1]=(uint8_t)(i+1); mode[7]=1; command(0x204e,mode,8);
+        }
+        command(0x202d,(uint8_t[]){1},1);
+        ble_conn_t c=sim_connection(); c.peer_type=1; c.peer[3]=0x94; c.peer[4]=0x81; c.peer[5]=0x70;
+        assert(ble_ah(b+7,c.peer+3,c.peer)); if(!hit) c.peer[0]^=1;
+        unsigned before=event_count,blocks=sim_aes_blocks;
+        assert(ble_ll_create(&c,sim_ticks)); ble_time_reset();
+        /* Deliberately model 2 x the HAL shared 26-us transaction deadline,
+         * plus memory costs; this is pessimistic, not a target measurement. */
+        sim_aes_cost_ticks=52u*24u; sim_memory_cost_ticks=1;
+        for(unsigned step=0;step<BLE_RL_CAPACITY;step++) {
+            uint32_t start=sim_ticks,old=sim_aes_blocks; worker();
+            assert(sim_aes_blocks-old<=BLE_RL_BLOCKS_PER_ITEM && sim_ticks-start<=100u*24u);
+            assert(event_count==before && ble_link.resolve_index==step+1u);
+            assert(ble_link.resolve_done==(step+1u==BLE_RL_CAPACITY));
+        }
+        assert(sim_aes_blocks-blocks==BLE_RL_CAPACITY-local && ble_link.peer_resolved==hit);
+        worker(); assert(event_count==before+1 && events[before][2]==10);
+        ble_timing_diag_t d; ble_time_get_diag(&d);
+        assert(d.kind_count[BLE_WORK_RESOLUTION]==BLE_RL_CAPACITY && d.kind_max[BLE_WORK_RESOLUTION]<=100u*24u && !d.item_over_100us);
+        printf("r8 full RL %s: %u entries, %u AES blocks in %u items, modeled resolution max %u ticks <=2400, event deferred: PASS\n",
+            hit ? "last match" : "miss",BLE_RL_CAPACITY,BLE_RL_CAPACITY-local,BLE_RL_CAPACITY,d.kind_max[BLE_WORK_RESOLUTION]);
+        sim_aes_cost_ticks=sim_memory_cost_ticks=0;
+    }
+}
+int main(void) { resets(); split_control(); full_resolution(); return 0; }

@@ -23,12 +23,18 @@ typedef struct {
     uint8_t n,used;
 #if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
     uint32_t received_ms,since_update_ms;
+    uint64_t radio_id;
     uint16_t interval,status;
     uint8_t slot,flags;
 #endif
     uint8_t data[BLE_LL_PAYLOAD_MAX];
 } rx_t;
-typedef struct { uint32_t epoch; uint8_t n,llid,state,terminate; uint8_t data[27]; uint32_t order; } tx_t;
+typedef struct {
+    uint32_t epoch; uint8_t n,llid,state,terminate; uint8_t data[27]; uint32_t order;
+#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
+    uint64_t radio_counter;
+#endif
+} tx_t;
 static struct {
     rx_t rx[BLE_RX_STREAM],host_rx[BLE_RX_BACKLOG];
     rx_t control;
@@ -225,6 +231,9 @@ void ble_ll_close(uint8_t reason)
 {
     uint32_t key=ble_port_lock();
     if(!live()) { ble_port_unlock(key); return; }
+#if FELUCCA_BLE_STAGE >= 3
+    ble_radio_freeze(reason);
+#endif
     ble_link.state=BLE_LINK_CLOSING; ble_link.reason=reason;
     update_outcome(reason==0x28 ? BLE_UPDATE_LATE : BLE_UPDATE_CLOSED,reason);
     timing_clear();
@@ -247,6 +256,9 @@ int ble_ll_rx_slot(uint16_t status,uint16_t header,const uint8_t *data,uint32_t 
                    int delayed,uint8_t slot,uint8_t flags)
 {
     unsigned cls,n=header>>8;
+#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
+    uint64_t radio_id=ble_radio_rx(event,status,header,slot,flags);
+#endif
     uint8_t reason;
     rx_t *r;
     if(!live()) return 1;
@@ -287,7 +299,7 @@ int ble_ll_rx_slot(uint16_t status,uint16_t header,const uint8_t *data,uint32_t 
 #endif
     r=&queues.rx[queues.w]; r->epoch=ble_link.epoch; r->event=event; r->header=header; r->n=(uint8_t)n;
 #if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
-    r->received_ms=ble_port_ms(); r->interval=ble_link.conn.interval; r->status=status;
+    r->radio_id=radio_id; r->received_ms=ble_port_ms(); r->interval=ble_link.conn.interval; r->status=status;
     r->since_update_ms=last_update_valid ? r->received_ms-last_update_ms : UINT32_MAX;
     r->slot=slot; r->flags=flags|(delayed ? BLE_RX_DELAYED|BLE_RX_EVENT_UNKNOWN : 0);
     if(cls==2) r->flags|=BLE_RX_REPEAT;
@@ -490,6 +502,9 @@ static void control(const uint8_t *p,uint8_t n,uint16_t received)
 }
 void ble_ll_event(uint16_t event,uint32_t now)
 {
+#if FELUCCA_BLE_STAGE >= 3
+    ble_radio_event(event,1);
+#endif
     uint8_t reason; unsigned i; int pending=0;
     if(!live() || (!ble_link.closed_valid && (int32_t)(now-ble_link.time.first)<0)) return; /* A8 only before first close */
     if(ble_link.closed_valid && ((uint16_t)(event-ble_link.closed_n)==0 ||

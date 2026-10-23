@@ -1,0 +1,978 @@
+diff --git a/firmware/ble/ble_controller.c b/firmware/ble/ble_controller.c
+index 108ea28..8d2358e 100644
+--- a/firmware/ble/ble_controller.c
++++ b/firmware/ble/ble_controller.c
+@@ -81,14 +81,14 @@ static void defaults(void)
+     memset(ctl.masks[0],255,5); ctl.masks[0][5]=31;
+     ctl.masks[1][0]=31;
+     ctl.diag.enabled=0; ctl.diag.stopping=0;
+-#if FELUCCA_BLE_S31
+-    ble_privacy_reset();
+-#endif
+ }
+ void ble_init(const uint8_t *public_addr,ble_host_fn host)
+ {
+     memset(&ctl,0,sizeof ctl); memset(&driver,0,sizeof driver);
+     trace_w=trace_used=0; trace_frozen=0;
++#if FELUCCA_BLE_S31
++    ble_privacy_reset();
++#endif
+     defaults(); ble_ll_init();
+     if (ble_public_valid(public_addr)) memcpy(ctl.pub,public_addr,6);
+     ctl.host=host;
+@@ -178,6 +178,7 @@ static void reset_defaults(void)
+ }
+ static void reset_step(void)
+ {
++    static unsigned privacy_offset; (void)privacy_offset;
+     uint32_t item=ble_time_item_begin(); ble_work_kind_t kind=BLE_WORK_RESET_CLEAR;
+     switch(ctl.reset_pending) {
+     case 1:
+@@ -193,9 +194,14 @@ static void reset_step(void)
+         if(rc>0) ctl.reset_pending=3;
+         break;
+     }
+-    case 3: if(ble_ll_reset_step()) ctl.reset_pending=4; break;
+-    case 4: kind=BLE_WORK_RESET_DEFAULTS; reset_defaults(); ctl.reset_pending=5; break;
+-    case 5:
++    case 3: if(ble_ll_reset_step()) { privacy_offset=0; ctl.reset_pending=4; } break;
++    case 4:
++#if FELUCCA_BLE_S31
++        if(!ble_privacy_reset_step(privacy_offset)) { privacy_offset+=128u; break; }
++#endif
++        ctl.reset_pending=5; break;
++    case 5: kind=BLE_WORK_RESET_DEFAULTS; reset_defaults(); ctl.reset_pending=6; break;
++    case 6:
+         kind=BLE_WORK_RESET_COMPLETE; ctl.reset_pending=0; complete(0x0c03,0,0,0,0); break;
+     }
+     ble_time_item_end(item,kind,0x0c03);
+diff --git a/firmware/ble/ble_link.c b/firmware/ble/ble_link.c
+index 5ada9a7..2efca3a 100644
+--- a/firmware/ble/ble_link.c
++++ b/firmware/ble/ble_link.c
+@@ -22,12 +22,18 @@ typedef struct {
+     uint8_t n,used;
+ #if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
+     uint32_t received_ms,since_update_ms;
++    uint64_t radio_id;
+     uint16_t interval,status;
+     uint8_t slot,flags;
+ #endif
+     uint8_t data[BLE_LL_PAYLOAD_MAX];
+ } rx_t;
+-typedef struct { uint32_t epoch; uint8_t n,llid,state,terminate; uint8_t data[27]; uint32_t order; } tx_t;
++typedef struct {
++    uint32_t epoch; uint8_t n,llid,state,terminate; uint8_t data[27]; uint32_t order;
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++    uint64_t radio_counter;
++#endif
++} tx_t;
+ static struct {
+     rx_t rx[BLE_RX_STREAM],host_rx[BLE_RX_BACKLOG];
+     rx_t control;
+@@ -216,6 +222,9 @@ void ble_ll_close(uint8_t reason)
+ {
+     uint32_t key=ble_port_lock();
+     if(!live()) { ble_port_unlock(key); return; }
++#if FELUCCA_BLE_STAGE >= 3
++    ble_radio_freeze(reason);
++#endif
+     ble_link.state=BLE_LINK_CLOSING; ble_link.reason=reason;
+     update_outcome(reason==0x28 ? BLE_UPDATE_LATE : BLE_UPDATE_CLOSED,reason);
+     timing_clear();
+@@ -238,6 +247,9 @@ int ble_ll_rx_slot(uint16_t status,uint16_t header,const uint8_t *data,uint32_t
+                    int delayed,uint8_t slot,uint8_t flags)
+ {
+     unsigned cls,n=header>>8;
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++    uint64_t radio_id=ble_radio_rx(event,status,header,slot,flags);
++#endif
+     uint8_t reason;
+     rx_t *r;
+     if(!live()) return 1;
+@@ -278,7 +290,7 @@ int ble_ll_rx_slot(uint16_t status,uint16_t header,const uint8_t *data,uint32_t
+ #endif
+     r=&queues.rx[queues.w]; r->epoch=ble_link.epoch; r->event=event; r->header=header; r->n=(uint8_t)n;
+ #if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
+-    r->received_ms=ble_port_ms(); r->interval=ble_link.conn.interval; r->status=status;
++    r->radio_id=radio_id; r->received_ms=ble_port_ms(); r->interval=ble_link.conn.interval; r->status=status;
+     r->since_update_ms=last_update_valid ? r->received_ms-last_update_ms : UINT32_MAX;
+     r->slot=slot; r->flags=flags|(delayed ? BLE_RX_DELAYED|BLE_RX_EVENT_UNKNOWN : 0);
+     if(cls==2) r->flags|=BLE_RX_REPEAT;
+@@ -481,6 +493,9 @@ static void control(const uint8_t *p,uint8_t n,uint16_t received)
+ }
+ void ble_ll_event(uint16_t event,uint32_t now)
+ {
++#if FELUCCA_BLE_STAGE >= 3
++    ble_radio_event(event,1);
++#endif
+     uint8_t reason; unsigned i; int pending=0;
+     if(!live() || (!ble_link.closed_valid && (int32_t)(now-ble_link.time.first)<0)) return; /* A8 only before first close */
+     if(ble_link.closed_valid && ((uint16_t)(event-ble_link.closed_n)==0 ||
+diff --git a/firmware/ble/ble_privacy.c b/firmware/ble/ble_privacy.c
+index 76d2f66..3d588b6 100644
+--- a/firmware/ble/ble_privacy.c
++++ b/firmware/ble/ble_privacy.c
+@@ -1,5 +1,5 @@
+ /* SPDX-License-Identifier: MIT */
+-/* r5 03 §3.6. Peer privacy only (D-6); no local RPA generation. */
++/* r8 03 §3.6. Peer privacy only (D-6); no local RPA generation. */
+ #include "ble_privacy.h"
+ #include "ble_crypto.h"
+ #include "ble_memory.h"
+@@ -17,6 +17,13 @@ static int find(const uint8_t *p)
+     return -1;
+ }
+ void ble_privacy_reset(void) { ble_secure_zero(&rl,sizeof rl); }
++int ble_privacy_reset_step(unsigned offset)
++{
++    if(!offset) rl.d.enabled=rl.d.count=0;
++    if(offset>=sizeof rl) return 1;
++    unsigned n=sizeof rl-offset; if(n>128u) n=128u;
++    ble_secure_zero((uint8_t *)&rl+offset,n); return offset+n==sizeof rl;
++}
+ uint8_t ble_privacy_command(uint16_t op,const uint8_t *p,int advertising)
+ {
+     int i; unsigned j;
+@@ -54,6 +61,8 @@ int ble_privacy_accept(const ble_conn_t *c)
+ }
+ int ble_privacy_resolve_step(void)
+ {
++    /* Keep the R4 one-entry quantum as the list grows to ten. In particular,
++     * never turn this into a whole-list AES loop in an executor item. */
+     unsigned i=ble_link.resolve_index++;
+     uint8_t hash[3];
+     if(ble_link.resolve_done) return 1;
+diff --git a/firmware/ble/ble_privacy.h b/firmware/ble/ble_privacy.h
+index f11e6ed..cbc453c 100644
+--- a/firmware/ble/ble_privacy.h
++++ b/firmware/ble/ble_privacy.h
+@@ -2,12 +2,15 @@
+ #ifndef FELUCCA_BLE_PRIVACY_H
+ #define FELUCCA_BLE_PRIVACY_H
+ #include "ble_link.h"
+-#define BLE_RL_CAPACITY 4u
++#define BLE_RL_CAPACITY 10u
++#define BLE_RL_BLOCKS_PER_ITEM 1u
+ typedef struct {
+     uint32_t attempts,matches,unresolved,aes_failures,network_rejected;
+     uint8_t count,enabled,capacity;
+ } ble_privacy_diag_t;
+ void ble_privacy_reset(void);
++/* Reset clearing, like LL queues, yields after at most 128 bytes. */
++int ble_privacy_reset_step(unsigned offset);
+ /* Caller excludes the CONNECT_IND interrupt through check and mutation. */
+ uint8_t ble_privacy_command(uint16_t op,const uint8_t *p,int advertising);
+ int ble_privacy_accept(const ble_conn_t *c);
+diff --git a/firmware/ble/ble_security.h b/firmware/ble/ble_security.h
+index f932984..760dc39 100644
+--- a/firmware/ble/ble_security.h
++++ b/firmware/ble/ble_security.h
+@@ -27,8 +27,38 @@ typedef struct {
+ } ble_mic_record_t;
+ unsigned ble_security_mic_records(ble_mic_record_t out[BLE_MIC_RECORDS]);
+ void ble_security_tx_loaded(uint8_t sn);
++/* R6 descriptor observations; no claim of an on-air TX sniffer. */
++/* Felucca retains >=16 events inside the synthesizer pool budget. */
++enum { BLE_RADIO_EVENTS=16, BLE_RADIO_ROWS=6 };
++enum { BLE_RADIO_RX=1, BLE_RADIO_LOAD, BLE_RADIO_ACK, BLE_RADIO_TX_STATE, BLE_RADIO_PREP };
++enum { BLE_RADIO_ACCEPT=1, BLE_RADIO_DUPLICATE, BLE_RADIO_CRC, BLE_RADIO_OTHER,
++       BLE_RADIO_AUTH_OK, BLE_RADIO_AUTH_BAD };
++#define BLE_RADIO_NO_COUNTER UINT64_MAX
++typedef struct {
++    uint64_t counter;
++    uint32_t ticks;
++    uint16_t header,status;
++    uint8_t kind,slot,id,decision,flags;
++} ble_radio_row_t;
++typedef struct {
++    uint32_t serial,epoch;
++    uint16_t event,count,overflow;
++    uint8_t closed;
++    ble_radio_row_t row[BLE_RADIO_ROWS];
++} ble_radio_event_t;
++typedef struct { uint32_t first,last; uint8_t frozen,reason; } ble_radio_summary_t;
++void ble_radio_event(uint16_t event,int closed);
++uint64_t ble_radio_rx(uint16_t event,uint16_t status,uint16_t header,uint8_t slot,uint8_t flags);
++void ble_radio_tx(uint8_t kind,uint16_t event,unsigned slot,int id,uint16_t header,uint16_t status);
++void ble_radio_freeze(uint8_t reason);
++void ble_radio_summary(ble_radio_summary_t *out);
++int ble_radio_read(uint32_t serial,ble_radio_event_t *out);
+ #else
+ #define ble_security_tx_loaded(sn) ((void)(sn))
++#define ble_radio_event(event,closed) ((void)0)
++#define ble_radio_rx(event,status,header,slot,flags) 0u
++#define ble_radio_tx(kind,event,slot,id,header,status) ((void)0)
++#define ble_radio_freeze(reason) ((void)0)
+ #endif
+ uint8_t ble_ll_ltk_reply(uint16_t handle,const uint8_t *ltk,int negative);
+ int ble_ll_tx_prepare(unsigned id,uint8_t out[31],uint8_t *n);
+diff --git a/firmware/ble/ble_security.inc b/firmware/ble/ble_security.inc
+index a1394b7..b52a891 100644
+--- a/firmware/ble/ble_security.inc
++++ b/firmware/ble/ble_security.inc
+@@ -18,6 +18,7 @@ static struct {
+  * Reset. Bounded journal retains the last four failures until power-off. */
+ static ble_mic_record_t mic_records[BLE_MIC_RECORDS] __attribute__((section(".pool.ble")));
+ static uint32_t mic_serial;
++#include "ble_radio_diag.inc"
+ static void security_history(ble_mic_pdu_t *p,unsigned capacity,uint8_t *count,
+                              uint8_t sn,uint64_t counter,uint8_t length)
+ {
+@@ -108,9 +109,11 @@ static int security_receive_inner(rx_t *r)
+     if(security.d.rx_on && r->n) {
+         uint64_t count=security.d.rx_counter++;
+         if(count>BLE_CCM_LAST || r->n<5 || !ble_ccm(security.key,security.iv,count,1,(uint8_t)llid,r->data,(uint8_t)(r->n-4u),1)) {
++            BLE_DIAG_ONLY(radio_auth(r->radio_id,count,0));
+             BLE_DIAG_ONLY(security_mic_record(r,count));
+             return security_auth_failure(1);
+         }
++        BLE_DIAG_ONLY(radio_auth(r->radio_id,count,1));
+         BLE_DIAG_ONLY(security_history(security.rx,4,&security.rx_count,(r->header>>3)&1u,count,r->n));
+         r->n=(uint8_t)(r->n-4u);
+     }
+@@ -234,10 +237,11 @@ int ble_ll_tx_prepare(unsigned id,uint8_t out[31],uint8_t *n)
+ {
+     tx_t *t=&queues.tx[id]; uint64_t count;
+     *n=t->n; memcpy(out,t->data,*n);
+-    BLE_DIAG_ONLY(security.prepared_encrypted=0);
++    BLE_DIAG_ONLY(t->radio_counter=BLE_RADIO_NO_COUNTER; security.prepared_encrypted=0);
+     if(!security.d.tx_on || !*n) return 1;
+     count=security.d.tx_counter;
+     if(count>BLE_CCM_LAST || (count==BLE_CCM_LAST && !t->terminate)) { ble_ll_close(0x16); return 0; }
++    BLE_DIAG_ONLY(t->radio_counter=count);
+     security.d.tx_counter++;
+     if(!ble_ccm(security.key,security.iv,count,0,t->llid,out,*n,0)) { ble_ll_close(0x1f); return 0; }
+     BLE_DIAG_ONLY(security.prepared_counter=count; security.prepared_length=(uint8_t)(*n+4u); security.prepared_encrypted=1);
+diff --git a/firmware/hal/fm1_ble.h b/firmware/hal/fm1_ble.h
+index 83065f2..1f862b0 100644
+--- a/firmware/hal/fm1_ble.h
++++ b/firmware/hal/fm1_ble.h
+@@ -126,13 +126,19 @@ static void bb_refill_limit(unsigned limit)
+         #if FELUCCA_BLE_STAGE >= 3
+         if(bb.tx_id[slot]>=0 && ble_ll_tx_boundary((unsigned)bb.tx_id[slot])) continue;
+ #endif
+-        if(bb.tx_id[slot]>=0) { id=bb.tx_id[slot]; bb.tx_id[slot]=-1; ble_ll_tx_ack((unsigned)id); }
++        if(bb.tx_id[slot]>=0) {
++#if FELUCCA_BLE_STAGE >= 3
++            ble_radio_tx(BLE_RADIO_ACK,BB_F16(BF_EVT),slot,bb.tx_id[slot],BB_F16(BF_TX_DATA+2*slot),1);
++#endif
++            id=bb.tx_id[slot]; bb.tx_id[slot]=-1; ble_ll_tx_ack((unsigned)id); }
+         if(bb.state!=4 || ble_link.state>=BLE_LINK_CLOSING) continue;
+         if(loads==limit) continue;
+         id=ble_ll_tx_pick();
+         if(id<0) { BB_F16(BF_FLOW)&=(uint16_t)~64u; continue; }
+         n=ble_ll_tx_len((unsigned)id); llid=ble_ll_tx_llid((unsigned)id); md=(unsigned)ble_ll_acl_waiting();
+ #if FELUCCA_BLE_STAGE >= 3
++        ble_radio_tx(BLE_RADIO_PREP,BB_F16(BF_EVT),slot,id,BB_F16(BF_TX_DATA+2*slot),
++                     (uint16_t)(BB_F8(BF_TX_CTL+slot)|(BB_F16(BF_TX_TOGGLE)<<8)));
+         if(!ble_ll_tx_prepare((unsigned)id,ble_dma.bb+(slot ? BB_TX1 : BB_TX0),&n)) break;
+ #else
+         memcpy(ble_dma.bb+(slot ? BB_TX1 : BB_TX0),ble_ll_tx_data((unsigned)id),n);
+@@ -143,6 +149,10 @@ static void bb_refill_limit(unsigned limit)
+         BB_F16(BF_FLOW)=(uint16_t)((BB_F16(BF_FLOW)&~64u)|(md<<6));
+ #if FELUCCA_BLE_STAGE >= 3
+         ble_security_tx_loaded((BB_F16(BF_TX_DATA+slot*2)>>2)&1u);
++#endif
++#if FELUCCA_BLE_STAGE >= 3
++        ble_radio_tx(BLE_RADIO_LOAD,BB_F16(BF_EVT),slot,id,BB_F16(BF_TX_DATA+2*slot),
++                     (uint16_t)(BB_F8(BF_TX_CTL+slot)|(BB_F16(BF_TX_TOGGLE)<<8)));
+ #endif
+         bb.tx_id[slot]=(int8_t)id; br_sync(); BB_F8(BF_TX_CTL+slot)&=(uint8_t)~1u; br_sync();
+         loads++;
+@@ -209,7 +219,11 @@ static void bb_connected_rx(uint32_t stamp,int recovery)
+         b=(BB_F16(BF_RX_TOGGLE)&1u)|((BB_F8(BF_RX_CTL)&1u)<<1)|((BB_F8(BF_RX_CTL+1)&1u)<<2);
+     } while(a!=b);
+     first=a&1u;
+-    for(j=0;j<2;j++) if(a&(2u<<(first^j))) slots[held++]=first^j;
++    for(j=0;j<2;j++) {
++        if(a&6u) ble_radio_tx(BLE_RADIO_TX_STATE,event,j,bb.tx_id[j],BB_F16(BF_TX_DATA+2*j),
++                     (uint16_t)(BB_F8(BF_TX_CTL+j)|(BB_F16(BF_TX_TOGGLE)<<8)));
++        if(a&(2u<<(first^j))) slots[held++]=first^j;
++    }
+     if(marker && (!held || !ble_ll_rx_reserve(held,1))) {
+         /* Reservation can block before the per-slot loop. Retain that wait
+          * just like ordinary backlog pressure: later IRQ service must use
+@@ -223,7 +237,9 @@ static void bb_connected_rx(uint32_t stamp,int recovery)
+         if(n[j]<=31) memcpy(copy[j],ble_dma.bb+(slot ? BB_RX1 : BB_RX0),n[j]);
+     }
+     if(marker) {
+-        int id=bb.tx_id[boundary_slot]; bb.tx_id[boundary_slot]=-1; ble_ll_tx_ack((unsigned)id);
++        int id=bb.tx_id[boundary_slot];
++        ble_radio_tx(BLE_RADIO_ACK,event,(unsigned)boundary_slot,id,BB_F16(BF_TX_DATA+2*boundary_slot),1);
++        bb.tx_id[boundary_slot]=-1; ble_ll_tx_ack((unsigned)id);
+         position=held==1 ? 0 : held;
+         if(held==2) for(j=0;j<held;j++)
+             if(ble_ll_rx_after_marker(marker,status[j],header[j],copy[j])) { position=j; break; }
+diff --git a/firmware/src/ble_console.c b/firmware/src/ble_console.c
+index 756f496..8dc9932 100644
+--- a/firmware/src/ble_console.c
++++ b/firmware/src/ble_console.c
+@@ -19,6 +19,11 @@ static void con_ble_field(const char *name,uint32_t value)
+     con_putc(' '); con_puts(name); con_putc(' '); con_dec((int32_t)value);
+ }
+ #if FELUCCA_BLE_STAGE >= 3 && FM1B_BLE_DIAG
++#define BRD_STACK_EVENT 1
++#define BRD_PUTS con_puts
++#define BRD_DEC con_dec
++#define BRD_HEX con_hex
++#include "../ble/ble_radio_dump.inc"
+ static void con_ble_mic_dump(void)
+ {
+     /* Snapshot before USB output yields: failures cannot tear a readout. */
+@@ -61,6 +66,7 @@ static void con_ble_status(void)
+ {
+ #if FELUCCA_BLE_STAGE >= 3 && FM1B_BLE_DIAG
+     con_ble_mic_dump();
++    ble_radio_dump();
+ #endif
+     ble_hw_diag_t hw;
+     ble_diag_t d;
+diff --git a/tests/ble_mic_radio.h b/tests/ble_mic_radio.h
+index b4a04ef..0515d3f 100644
+--- a/tests/ble_mic_radio.h
++++ b/tests/ble_mic_radio.h
+@@ -7,3 +7,8 @@ void sim_radio_service(int recovery);
+ unsigned sim_radio_full(void);
+ extern void (*sim_radio_release_hook)(void);
+ extern uint32_t sim_radio_pressure,sim_radio_both,sim_radio_refused;
++/* Core ARQ peripheral baseband model. RX service is controlled separately. */
++uint8_t sim_core_start(uint8_t rx_sn);
++int sim_core_receive(uint16_t header,const uint8_t *data,uint16_t event,int crc);
++void sim_core_transmit(uint16_t *header,uint8_t data[31]);
++extern uint32_t sim_core_empty_pending_loads;
+diff --git a/tests/ble_mic_radio.inc b/tests/ble_mic_radio.inc
+index d5fbfc7..b45b0dd 100644
+--- a/tests/ble_mic_radio.inc
++++ b/tests/ble_mic_radio.inc
+@@ -75,3 +75,45 @@ static void sim_radio_ack(unsigned slot)
+     BB_F16(BF_TX_TOGGLE)=(uint16_t)(slot^1u);
+     bb_refill(); sim_radio_mirror(); /* boundaries remain pending until RX */
+ }
++/* Independent from the central: two one-bit ARQ machines and an immutable
++ * last transmitted PDU, including automatic empty packets. The documented
++ * register bus does not specify how a newly loaded slot interlocks with a
++ * hardware-generated empty PDU that is still awaiting acknowledgment. */
++static struct {
++    uint8_t rx_sn,tx_sn,valid,loaded,slot,length,llid,md,data[31];
++} core_air;
++uint32_t sim_core_empty_pending_loads;
++uint8_t sim_core_start(uint8_t rx_sn)
++{
++    memset(&core_air,0,sizeof core_air);
++    core_air.rx_sn=rx_sn; core_air.tx_sn=(uint8_t)(BB_F16(BF_TX_TOGGLE)&1u);
++    sim_core_empty_pending_loads=0; return core_air.tx_sn;
++}
++int sim_core_receive(uint16_t header,const uint8_t *data,uint16_t event,int crc)
++{
++    unsigned fresh=((header>>3)&1u)==core_air.rx_sn;
++    if(crc && core_air.valid && ((header>>2)&1u)!=core_air.tx_sn) {
++        if(core_air.loaded) BB_F8(BF_TX_CTL+core_air.slot)=1;
++        else if(!(BB_F8(BF_TX_CTL+core_air.slot)&1u)) sim_core_empty_pending_loads++;
++        core_air.tx_sn^=1u; BB_F16(BF_TX_TOGGLE)^=1u; core_air.valid=0;
++    }
++    unsigned cls=crc ? (fresh ? 1u : 9u) : (fresh ? 5u : 13u);
++    int stored=sim_radio_receive((uint16_t)cls,header,data,event);
++    if(stored && crc && fresh) core_air.rx_sn^=1u;
++    return stored && crc && fresh;
++}
++void sim_core_transmit(uint16_t *header,uint8_t data[31])
++{
++    if(!core_air.valid) {
++        unsigned slot=BB_F16(BF_TX_TOGGLE)&1u;
++        core_air.slot=(uint8_t)slot; core_air.loaded=!(BB_F8(BF_TX_CTL+slot)&1u);
++        core_air.length=core_air.loaded ? (uint8_t)(BB_F16(BF_TX_DATA+2*slot)>>8) : 0;
++        core_air.llid=core_air.loaded ? (uint8_t)(BB_F16(BF_TX_DATA+2*slot)&3u) : 1;
++        core_air.md=core_air.loaded ? (uint8_t)((BB_F16(BF_TX_DATA+2*slot)>>3)&1u) : 0;
++        if(core_air.length) memcpy(core_air.data,ble_dma.bb+(slot ? BB_TX1 : BB_TX0),core_air.length);
++        core_air.valid=1;
++    }
++    *header=(uint16_t)((core_air.length<<8)|core_air.llid|(core_air.tx_sn<<3)|
++                      (core_air.rx_sn<<2)|(core_air.md<<4));
++    if(core_air.length) memcpy(data,core_air.data,core_air.length);
++}
+diff --git a/tests/ble_mic_stress.c b/tests/ble_mic_stress.c
+index 1dd4357..2338984 100644
+--- a/tests/ble_mic_stress.c
++++ b/tests/ble_mic_stress.c
+@@ -14,6 +14,7 @@
+ static uint8_t sk[16],iv[8],sn,expected_sn;
+ static uint64_t next_counter,accepted_counter;
+ static int start_pressure_mode;
++static uint16_t start_interval=12;
+ static uint32_t rng=0x4d494334u,sequence,delivered,crc_errors,repeats,missed,ack_lost;
+ static uint32_t random32(void) { rng^=rng<<13; rng^=rng>>17; rng^=rng<<5; return rng; }
+ static void work(void) { for(unsigned i=0;i<8;i++) ble_ll_worker(); }
+@@ -34,7 +35,7 @@ static void direct(const uint8_t *p,uint8_t n,uint8_t llid,uint16_t event,int en
+ static uint32_t begin(void)
+ {
+     ble_conn_t c=sim_connection(); uint8_t req[23]={3},ltk[16],skd[16],le[16]; int slot;
+-    sim_reset(); sim_storage_reset(); sim_seed(); c.interval=12;
++    sim_reset(); sim_storage_reset(); sim_seed(); c.interval=start_interval;
+     assert(ble_ll_create(&c,sim_ticks)); sim_radio_start();
+     sn=expected_sn=0; next_counter=accepted_counter=0;
+     sim_ticks=ble_link.time.first;
+@@ -96,6 +97,7 @@ static void acknowledge_all(void)
+ }
+ static void randomized(uint32_t events)
+ {
++    rng=0x4d494334u; /* Preserve the inherited stress stream independently of ping tests. */
+     uint32_t anchor=begin(),updates=0,delay=0;
+     uint16_t interval=12,new_interval=12,instant=0;
+     unsigned update_active=0,pending=0,new_update=0;
+@@ -180,6 +182,9 @@ static void randomized(uint32_t events)
+     assert(!ble_link.diag.late_instants && !ble_link.diag.supervision_fail);
+     printf("random seed=4d494334 events=%u counter=%" PRIu64 " missed=%u lost_ack=%u zero spontaneous MIC failures: PASS\n",events,d.rx_counter,missed,ack_lost);
+ }
++#include "ble_central_ccm.inc"
++#include "ble_ping_stress.inc"
++#include "ble_radio_trace_test.inc"
+ static void corruption(void)
+ {
+     /* Force both software tiers full and both DMA slots held. The final PDU
+@@ -324,13 +329,18 @@ static void update_age_record(void)
+     printf("MIC after update/tick wrap: event=%u interval=%u age_ms=%u exact counter=%" PRIu64 ": PASS\n",
+         r->event,r->interval,r->since_update_ms,r->counter);
+ }
+-static char dump[8192]; static unsigned dump_used;
++static char dump[131072]; static unsigned dump_used;
+ static void ob_putc(char c) { assert(dump_used+1u<sizeof dump); dump[dump_used++]=c; dump[dump_used]=0; }
+ static void ob_puts(const char *p) { while(*p) ob_putc(*p++); }
+ static void ob_dec(int32_t value) { char b[16]; snprintf(b,sizeof b,"%" PRId32,value); ob_puts(b); }
+ static void ob_hex(uint32_t value,unsigned n) { while(n--) ob_putc("0123456789ABCDEF"[(value>>(n*4u))&15u]); }
+ static void ob_kv(const char *name,int32_t value) { ob_puts(name); ob_putc(' '); ob_dec(value); ob_putc('\n'); }
+ #include "mic_dump_seam.inc"
++#define BRD_STACK_EVENT 1
++#define BRD_PUTS ob_puts
++#define BRD_DEC ob_dec
++#define BRD_HEX ob_hex
++#include "../firmware/ble/ble_radio_dump.inc"
+ static void dump_test(void)
+ {
+     open_ble_mic_dump(); assert(strstr(dump,"mic_records 4\n") && strstr(dump,"mic_rx serial "));
+@@ -339,10 +349,15 @@ static void dump_test(void)
+     unsigned line=0;
+     for(const char *p=dump;*p;p++) { if(*p=='\n') line=0; else assert(++line<188u); }
+     assert(!strstr(dump,"key") && !strstr(dump,"plaintext"));
++    ble_radio_dump();
++    assert(strstr(dump,"radio_frozen 1 reason 3D events ") && strstr(dump,"radio_tx_source descriptor_only"));
++    assert(strstr(dump," decision 6 ctr 0000000002") && strstr(dump," decision 2 ctr none"));
++    for(const char *p=dump;*p;p++) { if(*p=='\n') line=0; else assert(++line<188u); }
+     puts("production USB/CDC MIC formatter: complete fields, 39-bit hex counters, all logical rows fit USB frame: PASS");
+ }
+ int main(int argc,char **argv)
+ {
++    if(argc>1 && !strcmp(argv[1],"--trace-timeout")) { radio_timeout_test(); return 0; }
+     uint32_t events=argc>1 ? (uint32_t)strtoul(argv[1],0,0) : 10000000u;
+-    randomized(events); corruption(); slot_race_and_lengths(); pause_restart(); update_age_record(); dump_test(); return 0;
++    central_ccm_test(); ping_stress(events/2u,12); ping_stress(events/2u,24); randomized(events); radio_trace_test(); corruption(); slot_race_and_lengths(); pause_restart(); update_age_record(); dump_test(); return 0;
+ }
+diff --git a/tests/ble_s31_steps.c b/tests/ble_s31_steps.c
+index d5efd23..045bcd5 100644
+--- a/tests/ble_s31_steps.c
++++ b/tests/ble_s31_steps.c
+@@ -248,4 +248,36 @@ static void split_control(void)
+     sim_aes_cost_ticks=0;
+     puts("r7 failed control MIC: opcode FFFF (unavailable), no dispatch/refill: PASS");
+ }
+-int main(void) { resets(); split_control(); return 0; }
++static void full_resolution(void)
++{
++    for(unsigned local=0;local<2;local++) for(unsigned hit=0;hit<2;hit++) {
++        init();
++        uint8_t b[39]={0}; if(local) command(0x2027,b,39); /* profile local zero IRK */
++        for(unsigned i=local;i<BLE_RL_CAPACITY;i++) {
++            memset(b,0,39); b[1]=(uint8_t)(i+1); b[7]=(uint8_t)(i+1); command(0x2027,b,39);
++            uint8_t mode[8]={0}; mode[1]=(uint8_t)(i+1); mode[7]=1; command(0x204e,mode,8);
++        }
++        command(0x202d,(uint8_t[]){1},1);
++        ble_conn_t c=sim_connection(); c.peer_type=1; c.peer[3]=0x94; c.peer[4]=0x81; c.peer[5]=0x70;
++        assert(ble_ah(b+7,c.peer+3,c.peer)); if(!hit) c.peer[0]^=1;
++        unsigned before=event_count,blocks=sim_aes_blocks;
++        assert(ble_ll_create(&c,sim_ticks)); ble_time_reset();
++        /* Deliberately model 2 x the HAL shared 26-us transaction deadline,
++         * plus memory costs; this is pessimistic, not a target measurement. */
++        sim_aes_cost_ticks=52u*24u; sim_memory_cost_ticks=1;
++        for(unsigned step=0;step<BLE_RL_CAPACITY;step++) {
++            uint32_t start=sim_ticks,old=sim_aes_blocks; worker();
++            assert(sim_aes_blocks-old<=BLE_RL_BLOCKS_PER_ITEM && sim_ticks-start<=100u*24u);
++            assert(event_count==before && ble_link.resolve_index==step+1u);
++            assert(ble_link.resolve_done==(step+1u==BLE_RL_CAPACITY));
++        }
++        assert(sim_aes_blocks-blocks==BLE_RL_CAPACITY-local && ble_link.peer_resolved==hit);
++        worker(); assert(event_count==before+1 && events[before][2]==10);
++        ble_timing_diag_t d; ble_time_get_diag(&d);
++        assert(d.kind_count[BLE_WORK_RESOLUTION]==BLE_RL_CAPACITY && d.kind_max[BLE_WORK_RESOLUTION]<=100u*24u && !d.item_over_100us);
++        printf("r8 full RL %s: %u entries, %u AES blocks in %u items, modeled resolution max %u ticks <=2400, event deferred: PASS\n",
++            hit ? "last match" : "miss",BLE_RL_CAPACITY,BLE_RL_CAPACITY-local,BLE_RL_CAPACITY,d.kind_max[BLE_WORK_RESOLUTION]);
++        sim_aes_cost_ticks=sim_memory_cost_ticks=0;
++    }
++}
++int main(void) { resets(); split_control(); full_resolution(); return 0; }
+diff --git a/tests/ble_s31_test.c b/tests/ble_s31_test.c
+index b206812..649a83c 100644
+--- a/tests/ble_s31_test.c
++++ b/tests/ble_s31_test.c
+@@ -82,7 +82,7 @@ static void privacy(void)
+     assert(hci(0x2027,b,38)==0x12 && hci(0x2028,b,6)==0x12 && hci(0x2029,b,1)==0x12);
+     assert(hci(0x202a,b,1)==0x12 && hci(0x202d,0,0)==0x12 && hci(0x204e,b,7)==0x12);
+     for(i=1;i<=BLE_RL_CAPACITY;i++) { add(b,i); assert(!hci(0x2027,b,39)); }
+-    add(b,5); assert(hci(0x2027,b,39)==7);
++    add(b,BLE_RL_CAPACITY+1u); assert(hci(0x2027,b,39)==7);
+     add(b,1); assert(hci(0x2027,b,39)==0x12); /* duplicate before full */
+     b[1]=99; assert(hci(0x2027,b,39)==0x12); /* duplicate non-zero IRK */
+     assert(hci(0x2028,b,7)==2 && hci(0x204e,(uint8_t[8]){0,99,0,0,0,0,0,1},8)==2);
+diff --git a/tests/run_ble_s3_tests.py b/tests/run_ble_s3_tests.py
+index 6fbdeeb..f5be993 100644
+--- a/tests/run_ble_s3_tests.py
++++ b/tests/run_ble_s3_tests.py
+@@ -48,6 +48,7 @@ port=[compile(Path('firmware/ble')/(n+'.c'),nb.flags(vendor=False)) for n in ('b
+ if mic:
+     run('mic-stress',[*base,*sim,*vendor,*port,compile(Path('tests/ble_mic_stress.c'),nb.flags(vendor=False))],
+         [os.environ.get('BLE_MIC_EVENTS','10000000')])
++    subprocess.run([str(out/'mic-stress'),'--trace-timeout'],check=True)
+     sys.exit(0)
+ run('logic',[*base,*sim,*vendor,*port,compile(Path('tests/ble_s3_test.c'),nb.flags(vendor=False))])
+ run('s2-regression',[*base,*sim,*vendor,*port,compile(Path('tests/ble_s2_integration.c'),nb.flags(vendor=False))])
+diff --git a/docs/BLE-R5.md b/docs/BLE-R5.md
+new file mode 100644
+index 0000000..acae7c2
+--- /dev/null
++++ b/docs/BLE-R5.md
+@@ -0,0 +1,28 @@
++<!-- SPDX-License-Identifier: MIT -->
++# Round 5: r8 resolving-list capacity
++
++Uncommitted above `88d426f` on `ble-controller`. The shared controller now has
++**N_RL=10**. It keeps R4's resumable one-entry / at most one AES block per
++resolution item, before connection-event formatting. Reset clears the larger
++list in 128-byte executor slices; a full synchronous clear would exceed the
++existing pessimistic Reset test's 70-us target. Other controller timing,
++encryption, MIC journal and host security policy are unchanged.
++
++This deployment keeps **N_BOND=2** in its original sector journal, explicitly
++allowed by r8 04 section 7 item 5. It does not receive fm1-base's compact A/B
++store, persistent eight-peer LRU, or R3/R4 Apple host changes.
++
++ASan/UBSan: S1, S2, S3, S3.1 and the 10-million-event MIC suite. Logs are
++`out/ble-r5-{s1,s2,s3,s31,mic}-tests.log`. H-22/H-23 now fill all ten entries,
++then test overflow, duplicate identity/IRK and absent entries. Full resolution
++checks miss and last-entry match: 9 blocks with a local zero-IRK entry,
++10 without it, across 10 items, with no item
++performing more than one block, event deferred, modeled maximum 1260 ticks
++(52.5 us) with a deliberately pessimistic 52-us/block cost. Actual HAL's whole
++AES transaction has a shared 26-us deadline; the model is not a device timing
++measurement. The R4 355-tick measured resolution maximum already applied to
++one-entry work: nine such items batched could take 3195 ticks (133.1 us).
++
++The patch is exported by the fm1-base deliverable at
++`out/open-ble/R5-felucca.patch`; no devices or bench hosts were contacted, and
++no flashing, commits or pushes were performed.
+diff --git a/docs/BLE-R6.md b/docs/BLE-R6.md
+new file mode 100644
+index 0000000..0d8d512
+--- /dev/null
++++ b/docs/BLE-R6.md
+@@ -0,0 +1,37 @@
++# R6 investigation and diagnostics
++
++The MIC failure with central LE Ping is **not reproduced or fixed**. Do not
++promote the zero-failure simulation into a claim about silicon reliability.
++The fm1-base deliverable `out/open-ble/RESULTS-R6.md` describes the path audit,
++model assumptions, evidence gaps and proposed r9 probes in full.
++
++Both implementations retain the existing advertised LE Encryption feature
++only. Unknown ping requests still receive LL_UNKNOWN_RSP. R5's resolving-list
++capacity remains ten; this Felucca host's bond journal remains at two peers.
++
++Diagnostics add a 16-active-event, 6-row-per-event ring in Felucca (fm1-base
++uses 32 events and 64 rows). RX includes empties,
++duplicates, CRC outcomes, slot/header/status and the counter actually used by
++CCM. TX rows are prepare/load/ACK and descriptor snapshots, with logical buffer
++id, assigned counter and raw slot control/toggle. The first local 0x3D or 0x08
++freezes it through reconnect and HCI Reset until power-off. Silent closes do
++not erase the exchanges before a supervision timeout. The CDC BLE status
++formatter prints it, with no payload or key material.
++
++The documented hardware interface cannot supply a per-air-TX stream, actual TX
++NESN or a reliable new/repeat classification. These fields are explicitly
++unknown; descriptor headers in empty slots can be stale. Full-slot refused
++receptions have no descriptor. Per-event overflow is counted. This partially
++addresses the requested diagnostics; it does not claim unobservable packets.
++
++The independent central now uses its own ARQ and counters, a separate TinyCrypt
++AES-based CCM oracle, an authenticated-payload ping timer, ATT writes, CRC errors,
++packet/ACK loss and delayed slot service. It checks both directions and exact
++ATT delivery. `tests/run_ble_s3_tests.py --mic-stress` runs 10 M ping-model events
++(5 M at 15 ms, 5 M at 30 ms), then the inherited 10 M-event stress and directed
++corruption, DMA, encryption transition, ring-freeze and formatter tests. Logs:
++`out/ble-r6-regression-final-tests.log` and
++`out/ble-r6-mic-small-final-tests.log`. The final S3.1 target build also passes
++(`out/ble-r6-build-final.log`): 8,332 bytes of pool headroom remain; the 8,192-byte
++gate was retained. CDC readout uses a 160-byte stack event snapshot. No physical device was accessed and no
++commit was created. Hardware acceptance still starts with the owner ping test.
+diff --git a/firmware/ble/ble_radio_diag.inc b/firmware/ble/ble_radio_diag.inc
+new file mode 100644
+index 0000000..5f4a9b8
+--- /dev/null
++++ b/firmware/ble/ble_radio_diag.inc
+@@ -0,0 +1,86 @@
++/* SPDX-License-Identifier: MIT */
++/* R6: metadata only. Included inside ble_security.inc's diagnostics guard.
++ * Writers run with LL exclusion. Keep the first failure until power-off;
++ * session/security Reset must never clear this evidence. */
++static struct {
++    ble_radio_event_t events[BLE_RADIO_EVENTS];
++    uint32_t serial;
++    uint8_t frozen,reason;
++} radio_diag __attribute__((section(".pool.ble")));
++void ble_radio_event(uint16_t event,int closed)
++{
++    ble_radio_event_t *e=&radio_diag.events[radio_diag.serial%BLE_RADIO_EVENTS];
++    if(radio_diag.frozen) return;
++    /* Silent supervision-wait events must not evict the final exchange.
++     * Only events with descriptor activity enter the ring. */
++    if(closed && (!radio_diag.serial || e->epoch!=ble_link.epoch || e->event!=event)) return;
++    if(!radio_diag.serial || e->epoch!=ble_link.epoch || e->event!=event) {
++        uint32_t serial=++radio_diag.serial;
++        e=&radio_diag.events[serial%BLE_RADIO_EVENTS];
++        e->serial=serial; e->epoch=ble_link.epoch; e->event=event;
++        e->count=e->overflow=0; e->closed=0;
++    }
++    if(closed) e->closed=1;
++}
++static uint64_t radio_add(uint8_t kind,uint16_t event,uint16_t header,uint16_t status,
++                          uint8_t slot,uint8_t id,uint8_t flags,uint8_t decision,uint64_t counter)
++{
++    ble_radio_event_t *e; ble_radio_row_t *r; unsigned index;
++    if(radio_diag.frozen) return 0;
++    ble_radio_event(event,0); e=&radio_diag.events[radio_diag.serial%BLE_RADIO_EVENTS];
++    if(e->count==BLE_RADIO_ROWS) { if(e->overflow!=65535u) e->overflow++; return 0; }
++    index=e->count++; r=&e->row[index];
++    r->counter=counter; r->ticks=ble_port_ticks(); r->header=header; r->status=status;
++    r->kind=kind; r->slot=slot; r->id=id; r->decision=decision; r->flags=flags;
++    return (uint64_t)e->serial*BLE_RADIO_ROWS+index;
++}
++uint64_t ble_radio_rx(uint16_t event,uint16_t status,uint16_t header,uint8_t slot,uint8_t flags)
++{
++    unsigned cls=ble_rx_class(status,(uint8_t)(header>>8));
++    uint8_t decision=cls==0 ? BLE_RADIO_ACCEPT : cls==1 ? BLE_RADIO_CRC :
++        cls==2 ? BLE_RADIO_DUPLICATE : BLE_RADIO_OTHER;
++    return radio_add(BLE_RADIO_RX,event,header,status,slot,255,flags,decision,BLE_RADIO_NO_COUNTER);
++}
++static void radio_auth(uint64_t id,uint64_t counter,int ok)
++{
++    uint32_t serial=(uint32_t)(id/BLE_RADIO_ROWS);
++    ble_radio_event_t *e=&radio_diag.events[serial%BLE_RADIO_EVENTS];
++    if(radio_diag.frozen || !id || e->serial!=serial || id%BLE_RADIO_ROWS>=e->count) return;
++    ble_radio_row_t *r=&e->row[id%BLE_RADIO_ROWS];
++    r->counter=counter; r->decision=ok ? BLE_RADIO_AUTH_OK : BLE_RADIO_AUTH_BAD;
++}
++void ble_radio_tx(uint8_t kind,uint16_t event,unsigned slot,int id,uint16_t header,uint16_t status)
++{
++    uint64_t counter=BLE_RADIO_NO_COUNTER;
++    if(kind!=BLE_RADIO_PREP && id>=0 && (unsigned)id<BLE_TX_COUNT) counter=queues.tx[id].radio_counter;
++    /* Descriptor TX SN/MD are bits 2/3; NESN is not exposed here. Preserve
++     * the raw word, rather than manufacturing an on-air header. */
++    (void)radio_add(kind,event,header,status,(uint8_t)slot,(uint8_t)(id<0 ? 255 : id),0,0,counter);
++}
++void ble_radio_freeze(uint8_t reason)
++{
++    if(radio_diag.frozen || (reason!=0x3d && reason!=8)) return;
++    radio_diag.frozen=1; radio_diag.reason=reason;
++}
++void ble_radio_summary(ble_radio_summary_t *out)
++{
++    uint32_t key=ble_port_lock();
++    out->last=radio_diag.serial;
++    out->first=out->last>=BLE_RADIO_EVENTS ? out->last-BLE_RADIO_EVENTS+1u : out->last ? 1u : 0u;
++    out->frozen=radio_diag.frozen; out->reason=radio_diag.reason;
++    ble_port_unlock(key);
++}
++int ble_radio_read(uint32_t serial,ble_radio_event_t *out)
++{
++    uint32_t key=ble_port_lock();
++    const ble_radio_event_t *e=&radio_diag.events[serial%BLE_RADIO_EVENTS];
++    int valid=serial && e->serial==serial;
++    /* Only copy occupied rows. Avoid a multi-kilobyte critical section for
++     * the ordinary one-exchange event. */
++    if(valid) {
++        out->serial=e->serial; out->epoch=e->epoch; out->event=e->event;
++        out->count=e->count; out->overflow=e->overflow; out->closed=e->closed;
++        memcpy(out->row,e->row,e->count*sizeof e->row[0]);
++    }
++    ble_port_unlock(key); return valid;
++}
+diff --git a/firmware/ble/ble_radio_dump.inc b/firmware/ble/ble_radio_dump.inc
+new file mode 100644
+index 0000000..b256aec
+--- /dev/null
++++ b/firmware/ble/ble_radio_dump.inc
+@@ -0,0 +1,51 @@
++/* SPDX-License-Identifier: MIT */
++/* Shared USB/CDC formatter. Define BRD_PUTS, BRD_DEC and BRD_HEX. */
++static void ble_radio_dump(void)
++{
++    ble_radio_summary_t s;
++    /* Main-context scratch avoids a large stack frame and long IRQ-off
++     * sections. Rows contain metadata only. Read a bounded event at a time. */
++#ifdef BRD_STACK_EVENT
++    ble_radio_event_t e; /* Small Felucca profile: 160 bytes. */
++#else
++    static ble_radio_event_t e __attribute__((section(".pool.ble")));
++#endif
++    ble_radio_summary(&s);
++    BRD_PUTS("radio_frozen "); BRD_DEC(s.frozen);
++    BRD_PUTS(" reason "); BRD_HEX(s.reason,2);
++    BRD_PUTS(" events "); BRD_DEC(s.first ? (int32_t)(s.last-s.first+1u) : 0);
++    BRD_PUTS("\nradio_tx_source descriptor_only nesn_unknown air_new_repeat_unknown\n");
++    if(!s.first) return;
++    for(uint32_t serial=s.first;serial<=s.last;serial++) {
++        if(!ble_radio_read(serial,&e)) continue;
++        BRD_PUTS("radio_event serial "); BRD_DEC((int32_t)e.serial);
++        BRD_PUTS(" epoch "); BRD_DEC((int32_t)e.epoch);
++        BRD_PUTS(" event "); BRD_DEC(e.event);
++        BRD_PUTS(" closed "); BRD_DEC(e.closed);
++        BRD_PUTS(" rows "); BRD_DEC(e.count);
++        BRD_PUTS(" overflow "); BRD_DEC(e.overflow); BRD_PUTS("\n");
++        for(unsigned j=0;j<e.count;j++) {
++            const ble_radio_row_t *r=&e.row[j]; int rx=r->kind==BLE_RADIO_RX;
++            BRD_PUTS("radio "); BRD_DEC((int32_t)e.serial); BRD_PUTS("/"); BRD_DEC((int32_t)j);
++            BRD_PUTS(r->kind==BLE_RADIO_RX ? " rx" : r->kind==BLE_RADIO_LOAD ? " load" : r->kind==BLE_RADIO_ACK ? " ack" : r->kind==BLE_RADIO_PREP ? " prep" : " tx_state");
++            BRD_PUTS(" t "); BRD_HEX(r->ticks,8);
++            BRD_PUTS(" slot "); BRD_DEC(r->slot); BRD_PUTS(" id "); BRD_DEC(r->id);
++            BRD_PUTS(" sn "); BRD_DEC((r->header>>(rx ? 3 : 2))&1u);
++            BRD_PUTS(" nesn "); if(rx) BRD_DEC((r->header>>2)&1u); else BRD_PUTS("?");
++            BRD_PUTS(" md "); BRD_DEC((r->header>>(rx ? 4 : 3))&1u);
++            BRD_PUTS(" llid "); BRD_DEC(r->header&3u);
++            BRD_PUTS(" len "); BRD_DEC(r->header>>8);
++            BRD_PUTS(" raw "); BRD_HEX(r->status,4);
++            BRD_PUTS(" flags "); BRD_HEX(r->flags,2);
++            BRD_PUTS(" decision "); BRD_DEC(r->decision);
++            BRD_PUTS(" ctr ");
++            if(r->counter==BLE_RADIO_NO_COUNTER) BRD_PUTS("none");
++            else { BRD_HEX((uint32_t)(r->counter>>32),2); BRD_HEX((uint32_t)r->counter,8); }
++            BRD_PUTS("\n");
++        }
++    }
++}
++#undef BRD_STACK_EVENT
++#undef BRD_PUTS
++#undef BRD_DEC
++#undef BRD_HEX
+diff --git a/tests/ble_central_ccm.inc b/tests/ble_central_ccm.inc
+new file mode 100644
+index 0000000..d466aa4
+--- /dev/null
++++ b/tests/ble_central_ccm.inc
+@@ -0,0 +1,53 @@
++/* SPDX-License-Identifier: MIT */
++/* Test-only CCM oracle using public TinyCrypt AES directly. It does not call
++ * the controller CCM routine, AES port, security state, or counter helpers. */
++#include "tinycrypt/aes.h"
++static int central_ccm(uint64_t count,int direction,uint8_t llid,uint8_t *p,unsigned length,int decrypt)
++{
++    struct tc_aes_key_sched_struct aes;
++    uint8_t nonce[13],b[16]={0},mac[16]={0},a[16]={1},stream[16],text[27];
++    if(!length || length>27 || count>>39) return 0;
++    assert(tc_aes128_set_encrypt_key(&aes,sk));
++    for(unsigned i=0;i<5;i++) nonce[i]=(uint8_t)(count>>(8*i));
++    nonce[4]|=(uint8_t)(direction ? 0x80u : 0); memcpy(nonce+5,iv,8);
++    b[0]=0x49; memcpy(b+1,nonce,13); b[15]=(uint8_t)length;
++    assert(tc_aes_encrypt(mac,b,&aes));
++    memset(b,0,16); b[1]=1; b[2]=llid&3u;
++    for(unsigned i=0;i<16;i++) b[i]^=mac[i];
++    assert(tc_aes_encrypt(mac,b,&aes));
++    memcpy(a+1,nonce,13);
++    for(unsigned off=0;off<length;off+=16) {
++        a[15]=(uint8_t)(1+off/16); assert(tc_aes_encrypt(stream,a,&aes));
++        memset(b,0,16);
++        for(unsigned j=0;j<16 && off+j<length;j++) {
++            text[off+j]=decrypt ? p[off+j]^stream[j] : p[off+j]; b[j]=text[off+j];
++            if(!decrypt) p[off+j]^=stream[j];
++        }
++        for(unsigned j=0;j<16;j++) b[j]^=mac[j];
++        assert(tc_aes_encrypt(mac,b,&aes));
++    }
++    a[15]=0; assert(tc_aes_encrypt(stream,a,&aes));
++    uint8_t diff=0;
++    for(unsigned i=0;i<4;i++) {
++        uint8_t tag=mac[i]^stream[i];
++        if(decrypt) diff|=tag^p[length+i]; else p[length+i]=tag;
++    }
++    if(decrypt && !diff) memcpy(p,text,length);
++    return !diff;
++}
++static void central_ccm_test(void)
++{
++    begin();
++    for(unsigned direction=0;direction<2;direction++) for(unsigned length=1;length<=27;length++) {
++        uint8_t original[31],air[31]; uint64_t count=((uint64_t)1<<38)+length;
++        for(unsigned j=0;j<length;j++) original[j]=(uint8_t)(length+j);
++        memcpy(air,original,length); assert(central_ccm(count,(int)direction,3,air,length,0));
++        assert(ble_ccm(sk,iv,count,(int)direction,3,air,(uint8_t)length,1));
++        assert(!memcmp(air,original,length));
++        memcpy(air,original,length); assert(ble_ccm(sk,iv,count,(int)direction,3,air,(uint8_t)length,0));
++        uint8_t damaged[31]; memcpy(damaged,air,length+4); damaged[length+2]^=1;
++        assert(!central_ccm(count,(int)direction,3,damaged,length,1));
++        assert(central_ccm(count,(int)direction,3,air,length,1)); assert(!memcmp(air,original,length));
++    }
++    puts("independent central CCM: both directions, lengths 1..27, high counters, corrupted tags rejected: PASS");
++}
+diff --git a/tests/ble_ping_stress.inc b/tests/ble_ping_stress.inc
+new file mode 100644
+index 0000000..af4033e
+--- /dev/null
++++ b/tests/ble_ping_stress.inc
+@@ -0,0 +1,86 @@
++/* SPDX-License-Identifier: MIT */
++/* Core central, independent counters/ARQ, with a 100 ms authenticated
++ * payload timer. No feature-gating of ping (Vol 6 B 5.1.8). */
++static void ping_stress(uint32_t events,uint16_t interval)
++{
++    start_interval=interval; uint32_t anchor=begin(); start_interval=12;
++    assert(!oc); ow=orr=0;
++    uint8_t csn=sn,crx=sim_core_start(sn),pending=0,air[31],plain[27];
++    uint8_t length=0,llid=1,last_rx[31],last_length=0,last_llid=0;
++    uint64_t ctx=next_counter,prx=1;
++    uint32_t last_auth=0,pings=0,responses=0,writes=0,rx_repeat=0,tx_repeat=0,crc_count=0;
++    uint32_t timer=0,delay=0;
++    int ping_active=0;
++    for(uint32_t e=0;e<events;e++) {
++        uint32_t now=e*(interval*5u/4u);
++        unsigned burst=(random32()%19u)==0 ? 2u+random32()%4u : 1u;
++        for(unsigned j=0;j<burst;j++) {
++            if(!pending) {
++                length=0; llid=1;
++                if(!ping_active && (uint32_t)(now-last_auth)>=75u) {
++                    plain[0]=18; length=1; llid=3; ping_active=1; pings++; timer=now;
++                } else if((random32()%13u)==0) {
++                    /* L2CAP/ATT Write Command carrying a BLE MIDI note. */
++                    const uint8_t write[]={8,0,4,0,0x52,0x10,0,0x80,0x80,0x90,60,100};
++                    length=sizeof write; memcpy(plain,write,length); llid=2; writes++;
++                }
++                if(length) {
++                    memcpy(air,plain,length);
++                    assert(central_ccm(ctx++,1,llid,air,length,0)); length+=4;
++                }
++                pending=1;
++            } else tx_repeat++;
++            uint16_t ch=(uint16_t)((length<<8)|llid|(csn<<3)|(crx<<2)|((j+1<burst) ? 16u : 0));
++            sim_ticks=anchor+(80u+8u*length+j*708u)*24u;
++            unsigned roll=random32(); int crc=(roll%97u)!=0;
++            if(!crc) crc_count++;
++            int accepted=sim_core_receive(ch,air,(uint16_t)e,crc);
++            if(accepted && llid==2 && length) {
++                assert(oc<128); oracle[ow].n=(uint8_t)(length-4u);
++                memcpy(oracle[ow].p,plain,length-4u); ow=(ow+1u)%128u; oc++;
++            }
++            if(!delay && (random32()%4u)) sim_radio_service(0);
++            uint16_t ph; uint8_t p[31]; sim_core_transmit(&ph,p);
++            if(random32()%41u && random32()%97u) {
++                unsigned n=ph>>8;
++                if(((ph>>3)&1u)==crx) {
++                    crx^=1;
++                    if(n) {
++                        uint8_t decrypted[31]; memcpy(decrypted,p,n);
++                        if(n<5 || !central_ccm(prx,0,(uint8_t)(ph&3u),decrypted,n-4u,1)) {
++                            printf("PING CENTRAL MIC event=%u pings=%u responses=%u expected_counter=%" PRIu64 " pending_empty_loads=%u\n",e,pings,responses,prx,sim_core_empty_pending_loads);
++                            fflush(stdout); abort();
++                        }
++                        prx++; last_auth=now;
++                        if((ph&3u)==3 && n==6 && decrypted[0]==7 && decrypted[1]==18) {
++                            assert(ping_active); ping_active=0; responses++;
++                        }
++                    }
++                    last_length=(uint8_t)n; last_llid=(uint8_t)(ph&3u); memcpy(last_rx,p,n);
++                } else {
++                    rx_repeat++;
++                    assert(n==last_length && (ph&3u)==last_llid && !memcmp(last_rx,p,n));
++                }
++                if(((ph>>2)&1u)!=csn) { csn^=1; pending=0; }
++            }
++            if(!delay) { sim_radio_service(0); drain(); }
++            if(!(ph&16u) && !(ch&16u)) break;
++        }
++        sim_ticks=anchor+6000u*24u;
++        if(!delay) { sim_radio_service(1); drain(); if(random32()%127u==0) delay=1u+random32()%4u; }
++        else delay--;
++        ble_ll_event((uint16_t)e,sim_ticks); ble_link.rx_seen=ble_link.valid_seen=0;
++        assert(ble_link.state==BLE_LINK_UP);
++        assert(!ping_active || now-timer<1000u);
++        anchor+=(uint32_t)interval*30000u;
++        if((e+1u)%1000000u==0) {
++            printf("ping interval=%u events=%u requests=%u replies=%u writes=%u central_repeats=%u peripheral_repeats=%u crc=%u empty_pending_loads=%u zero MIC failures\n",
++                   interval,e+1,pings,responses,writes,tx_repeat,rx_repeat,crc_count,sim_core_empty_pending_loads); fflush(stdout);
++        }
++    }
++    ble_security_diag_t d; ble_security_get_diag(&d); assert(!d.mic_failures);
++    sim_radio_service(1); drain(); assert(!oc);
++    printf("ping final interval=%u events=%u requests=%u replies=%u writes=%u central_repeats=%u peripheral_repeats=%u crc=%u empty_pending_loads=%u: PASS\n",
++           interval,events,pings,responses,writes,tx_repeat,rx_repeat,crc_count,sim_core_empty_pending_loads);
++    assert(pings>100 && responses+1u>=pings && writes && rx_repeat && tx_repeat && crc_count);
++}
+diff --git a/tests/ble_radio_trace_test.inc b/tests/ble_radio_trace_test.inc
+new file mode 100644
+index 0000000..f9d9904
+--- /dev/null
++++ b/tests/ble_radio_trace_test.inc
+@@ -0,0 +1,59 @@
++/* SPDX-License-Identifier: MIT */
++static void radio_trace_test(void)
++{
++    begin();
++    for(unsigned e=1;e<=40;e++) {
++        sim_ticks+=15u*24000u;
++        assert(sim_radio_receive(1,(uint16_t)(1u|(sn<<3)),0,(uint16_t)e)); sn^=1;
++        sim_radio_service(0); work(); ble_ll_event((uint16_t)e,sim_ticks);
++    }
++    direct((uint8_t[]){18},1,3,41,1);
++    int reply=opcode(7); assert(reply>=0); sim_ack((unsigned)reply);
++    uint8_t ignored[5]={0};
++    assert(sim_radio_receive(9,(uint16_t)(0x503u|((sn^1u)<<3)),ignored,42));
++    assert(sim_radio_receive(13,0x0513,ignored,43)); sim_radio_service(0); work();
++    uint8_t bad[5]={18}; uint64_t counter=next_counter++;
++    assert(central_ccm(counter,1,3,bad,1,0)); bad[4]^=1;
++    assert(sim_radio_receive(1,(uint16_t)(0x503u|(sn<<3)),bad,44));
++    sim_radio_service(0); work(); assert(ble_link.reason==0x3d);
++    ble_radio_summary_t summary; ble_radio_summary(&summary);
++    assert(summary.frozen && summary.reason==0x3d && summary.last-summary.first+1u==BLE_RADIO_EVENTS);
++    static ble_radio_event_t event;
++    unsigned empty=0,repeat=0,crc=0,auth_bad=0,ack=0,load=0;
++    for(uint32_t serial=summary.first;serial<=summary.last;serial++) {
++        assert(ble_radio_read(serial,&event)); assert(!event.overflow);
++        for(unsigned i=0;i<event.count;i++) {
++            const ble_radio_row_t *r=&event.row[i];
++            if(r->kind==BLE_RADIO_ACK) { ack++; assert(r->counter!=BLE_RADIO_NO_COUNTER); }
++            if(r->kind==BLE_RADIO_LOAD) { load++; assert(r->counter!=BLE_RADIO_NO_COUNTER); }
++            if(r->kind!=BLE_RADIO_RX) continue;
++            if(!(r->header>>8)) { empty++; assert(r->counter==BLE_RADIO_NO_COUNTER); }
++            if(r->decision==BLE_RADIO_DUPLICATE) { repeat++; assert(r->counter==BLE_RADIO_NO_COUNTER); }
++            if(r->decision==BLE_RADIO_CRC) { crc++; assert(r->counter==BLE_RADIO_NO_COUNTER); }
++            if(r->decision==BLE_RADIO_AUTH_BAD) { auth_bad++; assert(r->counter==counter && r->slot<2); }
++        }
++    }
++    assert(empty>=BLE_RADIO_EVENTS-4u && repeat==1 && crc==1 && auth_bad==1 && ack==1 && load==1);
++    assert(ble_radio_read(summary.last,&event));
++    ble_radio_event_t saved=event;
++    ble_ll_reset(); begin();
++    for(unsigned e=0;e<50;e++) ble_ll_event((uint16_t)e,sim_ticks);
++    assert(ble_radio_read(summary.last,&event) && !memcmp(&saved,&event,sizeof saved));
++    ble_radio_summary_t after; ble_radio_summary(&after); assert(summary.first==after.first && summary.last==after.last && summary.frozen==after.frozen && summary.reason==after.reason);
++    printf("radio ring: %u active events, empty/duplicate/CRC rows, exact auth counter, load/ACK once, frozen through Reset/reconnect: PASS\n",BLE_RADIO_EVENTS);
++}
++
++static void radio_timeout_test(void)
++{
++    begin();
++    for(unsigned e=1;e<=40;e++) {
++        sim_ticks+=15u*24000u;
++        assert(sim_radio_receive(1,(uint16_t)(1u|(sn<<3)),0,(uint16_t)e)); sn^=1;
++        sim_radio_service(0); work(); ble_ll_event((uint16_t)e,sim_ticks);
++    }
++    ble_radio_summary_t before,after; ble_radio_summary(&before);
++    for(unsigned e=41;e<600;e++) ble_radio_event((uint16_t)e,1);
++    ble_ll_close(8); ble_radio_summary(&after);
++    assert(after.frozen && after.reason==8 && after.first==before.first && after.last==before.last);
++    printf("central-side MIC/silent timeout: last %u active events retained across 559 silent closes, frozen reason 08: PASS\n",BLE_RADIO_EVENTS);
++}

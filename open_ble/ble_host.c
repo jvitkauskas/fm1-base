@@ -199,6 +199,11 @@ static int gap_event(struct ble_gap_event *event,void *arg)
         if(!ble_gap_conn_find(event->enc_change.conn_handle,&desc)) {
             diag.encrypted=desc.sec_state.encrypted; diag.bonded=desc.sec_state.bonded;
             diag.key_size=desc.sec_state.key_size;
+#if FM1B_BLE_OPEN
+            if(!event->enc_change.status && desc.sec_state.encrypted) {
+                ble_bonds_touch(desc.peer_id_addr.type,desc.peer_id_addr.val); bond_flush_due=1;
+            }
+#endif
         }
         break;
     }
@@ -325,6 +330,31 @@ static int store_write(int type,const union ble_store_value *value)
 }
 static int store_status(struct ble_store_status_event *event,void *arg)
 {
+#if FM1B_BLE_OPEN
+    ble_bond_diag_t d; ble_bond_peer_diag_t peer; struct ble_gap_conn_desc conn;
+    const ble_addr_t *incoming;
+    (void)arg;
+    /* FULL is a pessimistic SMP preflight (even at N-1); wait for an actual
+     * overflow so failed pairings and rewrites never evict a retained bond. */
+    if(event->event_code==BLE_STORE_EVENT_FULL) return 0;
+    if(event->event_code!=BLE_STORE_EVENT_OVERFLOW) return BLE_HS_EUNKNOWN;
+    int type=event->overflow.obj_type;
+    if(type<1 || type>3) return BLE_HS_EUNKNOWN;
+    incoming=type==3 ? &event->overflow.value->cccd.peer_addr : &event->overflow.value->sec.peer_addr;
+    ble_bonds_get_diag(&d);
+    /* An existing peer already owns its two CCCD slots; deleting some other
+     * peer cannot make a third CCCD fit. Do not cascade replacements. */
+    for(unsigned n=0;n<d.count;n++) if(!ble_bonds_peer(n,&peer) &&
+        (incoming->type&1u)==peer.type && !memcmp(incoming->val,peer.addr,6)) return BLE_HS_ESTORE_CAP;
+    for(unsigned n=d.count;n>0;n--) if(!ble_bonds_peer(n-1u,&peer)) {
+        ble_addr_t addr; addr.type=peer.type; memcpy(addr.val,peer.addr,6);
+        if(!ble_gap_conn_find_by_addr(&addr,&conn)) continue;
+        int rc=ble_host_delete_bond(addr.type,addr.val);
+        if(!rc) ble_bonds_replaced();
+        return rc;
+    }
+    return BLE_HS_ENOMEM;
+#else
     ble_addr_t peers[MYNEWT_VAL(BLE_STORE_MAX_BONDS)]; int count,rc,i;
     (void)arg;
     if(event->event_code==BLE_STORE_EVENT_FULL) return 0;
@@ -340,6 +370,7 @@ static int store_status(struct ble_store_status_event *event,void *arg)
         return ble_host_delete_bond(peers[i].type,peers[i].val);
     }
     return BLE_HS_ENOMEM;
+#endif
 }
 #endif
 static void receive_main(uint8_t type,const uint8_t *packet,uint16_t n)

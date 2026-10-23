@@ -88,14 +88,14 @@ static void defaults(void)
     memset(ctl.masks[0],255,5); ctl.masks[0][5]=31;
     ctl.masks[1][0]=31;
     ctl.diag.enabled=0; ctl.diag.stopping=0;
-#if FELUCCA_BLE_S31
-    ble_privacy_reset();
-#endif
 }
 void ble_init(const uint8_t *public_addr,ble_host_fn host)
 {
     memset(&ctl,0,sizeof ctl); memset(&driver,0,sizeof driver);
     BLE_DIAG_ONLY(trace_w=trace_used=0; trace_frozen=0);
+#if FELUCCA_BLE_S31
+    ble_privacy_reset();
+#endif
     defaults(); ble_ll_init();
     if (ble_public_valid(public_addr)) memcpy(ctl.pub,public_addr,6);
     ctl.host=host;
@@ -187,6 +187,7 @@ static void reset_defaults(void)
 }
 static void reset_step(void)
 {
+    static unsigned privacy_offset; (void)privacy_offset;
     uint32_t item=ble_time_item_begin(); ble_work_kind_t kind=BLE_WORK_RESET_CLEAR;
     switch(ctl.reset_pending) {
     case 1:
@@ -202,9 +203,14 @@ static void reset_step(void)
         if(rc>0) ctl.reset_pending=3;
         break;
     }
-    case 3: if(ble_ll_reset_step()) ctl.reset_pending=4; break;
-    case 4: kind=BLE_WORK_RESET_DEFAULTS; reset_defaults(); ctl.reset_pending=5; break;
-    case 5:
+    case 3: if(ble_ll_reset_step()) { privacy_offset=0; ctl.reset_pending=4; } break;
+    case 4:
+#if FELUCCA_BLE_S31
+        if(!ble_privacy_reset_step(privacy_offset)) { privacy_offset+=128u; break; }
+#endif
+        ctl.reset_pending=5; break;
+    case 5: kind=BLE_WORK_RESET_DEFAULTS; reset_defaults(); ctl.reset_pending=6; break;
+    case 6:
         kind=BLE_WORK_RESET_COMPLETE; ctl.reset_pending=0; complete(0x0c03,0,0,0,0); break;
     }
     ble_time_item_end(item,kind,0x0c03);

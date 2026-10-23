@@ -1,0 +1,4 @@
+ebf0dfb3b7ff0b75e37417fceb0998ad6d7917153c09ac90362e33222106986f  template/build/template-open-r5.fwsc
+049117a52063e83c92461e97fc47e329615c9b3f7faf616c287b4ef26e6d134e  template/build/template-open-r5-no-diag.fwsc
+8866ab78df218f4a9c89c4b409e9fce9c3b2d4d4b49aeb2574ef94f85ed6fe06  template/build/template-open-r4.fwsc
+c3843fb5d64217cc74194751d73ba9cb366f6fd46297c18066769df81d80c8a0  out/open-ble/R5-felucca.patch

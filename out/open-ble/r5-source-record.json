@@ -1,0 +1,34 @@
+{
+  "base": "208ebfb",
+  "felucca_base": "88d426f",
+  "spec": "r8",
+  "sources": {
+    "device/ble_open_diag.c": "aa20b90232f0c68d0e05204ed36e6bdbf32f7e0ffc1f312771829fdb333f6400",
+    "docs/OPEN-BLE.md": "8a75d9ce2431c87a42dc0ca5d81bea7755d5352ae8bbbfdb2dc434e804a56b92",
+    "open_ble/ble_bonds.c": "c1f773b7d912259a6552edb6d994f9a2149656999768be30eac25cda11ed38fd",
+    "open_ble/ble_bonds.h": "c367210ad653949003ae2b37caea494974ebc275f89814e5d31159a18f0ef26f",
+    "open_ble/ble_controller.c": "2312a821511a4cffb6edaac78ca586529654886b5a3fd62ef823284496098d70",
+    "open_ble/ble_host.c": "b4c9d36d9e35f4f0e190e919de9c2442ed5d9617fb942de24a739cf6c414d3eb",
+    "open_ble/ble_privacy.c": "ef6d831ae59047d7e5acf38cd4dcbc702b0fe944b939c0d96f972ba4601aac91",
+    "open_ble/ble_privacy.h": "80a73b438d803576966933817f9183b5022bef2341b5ef805b943a6c921606bd",
+    "open_ble/ble_store.c": "2c650f74124363f82936f14137b937711f3af58bf4f58a10d0f58770153e5779",
+    "open_ble/ble_store.h": "0ecdd9fb66b8013a99a61bebc8d339d8033b0edd9784d0618d19a180aafa0459",
+    "open_ble/port/felucca_nimble_config.h": "865ab77d9a0c0c93f79bf4f1d31381707f60a78b61ecf5495479e7a092706253",
+    "tests/ble_open_store_test.c": "1662dbba1c1ed9ff54c019add0ee8802abba69299466d235a1acbb659754b3c8",
+    "tests/ble_s31_steps.c": "5a4f4a2584038510f65a70fcb611d53423d08b21558882a707e1ff4cff793646",
+    "tests/ble_s31_test.c": "b9ad589c2374facfa88dfedcc8a0fc5da4704d06856c6b98df93c7a632e9ea4d",
+    "tests/ble_s3_integration.c": "932e03123c696e703b282e0db1f492fbcc68fac97e420dd3aceaf4acb1e2ea97",
+    "tests/run_ble_s3_tests.py": "aafda5baee6bca1dfeaf3aa551b3d5c4f328ba12449a6c5907ee47a486e695bd",
+    "open_ble/ble_bond_capacity.inc": "c5421dbc347f65a64b64c12ddfafa1de9849f842c7c7a7b845c0b9cb2d13d1fb",
+    "tests/ble_bond_capacity_test.inc": "859be47a5543875ad71f7280bc00c9c004760592f8b2d6a8978e577440c4944f",
+    "tests/ble_bond_migration_test.inc": "30cd81c1b45662f1a86097e85f01c97f466273bd0a403500d610c432a3b5f660",
+    "tests/fixtures/r4-bonds-object.bin": "2d8813f9826a6a4e447ef2c288d5e6fb670039e41615b58c770a839d79b88e7d",
+    "tests/fixtures/README-r4-bonds.md": "7d8e8ba7de9da24032cd51cd3ad5e7ba44a96fbade7c55b044a387e5c5fc9258"
+  },
+  "artifacts": {
+    "template/build/template-open-r5.fwsc": "ebf0dfb3b7ff0b75e37417fceb0998ad6d7917153c09ac90362e33222106986f",
+    "template/build/template-open-r5-no-diag.fwsc": "049117a52063e83c92461e97fc47e329615c9b3f7faf616c287b4ef26e6d134e",
+    "template/build/template-open-r4.fwsc": "8866ab78df218f4a9c89c4b409e9fce9c3b2d4d4b49aeb2574ef94f85ed6fe06",
+    "out/open-ble/R5-felucca.patch": "c3843fb5d64217cc74194751d73ba9cb366f6fd46297c18066769df81d80c8a0"
+  }
+}

@@ -1,0 +1,128 @@
+log: ble_diag 1
+log: sample_ms 32916277
+log: peripheral_state 2
+log: peripheral_linked 0
+log: link_state_idle_created_up_closing_stopped 0
+log: link_epoch 45
+log: conn_interval_1250us 12
+log: conn_latency 0
+log: conn_timeout_10ms 600
+log: conn_event 4915
+log: conn_events 2180218
+log: conn_updates 73
+log: pending_kind 0
+log: supervision_fail 3
+log: late_instants 0
+log: disconnects 22
+log: enc_enabled 0
+log: mic_failures 4
+log: nimble_bonded 0
+log: nimble_subscribed 0
+log: nimble_mtu 517
+log: nimble_resets 0
+log: nimble_error 0
+log: param_pending 0
+log: param_requests 15
+log: param_status 0
+log: gatt_invalidations 1
+log: gatt_confirmations 1
+log: gatt_peer_version 3
+log: bond_pending 0
+log: bond_failures 0
+log: midi_packets_in 8034
+log: midi_packets_out 1228
+log: midi_bad 0
+log: midi_drop 0
+log: error 0
+log: dma_canary_errors 0
+log: executor_selftest 1
+log: executor_dispatch_live_max_us 220
+log: executor_item_max_us 70
+log: executor_item_over_100us 0
+log: executor_own_over_250us 0
+log: executor_over_250us_plus_item 0
+log: refill_max_us 51
+log: refill_over_80us 0
+log: worker_timer_calls 33357920
+log: worker_timer_max_gap_us 17812
+log: worker_timer_over_7500us 8
+log: worker_gap_max ms 797302 us 17812 state starting end_state starting reason radio_start,flash_write, epoch 15
+log: worker_gap ms 1401714 us 17772 state starting end_state starting reason radio_start,flash_write, epoch 21
+log: worker_gap ms 1510036 us 17729 state starting end_state starting reason radio_start,flash_write, epoch 25
+log: worker_gap ms 7760045 us 17775 state starting end_state starting reason radio_start,flash_write, epoch 29
+log: worker_gap ms 32914936 us 17759 state starting end_state starting reason radio_start,flash_write, epoch 45
+log: adv_session 23
+log: connect_seen 0
+log: connect_accepted 0
+log: adv_session_record id 20 ms 32703023 seen 1 accepted 1
+log: adv_session_record id 21 ms 32732558 seen 1 accepted 1
+log: adv_session_record id 22 ms 32841130 seen 1 accepted 1
+log: adv_session_record id 23 ms 32915048 seen 0 accepted 0
+log: audio_late 0
+log: audio_max_wall_us 155
+log: audio_xruns 0
+log: ble_event ms 32709552 session 20 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 32714099 session 20 conn 80 l2cap_request a 12 b 600 c 0
+log: ble_event ms 32714128 session 20 conn 80 l2cap_result a 0 b 0 c 0
+log: ble_event ms 32714232 session 20 conn 80 conn_update a 12 b 0 c 600
+log: ble_event ms 32732547 session 20 conn 80 disconnect a 61 b 573 c 0
+log: ble_event ms 32738695 session 21 conn 80 connect a 0 b 0 c 0
+log: ble_event ms 32738802 session 21 conn 80 enc_start a 0 b 1 c 0
+log: ble_event ms 32738802 session 21 conn 80 cccd_restore a 9 b 2 c 0
+log: ble_event ms 32738802 session 21 conn 80 cccd_restore a 17 b 1 c 0
+log: ble_event ms 32738832 session 21 conn 80 mtu a 517 b 0 c 0
+log: ble_event ms 32738862 session 21 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 32738952 session 21 conn 80 cccd_write a 17 b 1 c 0
+log: ble_event ms 32739117 session 21 conn 80 cccd_write a 9 b 2 c 0
+log: ble_event ms 32739147 session 21 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 32743695 session 21 conn 80 l2cap_request a 12 b 600 c 0
+log: ble_event ms 32743723 session 21 conn 80 l2cap_result a 0 b 0 c 0
+log: ble_event ms 32743827 session 21 conn 80 conn_update a 12 b 0 c 600
+log: ble_event ms 32841119 session 21 conn 80 disconnect a 8 b 520 c 0
+log: ble_event ms 32841272 session 22 conn 80 connect a 0 b 0 c 0
+log: ble_event ms 32841387 session 22 conn 80 enc_start a 0 b 1 c 0
+log: ble_event ms 32841387 session 22 conn 80 cccd_restore a 9 b 2 c 0
+log: ble_event ms 32841387 session 22 conn 80 cccd_restore a 17 b 1 c 0
+log: ble_event ms 32841417 session 22 conn 80 mtu a 517 b 0 c 0
+log: ble_event ms 32841447 session 22 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 32841537 session 22 conn 80 cccd_write a 17 b 1 c 0
+log: ble_event ms 32841702 session 22 conn 80 cccd_write a 9 b 2 c 0
+log: ble_event ms 32841732 session 22 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 32846272 session 22 conn 80 l2cap_request a 12 b 600 c 0
+log: ble_event ms 32846293 session 22 conn 80 l2cap_result a 0 b 0 c 0
+log: ble_event ms 32846397 session 22 conn 80 conn_update a 12 b 0 c 600
+log: ble_event ms 32912607 session 22 conn 80 cccd_write a 17 b 0 c 0
+log: ble_event ms 32915007 session 22 conn 80 disconnect a 19 b 531 c 0
+log: mic_records 4
+log: mic_record serial 1 ms 9524966 epoch 30 received_ms 9524966 event 65400 service_event 65400 interval 12 since_update_ms 00034E72
+log: mic_pdu serial 1 slot 0 flags 00 status 5101 llid 3 sn 0 nesn 0 md 0 length 5 counter 000000026D
+log: mic_rx serial 1 index 0 sn 0 counter 0000000269 length 16
+log: mic_rx serial 1 index 1 sn 0 counter 000000026A length 16
+log: mic_rx serial 1 index 2 sn 1 counter 000000026B length 16
+log: mic_rx serial 1 index 3 sn 0 counter 000000026C length 16
+log: mic_tx serial 1 index 0 sn 0 counter 000000007F length 6
+log: mic_tx serial 1 index 1 sn 1 counter 0000000080 length 6
+log: mic_record serial 2 ms 32649192 epoch 36 received_ms 32649191 event 2534 service_event 2534 interval 12 since_update_ms 00008070
+log: mic_pdu serial 2 slot 0 flags 00 status 1901 llid 3 sn 0 nesn 0 md 0 length 5 counter 0000000127
+log: mic_rx serial 2 index 0 sn 0 counter 0000000123 length 5
+log: mic_rx serial 2 index 1 sn 0 counter 0000000124 length 5
+log: mic_rx serial 2 index 2 sn 0 counter 0000000125 length 5
+log: mic_rx serial 2 index 3 sn 0 counter 0000000126 length 5
+log: mic_tx serial 2 index 0 sn 1 counter 0000000118 length 6
+log: mic_tx serial 2 index 1 sn 0 counter 0000000119 length 6
+log: mic_record serial 3 ms 32703012 epoch 38 received_ms 32703012 event 3149 service_event 3149 interval 12 since_update_ms 0000A489
+log: mic_pdu serial 3 slot 0 flags 00 status 2101 llid 3 sn 0 nesn 0 md 0 length 5 counter 00000000E2
+log: mic_rx serial 3 index 0 sn 0 counter 00000000DE length 5
+log: mic_rx serial 3 index 1 sn 0 counter 00000000DF length 5
+log: mic_rx serial 3 index 2 sn 0 counter 00000000E0 length 5
+log: mic_rx serial 3 index 3 sn 0 counter 00000000E1 length 5
+log: mic_tx serial 3 index 0 sn 0 counter 00000000CF length 6
+log: mic_tx serial 3 index 1 sn 1 counter 00000000D0 length 6
+log: mic_record serial 4 ms 32732547 epoch 40 received_ms 32732546 event 1563 service_event 1563 interval 12 since_update_ms 0000478B
+log: mic_pdu serial 4 slot 0 flags 00 status 4101 llid 3 sn 0 nesn 0 md 0 length 5 counter 00000000CF
+log: mic_rx serial 4 index 0 sn 0 counter 00000000CB length 5
+log: mic_rx serial 4 index 1 sn 0 counter 00000000CC length 5
+log: mic_rx serial 4 index 2 sn 0 counter 00000000CD length 5
+log: mic_rx serial 4 index 3 sn 0 counter 00000000CE length 5
+log: mic_tx serial 4 index 0 sn 1 counter 00000000C6 length 6
+log: mic_tx serial 4 index 1 sn 0 counter 00000000C7 length 6
