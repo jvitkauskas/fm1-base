@@ -11,7 +11,7 @@ RESULT: 18.7 h uptime (sample_ms 67,207,054, past 2^15 s and 2^16 s), 744 link e
 - Journal serial 1: event 7, slot 1, status 7901, LLID 3, SN 1, NESN 1, length 5, counter 0 -> the central's
   first encrypted PDU (LL_START_ENC_RSP). The next link 6 s later was clean.
 - No mid-link ping failure in ~712k pings, unlike ping-r4/ (3 in ~4,000 pings on the 2026-10-22 boot after the
-  interval-cycling soak). Fresh-boot R4 (13,271 pings) was clean too. Mid-link failures therefore look tied to
-  something earlier in that boot (connection updates?), not to uptime or ping rate alone.
+  interval-cycling soak). Fresh-boot R4 (13,271 pings) was clean too. Not explained by connection updates: links in
+  both runs got the same central update (12 -> 12, instant ~341; 343 here). Not uptime or ping rate alone either.
 - Not captured on air: the sniffer missed that link (startup gap); from ~09:20 it missed about half of new links
   (r4L2: 91 of 169 checks with 0 packets). No btmon in this run.
