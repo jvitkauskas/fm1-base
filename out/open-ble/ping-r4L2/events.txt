@@ -1,0 +1,598 @@
+04:51:57 sniffer segment seg-045154.pcap
+04:51:59 disconnect forced (cycle 0) try 1
+04:52:06 sniffer data packets after reconnect: 447
+04:52:06 apto handle 0x0800 status 0x0
+04:57:11 sniffer segment seg-045708.pcap
+04:57:13 disconnect forced (cycle 1) try 1
+04:57:20 sniffer data packets after reconnect: 449
+04:57:20 apto handle 0x0800 status 0x0
+05:02:25 sniffer segment seg-050222.pcap
+05:02:27 disconnect forced (cycle 2) try 1
+05:02:34 sniffer data packets after reconnect: 448
+05:02:34 apto handle 0x0800 status 0x0
+05:07:39 sniffer segment seg-050736.pcap
+05:07:41 disconnect forced (cycle 3) try 1
+05:07:48 sniffer data packets after reconnect: 456
+05:07:48 apto handle 0x0800 status 0x0
+05:12:53 sniffer segment seg-051250.pcap
+05:12:55 disconnect forced (cycle 4) try 1
+05:13:02 sniffer data packets after reconnect: 0
+05:13:06 sniffer segment seg-051303.pcap
+05:13:08 disconnect forced (cycle 4) try 2
+05:13:15 sniffer data packets after reconnect: 454
+05:13:15 apto handle 0x0800 status 0x0
+05:18:20 sniffer segment seg-051817.pcap
+05:18:22 disconnect forced (cycle 5) try 1
+05:18:29 sniffer data packets after reconnect: 459
+05:18:29 apto handle 0x0800 status 0x0
+05:23:34 sniffer segment seg-052331.pcap
+05:23:36 disconnect forced (cycle 6) try 1
+05:23:43 sniffer data packets after reconnect: 445
+05:23:43 apto handle 0x0800 status 0x0
+05:28:48 sniffer segment seg-052845.pcap
+05:28:50 disconnect forced (cycle 7) try 1
+05:28:57 sniffer data packets after reconnect: 458
+05:28:57 apto handle 0x0800 status 0x0
+05:34:02 sniffer segment seg-053359.pcap
+05:34:04 disconnect forced (cycle 8) try 1
+05:34:11 sniffer data packets after reconnect: 455
+05:34:11 apto handle 0x0800 status 0x0
+05:39:16 sniffer segment seg-053913.pcap
+05:39:18 disconnect forced (cycle 9) try 1
+05:39:25 sniffer data packets after reconnect: 448
+05:39:25 apto handle 0x0800 status 0x0
+05:44:30 sniffer segment seg-054427.pcap
+05:44:32 disconnect forced (cycle 10) try 1
+05:44:39 sniffer data packets after reconnect: 457
+05:44:39 apto handle 0x0800 status 0x0
+05:49:44 sniffer segment seg-054941.pcap
+05:49:46 disconnect forced (cycle 11) try 1
+05:49:53 sniffer data packets after reconnect: 459
+05:49:53 apto handle 0x0800 status 0x0
+05:54:58 sniffer segment seg-055455.pcap
+05:55:00 disconnect forced (cycle 12) try 1
+05:55:07 sniffer data packets after reconnect: 462
+05:55:07 apto handle 0x0800 status 0x0
+06:00:12 sniffer segment seg-060009.pcap
+06:00:14 disconnect forced (cycle 13) try 1
+06:00:21 sniffer data packets after reconnect: 458
+06:00:21 apto handle 0x0800 status 0x0
+06:05:26 sniffer segment seg-060523.pcap
+06:05:28 disconnect forced (cycle 14) try 1
+06:05:35 sniffer data packets after reconnect: 0
+06:05:39 sniffer segment seg-060536.pcap
+06:05:41 disconnect forced (cycle 14) try 2
+06:05:48 sniffer data packets after reconnect: 459
+06:05:48 apto handle 0x0800 status 0x0
+06:10:53 sniffer segment seg-061050.pcap
+06:10:55 disconnect forced (cycle 15) try 1
+06:11:02 sniffer data packets after reconnect: 0
+06:11:06 sniffer segment seg-061103.pcap
+06:11:08 disconnect forced (cycle 15) try 2
+06:11:15 sniffer data packets after reconnect: 441
+06:11:15 apto handle 0x0800 status 0x0
+06:16:20 sniffer segment seg-061617.pcap
+06:16:22 disconnect forced (cycle 16) try 1
+06:16:29 sniffer data packets after reconnect: 454
+06:16:29 apto handle 0x0800 status 0x0
+06:21:34 sniffer segment seg-062131.pcap
+06:21:36 disconnect forced (cycle 17) try 1
+06:21:43 sniffer data packets after reconnect: 456
+06:21:43 apto handle 0x0800 status 0x0
+06:26:48 sniffer segment seg-062645.pcap
+06:26:50 disconnect forced (cycle 18) try 1
+06:26:57 sniffer data packets after reconnect: 458
+06:26:57 apto handle 0x0800 status 0x0
+06:32:02 sniffer segment seg-063159.pcap
+06:32:04 disconnect forced (cycle 19) try 1
+06:32:11 sniffer data packets after reconnect: 458
+06:32:11 apto handle 0x0800 status 0x0
+06:37:16 sniffer segment seg-063713.pcap
+06:37:18 disconnect forced (cycle 20) try 1
+06:37:25 sniffer data packets after reconnect: 0
+06:37:29 sniffer segment seg-063726.pcap
+06:37:31 disconnect forced (cycle 20) try 2
+06:37:38 sniffer data packets after reconnect: 456
+06:37:38 apto handle 0x0800 status 0x0
+06:42:43 sniffer segment seg-064240.pcap
+06:42:45 disconnect forced (cycle 21) try 1
+06:42:52 sniffer data packets after reconnect: 460
+06:42:52 apto handle 0x0800 status 0x0
+06:47:57 sniffer segment seg-064754.pcap
+06:47:59 disconnect forced (cycle 22) try 1
+06:48:06 sniffer data packets after reconnect: 438
+06:48:06 apto handle 0x0800 status 0x0
+06:53:19 sniffer segment seg-065316.pcap
+06:53:21 disconnect forced (cycle 23) try 1
+06:53:28 sniffer data packets after reconnect: 0
+06:53:32 sniffer segment seg-065329.pcap
+06:53:34 disconnect forced (cycle 23) try 2
+06:53:41 sniffer data packets after reconnect: 444
+06:53:41 apto handle 0x0800 status 0x0
+06:58:46 sniffer segment seg-065843.pcap
+06:58:48 disconnect forced (cycle 24) try 1
+06:58:55 sniffer data packets after reconnect: 461
+06:58:55 apto handle 0x0800 status 0x0
+07:04:00 sniffer segment seg-070357.pcap
+07:04:02 disconnect forced (cycle 25) try 1
+07:04:09 sniffer data packets after reconnect: 461
+07:04:09 apto handle 0x0800 status 0x0
+07:09:14 sniffer segment seg-070911.pcap
+07:09:16 disconnect forced (cycle 26) try 1
+07:09:23 sniffer data packets after reconnect: 454
+07:09:23 apto handle 0x0800 status 0x0
+07:14:28 sniffer segment seg-071425.pcap
+07:14:30 disconnect forced (cycle 27) try 1
+07:14:37 sniffer data packets after reconnect: 444
+07:14:37 apto handle 0x0800 status 0x0
+07:19:42 sniffer segment seg-071939.pcap
+07:19:44 disconnect forced (cycle 28) try 1
+07:19:51 sniffer data packets after reconnect: 452
+07:19:51 apto handle 0x0800 status 0x0
+07:24:56 sniffer segment seg-072453.pcap
+07:24:58 disconnect forced (cycle 29) try 1
+07:25:05 sniffer data packets after reconnect: 460
+07:25:05 apto handle 0x0800 status 0x0
+07:30:10 sniffer segment seg-073007.pcap
+07:30:12 disconnect forced (cycle 30) try 1
+07:30:19 sniffer data packets after reconnect: 458
+07:30:19 apto handle 0x0800 status 0x0
+07:35:24 sniffer segment seg-073521.pcap
+07:35:26 disconnect forced (cycle 31) try 1
+07:35:33 sniffer data packets after reconnect: 460
+07:35:33 apto handle 0x0800 status 0x0
+07:40:38 sniffer segment seg-074035.pcap
+07:40:40 disconnect forced (cycle 32) try 1
+07:40:47 sniffer data packets after reconnect: 458
+07:40:47 apto handle 0x0800 status 0x0
+07:45:52 sniffer segment seg-074549.pcap
+07:45:54 disconnect forced (cycle 33) try 1
+07:46:01 sniffer data packets after reconnect: 0
+07:46:05 sniffer segment seg-074602.pcap
+07:46:07 disconnect forced (cycle 33) try 2
+07:46:14 sniffer data packets after reconnect: 430
+07:46:14 apto handle 0x0800 status 0x0
+07:51:19 sniffer segment seg-075116.pcap
+07:51:21 disconnect forced (cycle 34) try 1
+07:51:28 sniffer data packets after reconnect: 460
+07:51:28 apto handle 0x0800 status 0x0
+07:56:33 sniffer segment seg-075630.pcap
+07:56:35 disconnect forced (cycle 35) try 1
+07:56:42 sniffer data packets after reconnect: 460
+07:56:42 apto handle 0x0800 status 0x0
+08:01:47 sniffer segment seg-080144.pcap
+08:01:49 disconnect forced (cycle 36) try 1
+08:01:56 sniffer data packets after reconnect: 460
+08:01:56 apto handle 0x0800 status 0x0
+08:07:01 sniffer segment seg-080658.pcap
+08:07:03 disconnect forced (cycle 37) try 1
+08:07:10 sniffer data packets after reconnect: 0
+08:07:14 sniffer segment seg-080711.pcap
+08:07:16 disconnect forced (cycle 37) try 2
+08:07:23 sniffer data packets after reconnect: 0
+08:07:27 sniffer segment seg-080724.pcap
+08:07:29 disconnect forced (cycle 37) try 3
+08:07:36 sniffer data packets after reconnect: 457
+08:07:36 apto handle 0x0800 status 0x0
+08:12:41 sniffer segment seg-081238.pcap
+08:12:43 disconnect forced (cycle 38) try 1
+08:12:50 sniffer data packets after reconnect: 0
+08:12:54 sniffer segment seg-081251.pcap
+08:12:56 disconnect forced (cycle 38) try 2
+08:13:03 sniffer data packets after reconnect: 0
+08:13:07 sniffer segment seg-081304.pcap
+08:13:09 disconnect forced (cycle 38) try 3
+08:13:16 sniffer data packets after reconnect: 0
+08:13:20 sniffer segment seg-081317.pcap
+08:13:22 disconnect forced (cycle 38) try 4
+08:13:29 sniffer data packets after reconnect: 0
+08:13:29 apto handle 0x0800 status 0x0
+08:18:34 sniffer segment seg-081831.pcap
+08:18:36 disconnect forced (cycle 39) try 1
+08:18:43 sniffer data packets after reconnect: 0
+08:18:47 sniffer segment seg-081844.pcap
+08:18:49 disconnect forced (cycle 39) try 2
+08:18:56 sniffer data packets after reconnect: 431
+08:18:56 apto handle 0x0800 status 0x0
+08:24:01 sniffer segment seg-082358.pcap
+08:24:03 disconnect forced (cycle 40) try 1
+08:24:10 sniffer data packets after reconnect: 459
+08:24:10 apto handle 0x0800 status 0x0
+08:29:15 sniffer segment seg-082912.pcap
+08:29:17 disconnect forced (cycle 41) try 1
+08:29:24 sniffer data packets after reconnect: 458
+08:29:24 apto handle 0x0800 status 0x0
+08:34:29 sniffer segment seg-083426.pcap
+08:34:31 disconnect forced (cycle 42) try 1
+08:34:38 sniffer data packets after reconnect: 0
+08:34:42 sniffer segment seg-083439.pcap
+08:34:44 disconnect forced (cycle 42) try 2
+08:34:51 sniffer data packets after reconnect: 458
+08:34:51 apto handle 0x0800 status 0x0
+08:39:56 sniffer segment seg-083953.pcap
+08:39:58 disconnect forced (cycle 43) try 1
+08:40:05 sniffer data packets after reconnect: 458
+08:40:05 apto handle 0x0800 status 0x0
+08:45:10 sniffer segment seg-084507.pcap
+08:45:12 disconnect forced (cycle 44) try 1
+08:45:19 sniffer data packets after reconnect: 0
+08:45:23 sniffer segment seg-084520.pcap
+08:45:25 disconnect forced (cycle 44) try 2
+08:45:32 sniffer data packets after reconnect: 435
+08:45:32 apto handle 0x0800 status 0x0
+08:50:37 sniffer segment seg-085034.pcap
+08:50:39 disconnect forced (cycle 45) try 1
+08:50:46 sniffer data packets after reconnect: 460
+08:50:46 apto handle 0x0800 status 0x0
+08:55:51 sniffer segment seg-085548.pcap
+08:55:53 disconnect forced (cycle 46) try 1
+08:56:00 sniffer data packets after reconnect: 448
+08:56:00 apto handle 0x0800 status 0x0
+09:01:05 sniffer segment seg-090102.pcap
+09:01:07 disconnect forced (cycle 47) try 1
+09:01:14 sniffer data packets after reconnect: 453
+09:01:14 apto handle 0x0800 status 0x0
+09:06:19 sniffer segment seg-090616.pcap
+09:06:21 disconnect forced (cycle 48) try 1
+09:06:28 sniffer data packets after reconnect: 457
+09:06:28 apto handle 0x0800 status 0x0
+09:11:32 sniffer segment seg-091129.pcap
+09:11:34 disconnect forced (cycle 49) try 1
+09:11:41 sniffer data packets after reconnect: 376
+09:11:41 apto handle 0x0800 status 0x0
+09:16:46 sniffer segment seg-091643.pcap
+09:16:48 disconnect forced (cycle 50) try 1
+09:16:55 sniffer data packets after reconnect: 460
+09:16:55 apto handle 0x0800 status 0x0
+09:22:00 sniffer segment seg-092157.pcap
+09:22:02 disconnect forced (cycle 51) try 1
+09:22:09 sniffer data packets after reconnect: 0
+09:22:13 sniffer segment seg-092210.pcap
+09:22:15 disconnect forced (cycle 51) try 2
+09:22:22 sniffer data packets after reconnect: 877
+09:22:22 apto handle 0x0800 status 0x0
+09:27:27 sniffer segment seg-092724.pcap
+09:27:29 disconnect forced (cycle 52) try 1
+09:27:36 sniffer data packets after reconnect: 0
+09:27:40 sniffer segment seg-092737.pcap
+09:27:42 disconnect forced (cycle 52) try 2
+09:27:49 sniffer data packets after reconnect: 0
+09:27:53 sniffer segment seg-092750.pcap
+09:27:55 disconnect forced (cycle 52) try 3
+09:28:02 sniffer data packets after reconnect: 0
+09:28:06 sniffer segment seg-092803.pcap
+09:28:08 disconnect forced (cycle 52) try 4
+09:28:15 sniffer data packets after reconnect: 818
+09:28:15 apto handle 0x0800 status 0x0
+09:33:20 sniffer segment seg-093317.pcap
+09:33:22 disconnect forced (cycle 53) try 1
+09:33:29 sniffer data packets after reconnect: 0
+09:33:33 sniffer segment seg-093330.pcap
+09:33:35 disconnect forced (cycle 53) try 2
+09:33:42 sniffer data packets after reconnect: 0
+09:33:46 sniffer segment seg-093343.pcap
+09:33:48 disconnect forced (cycle 53) try 3
+09:33:55 sniffer data packets after reconnect: 0
+09:33:59 sniffer segment seg-093356.pcap
+09:34:01 disconnect forced (cycle 53) try 4
+09:34:08 sniffer data packets after reconnect: 0
+09:34:08 apto handle 0x0800 status 0x0
+09:39:13 sniffer segment seg-093910.pcap
+09:39:15 disconnect forced (cycle 54) try 1
+09:39:22 sniffer data packets after reconnect: 918
+09:39:22 apto handle 0x0800 status 0x0
+09:44:27 sniffer segment seg-094424.pcap
+09:44:29 disconnect forced (cycle 55) try 1
+09:44:36 sniffer data packets after reconnect: 0
+09:44:40 sniffer segment seg-094437.pcap
+09:44:42 disconnect forced (cycle 55) try 2
+09:44:49 sniffer data packets after reconnect: 0
+09:44:53 sniffer segment seg-094450.pcap
+09:44:55 disconnect forced (cycle 55) try 3
+09:45:02 sniffer data packets after reconnect: 0
+09:45:06 sniffer segment seg-094503.pcap
+09:45:08 disconnect forced (cycle 55) try 4
+09:45:15 sniffer data packets after reconnect: 0
+09:45:15 apto handle 0x0800 status 0x0
+09:50:20 sniffer segment seg-095017.pcap
+09:50:22 disconnect forced (cycle 56) try 1
+09:50:29 sniffer data packets after reconnect: 0
+09:50:33 sniffer segment seg-095030.pcap
+09:50:35 disconnect forced (cycle 56) try 2
+09:50:42 sniffer data packets after reconnect: 0
+09:50:46 sniffer segment seg-095043.pcap
+09:50:48 disconnect forced (cycle 56) try 3
+09:50:55 sniffer data packets after reconnect: 0
+09:50:59 sniffer segment seg-095056.pcap
+09:51:01 disconnect forced (cycle 56) try 4
+09:51:08 sniffer data packets after reconnect: 0
+09:51:08 apto handle 0x0800 status 0x0
+09:56:13 sniffer segment seg-095610.pcap
+09:56:15 disconnect forced (cycle 57) try 1
+09:56:22 sniffer data packets after reconnect: 0
+09:56:26 sniffer segment seg-095623.pcap
+09:56:28 disconnect forced (cycle 57) try 2
+09:56:35 sniffer data packets after reconnect: 0
+09:56:39 sniffer segment seg-095636.pcap
+09:56:41 disconnect forced (cycle 57) try 3
+09:56:48 sniffer data packets after reconnect: 896
+09:56:48 apto handle 0x0800 status 0x0
+10:01:53 sniffer segment seg-100150.pcap
+10:01:55 disconnect forced (cycle 58) try 1
+10:02:02 sniffer data packets after reconnect: 663
+10:02:02 apto handle 0x0800 status 0x0
+10:07:07 sniffer segment seg-100704.pcap
+10:07:09 disconnect forced (cycle 59) try 1
+10:07:16 sniffer data packets after reconnect: 0
+10:07:20 sniffer segment seg-100717.pcap
+10:07:22 disconnect forced (cycle 59) try 2
+10:07:29 sniffer data packets after reconnect: 0
+10:07:33 sniffer segment seg-100730.pcap
+10:07:35 disconnect forced (cycle 59) try 3
+10:07:42 sniffer data packets after reconnect: 0
+10:07:46 sniffer segment seg-100743.pcap
+10:07:48 disconnect forced (cycle 59) try 4
+10:07:55 sniffer data packets after reconnect: 568
+10:07:55 apto handle 0x0800 status 0x0
+10:13:00 sniffer segment seg-101257.pcap
+10:13:02 disconnect forced (cycle 60) try 1
+10:13:09 sniffer data packets after reconnect: 0
+10:13:13 sniffer segment seg-101310.pcap
+10:13:15 disconnect forced (cycle 60) try 2
+10:13:22 sniffer data packets after reconnect: 0
+10:13:26 sniffer segment seg-101323.pcap
+10:13:28 disconnect forced (cycle 60) try 3
+10:13:35 sniffer data packets after reconnect: 0
+10:13:39 sniffer segment seg-101336.pcap
+10:13:41 disconnect forced (cycle 60) try 4
+10:13:48 sniffer data packets after reconnect: 0
+10:13:48 apto handle 0x0800 status 0x0
+10:18:53 sniffer segment seg-101850.pcap
+10:18:55 disconnect forced (cycle 61) try 1
+10:19:02 sniffer data packets after reconnect: 0
+10:19:06 sniffer segment seg-101903.pcap
+10:19:08 disconnect forced (cycle 61) try 2
+10:19:15 sniffer data packets after reconnect: 0
+10:19:19 sniffer segment seg-101916.pcap
+10:19:21 disconnect forced (cycle 61) try 3
+10:19:28 sniffer data packets after reconnect: 580
+10:19:28 apto handle 0x0800 status 0x0
+10:24:33 sniffer segment seg-102430.pcap
+10:24:35 disconnect forced (cycle 62) try 1
+10:24:42 sniffer data packets after reconnect: 558
+10:24:42 apto handle 0x0800 status 0x0
+10:29:47 sniffer segment seg-102944.pcap
+10:29:49 disconnect forced (cycle 63) try 1
+10:29:56 sniffer data packets after reconnect: 572
+10:29:56 apto handle 0x0800 status 0x0
+10:35:01 sniffer segment seg-103458.pcap
+10:35:03 disconnect forced (cycle 64) try 1
+10:35:10 sniffer data packets after reconnect: 0
+10:35:14 sniffer segment seg-103511.pcap
+10:35:16 disconnect forced (cycle 64) try 2
+10:35:23 sniffer data packets after reconnect: 0
+10:35:27 sniffer segment seg-103524.pcap
+10:35:29 disconnect forced (cycle 64) try 3
+10:35:36 sniffer data packets after reconnect: 0
+10:35:40 sniffer segment seg-103537.pcap
+10:35:42 disconnect forced (cycle 64) try 4
+10:35:49 sniffer data packets after reconnect: 0
+10:35:49 apto handle 0x0800 status 0x0
+10:40:54 sniffer segment seg-104051.pcap
+10:40:56 disconnect forced (cycle 65) try 1
+10:41:03 sniffer data packets after reconnect: 0
+10:41:07 sniffer segment seg-104104.pcap
+10:41:09 disconnect forced (cycle 65) try 2
+10:41:16 sniffer data packets after reconnect: 0
+10:41:20 sniffer segment seg-104117.pcap
+10:41:22 disconnect forced (cycle 65) try 3
+10:41:29 sniffer data packets after reconnect: 743
+10:41:29 apto handle 0x0800 status 0x0
+10:46:34 sniffer segment seg-104631.pcap
+10:46:36 disconnect forced (cycle 66) try 1
+10:46:43 sniffer data packets after reconnect: 0
+10:46:47 sniffer segment seg-104644.pcap
+10:46:49 disconnect forced (cycle 66) try 2
+10:46:56 sniffer data packets after reconnect: 679
+10:46:56 apto handle 0x0800 status 0x0
+10:52:01 sniffer segment seg-105158.pcap
+10:52:03 disconnect forced (cycle 67) try 1
+10:52:10 sniffer data packets after reconnect: 490
+10:52:10 apto handle 0x0800 status 0x0
+10:57:15 sniffer segment seg-105712.pcap
+10:57:17 disconnect forced (cycle 68) try 1
+10:57:24 sniffer data packets after reconnect: 0
+10:57:28 sniffer segment seg-105725.pcap
+10:57:30 disconnect forced (cycle 68) try 2
+10:57:37 sniffer data packets after reconnect: 795
+10:57:37 apto handle 0x0800 status 0x0
+11:02:42 sniffer segment seg-110239.pcap
+11:02:44 disconnect forced (cycle 69) try 1
+11:02:51 sniffer data packets after reconnect: 0
+11:02:55 sniffer segment seg-110252.pcap
+11:02:57 disconnect forced (cycle 69) try 2
+11:03:04 sniffer data packets after reconnect: 0
+11:03:08 sniffer segment seg-110305.pcap
+11:03:10 disconnect forced (cycle 69) try 3
+11:03:17 sniffer data packets after reconnect: 0
+11:03:21 sniffer segment seg-110318.pcap
+11:03:23 disconnect forced (cycle 69) try 4
+11:03:30 sniffer data packets after reconnect: 888
+11:03:30 apto handle 0x0800 status 0x0
+11:08:35 sniffer segment seg-110832.pcap
+11:08:37 disconnect forced (cycle 70) try 1
+11:08:44 sniffer data packets after reconnect: 740
+11:08:44 apto handle 0x0800 status 0x0
+11:13:49 sniffer segment seg-111346.pcap
+11:13:51 disconnect forced (cycle 71) try 1
+11:13:58 sniffer data packets after reconnect: 0
+11:14:02 sniffer segment seg-111359.pcap
+11:14:04 disconnect forced (cycle 71) try 2
+11:14:11 sniffer data packets after reconnect: 913
+11:14:11 apto handle 0x0800 status 0x0
+11:19:16 sniffer segment seg-111913.pcap
+11:19:18 disconnect forced (cycle 72) try 1
+11:19:25 sniffer data packets after reconnect: 6
+11:19:29 sniffer segment seg-111926.pcap
+11:19:31 disconnect forced (cycle 72) try 2
+11:19:38 sniffer data packets after reconnect: 0
+11:19:42 sniffer segment seg-111939.pcap
+11:19:44 disconnect forced (cycle 72) try 3
+11:19:51 sniffer data packets after reconnect: 0
+11:19:55 sniffer segment seg-111952.pcap
+11:19:57 disconnect forced (cycle 72) try 4
+11:20:04 sniffer data packets after reconnect: 703
+11:20:04 apto handle 0x0800 status 0x0
+11:25:09 sniffer segment seg-112506.pcap
+11:25:11 disconnect forced (cycle 73) try 1
+11:25:18 sniffer data packets after reconnect: 0
+11:25:22 sniffer segment seg-112519.pcap
+11:25:24 disconnect forced (cycle 73) try 2
+11:25:31 sniffer data packets after reconnect: 0
+11:25:35 sniffer segment seg-112532.pcap
+11:25:37 disconnect forced (cycle 73) try 3
+11:25:44 sniffer data packets after reconnect: 90
+11:25:44 apto handle 0x0800 status 0x0
+11:30:49 sniffer segment seg-113046.pcap
+11:30:51 disconnect forced (cycle 74) try 1
+11:30:58 sniffer data packets after reconnect: 0
+11:31:02 sniffer segment seg-113059.pcap
+11:31:04 disconnect forced (cycle 74) try 2
+11:31:11 sniffer data packets after reconnect: 0
+11:31:15 sniffer segment seg-113112.pcap
+11:31:17 disconnect forced (cycle 74) try 3
+11:31:24 sniffer data packets after reconnect: 0
+11:31:28 sniffer segment seg-113125.pcap
+11:31:30 disconnect forced (cycle 74) try 4
+11:31:37 sniffer data packets after reconnect: 0
+11:31:37 apto handle 0x0800 status 0x0
+11:36:42 sniffer segment seg-113639.pcap
+11:36:44 disconnect forced (cycle 75) try 1
+11:36:51 sniffer data packets after reconnect: 0
+11:36:55 sniffer segment seg-113652.pcap
+11:36:57 disconnect forced (cycle 75) try 2
+11:37:04 sniffer data packets after reconnect: 0
+11:37:08 sniffer segment seg-113705.pcap
+11:37:10 disconnect forced (cycle 75) try 3
+11:37:17 sniffer data packets after reconnect: 0
+11:37:21 sniffer segment seg-113718.pcap
+11:37:23 disconnect forced (cycle 75) try 4
+11:37:30 sniffer data packets after reconnect: 0
+11:37:30 apto handle 0x0800 status 0x0
+11:42:35 sniffer segment seg-114232.pcap
+11:42:37 disconnect forced (cycle 76) try 1
+11:42:44 sniffer data packets after reconnect: 0
+11:42:48 sniffer segment seg-114245.pcap
+11:42:50 disconnect forced (cycle 76) try 2
+11:42:57 sniffer data packets after reconnect: 793
+11:42:57 apto handle 0x0800 status 0x0
+11:48:02 sniffer segment seg-114759.pcap
+11:48:04 disconnect forced (cycle 77) try 1
+11:48:11 sniffer data packets after reconnect: 915
+11:48:11 apto handle 0x0800 status 0x0
+11:53:16 sniffer segment seg-115313.pcap
+11:53:18 disconnect forced (cycle 78) try 1
+11:53:25 sniffer data packets after reconnect: 482
+11:53:25 apto handle 0x0800 status 0x0
+11:58:30 sniffer segment seg-115827.pcap
+11:58:32 disconnect forced (cycle 79) try 1
+11:58:39 sniffer data packets after reconnect: 733
+11:58:39 apto handle 0x0800 status 0x0
+12:03:44 sniffer segment seg-120341.pcap
+12:03:46 disconnect forced (cycle 80) try 1
+12:03:53 sniffer data packets after reconnect: 0
+12:03:57 sniffer segment seg-120354.pcap
+12:03:59 disconnect forced (cycle 80) try 2
+12:04:06 sniffer data packets after reconnect: 0
+12:04:10 sniffer segment seg-120407.pcap
+12:04:12 disconnect forced (cycle 80) try 3
+12:04:19 sniffer data packets after reconnect: 0
+12:04:23 sniffer segment seg-120420.pcap
+12:04:25 disconnect forced (cycle 80) try 4
+12:04:32 sniffer data packets after reconnect: 0
+12:04:32 apto handle 0x0800 status 0x0
+12:09:37 sniffer segment seg-120934.pcap
+12:09:39 disconnect forced (cycle 81) try 1
+12:09:46 sniffer data packets after reconnect: 0
+12:09:50 sniffer segment seg-120947.pcap
+12:09:52 disconnect forced (cycle 81) try 2
+12:09:59 sniffer data packets after reconnect: 0
+12:10:03 sniffer segment seg-121000.pcap
+12:10:05 disconnect forced (cycle 81) try 3
+12:10:12 sniffer data packets after reconnect: 0
+12:10:16 sniffer segment seg-121013.pcap
+12:10:18 disconnect forced (cycle 81) try 4
+12:10:25 sniffer data packets after reconnect: 0
+12:10:25 apto handle 0x0800 status 0x0
+12:15:30 sniffer segment seg-121527.pcap
+12:15:32 disconnect forced (cycle 82) try 1
+12:15:39 sniffer data packets after reconnect: 764
+12:15:39 apto handle 0x0800 status 0x0
+12:20:44 sniffer segment seg-122041.pcap
+12:20:46 disconnect forced (cycle 83) try 1
+12:20:53 sniffer data packets after reconnect: 0
+12:20:57 sniffer segment seg-122054.pcap
+12:20:59 disconnect forced (cycle 83) try 2
+12:21:06 sniffer data packets after reconnect: 0
+12:21:10 sniffer segment seg-122107.pcap
+12:21:12 disconnect forced (cycle 83) try 3
+12:21:19 sniffer data packets after reconnect: 0
+12:21:23 sniffer segment seg-122120.pcap
+12:21:25 disconnect forced (cycle 83) try 4
+12:21:32 sniffer data packets after reconnect: 0
+12:21:32 apto handle 0x0800 status 0x0
+12:26:37 sniffer segment seg-122634.pcap
+12:26:39 disconnect forced (cycle 84) try 1
+12:26:46 sniffer data packets after reconnect: 0
+12:26:50 sniffer segment seg-122647.pcap
+12:26:52 disconnect forced (cycle 84) try 2
+12:26:59 sniffer data packets after reconnect: 789
+12:26:59 apto handle 0x0800 status 0x0
+12:32:04 sniffer segment seg-123201.pcap
+12:32:06 disconnect forced (cycle 85) try 1
+12:32:13 sniffer data packets after reconnect: 0
+12:32:17 sniffer segment seg-123214.pcap
+12:32:19 disconnect forced (cycle 85) try 2
+12:32:26 sniffer data packets after reconnect: 0
+12:32:30 sniffer segment seg-123227.pcap
+12:32:32 disconnect forced (cycle 85) try 3
+12:32:39 sniffer data packets after reconnect: 0
+12:32:43 sniffer segment seg-123240.pcap
+12:32:45 disconnect forced (cycle 85) try 4
+12:32:52 sniffer data packets after reconnect: 0
+12:32:52 apto handle 0x0800 status 0x0
+12:37:57 sniffer segment seg-123754.pcap
+12:37:59 disconnect forced (cycle 86) try 1
+12:38:06 sniffer data packets after reconnect: 0
+12:38:10 sniffer segment seg-123807.pcap
+12:38:12 disconnect forced (cycle 86) try 2
+12:38:19 sniffer data packets after reconnect: 861
+12:38:19 apto handle 0x0800 status 0x0
+12:43:24 sniffer segment seg-124321.pcap
+12:43:26 disconnect forced (cycle 87) try 1
+12:43:33 sniffer data packets after reconnect: 0
+12:43:37 sniffer segment seg-124334.pcap
+12:43:39 disconnect forced (cycle 87) try 2
+12:43:46 sniffer data packets after reconnect: 0
+12:43:50 sniffer segment seg-124347.pcap
+12:43:52 disconnect forced (cycle 87) try 3
+12:43:59 sniffer data packets after reconnect: 0
+12:44:03 sniffer segment seg-124400.pcap
+12:44:05 disconnect forced (cycle 87) try 4
+12:44:12 sniffer data packets after reconnect: 0
+12:44:12 apto handle 0x0800 status 0x0
+12:49:17 sniffer segment seg-124914.pcap
+12:49:19 disconnect forced (cycle 88) try 1
+12:49:26 sniffer data packets after reconnect: 0
+12:49:30 sniffer segment seg-124927.pcap
+12:49:32 disconnect forced (cycle 88) try 2
+12:49:39 sniffer data packets after reconnect: 532
+12:49:39 apto handle 0x0800 status 0x0
+12:54:44 sniffer segment seg-125441.pcap
+12:54:46 disconnect forced (cycle 89) try 1
+12:54:53 sniffer data packets after reconnect: 0
+12:54:57 sniffer segment seg-125454.pcap
+12:54:59 disconnect forced (cycle 89) try 2
+12:55:06 sniffer data packets after reconnect: 842
+12:55:06 apto handle 0x0800 status 0x0
+13:00:08 done

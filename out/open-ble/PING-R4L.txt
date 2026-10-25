@@ -1,0 +1,17 @@
+Open BLE R4 long LE Ping run - desktop BlueZ (Intel), image 8866ab78 (R4), one FM-1 boot (~18:20 on 2026-10-23).
+ping-r4L/  18:48 -> 04:51 (10 h), ping-r4L2/ 04:51 -> 13:00 (continuation, same boot, chain.sh).
+Traffic: APTO 100 ms (ping-r4/apto.py) -> LL_PING_REQ every ~85 ms, answered LL_UNKNOWN_RSP; MIDI notes every ~4 s.
+Every 5 min: nRF sniffer restart + forced reconnect (retried until the sniffer follows), APTO re-set, USB sample 60 s.
+Data: ping-r4L*/{events,samples}.txt, {before,final}-log.txt, ping-r4L2/mic1-112758.txt (FM-1 log right after the failure).
+Sniffer segments stay on the desktop (~/fm1-sniff/r4L*); they are not committed.
+
+RESULT: 18.7 h uptime (sample_ms 67,207,054, past 2^15 s and 2^16 s), 744 link epochs, ~712,000 control_rx
+(pings), supervision_fail 0, unplanned disconnects 0, executor over100 0. ONE MIC failure:
+- 11:25:37, uptime 61,537 s, epoch 658, the forced reconnect 131 ms after the previous link ended.
+- Journal serial 1: event 7, slot 1, status 7901, LLID 3, SN 1, NESN 1, length 5, counter 0 -> the central's
+  first encrypted PDU (LL_START_ENC_RSP). The next link 6 s later was clean.
+- No mid-link ping failure in ~712k pings, unlike ping-r4/ (3 in ~4,000 pings on the 2026-10-22 boot after the
+  interval-cycling soak). Fresh-boot R4 (13,271 pings) was clean too. Mid-link failures therefore look tied to
+  something earlier in that boot (connection updates?), not to uptime or ping rate alone.
+- Not captured on air: the sniffer missed that link (startup gap); from ~09:20 it missed about half of new links
+  (r4L2: 91 of 169 checks with 0 packets). No btmon in this run.
