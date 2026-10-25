@@ -12,14 +12,14 @@
 #include "host/ble_hs.h"
 #include "host/ble_store.h"
 extern uint8_t nor[0x100000];
-extern int cut,reads_fail,verify_fail;
+extern int cut,reads_fail,verify_fail,read_cut;
 extern unsigned writes,erases;
 static uint8_t baseline[8192];
 static void reopen(void) { ble_object_init(); ble_bonds_init(); }
 static void fresh(void)
 {
     sim_reset(); sim_storage_reset(); memset(nor,255,sizeof nor);
-    cut=-1; reads_fail=0; writes=erases=0; reopen();
+    cut=read_cut=-1; reads_fail=0; writes=erases=0; reopen();
 }
 static union ble_store_value value(unsigned peer,unsigned key)
 {
@@ -168,5 +168,33 @@ static void cuts_test(void)
     for(unsigned i=0xf00;i<0x1000;i++) assert(nor[0xde000u+i]==255 && nor[0xdf000u+i]==255);
     printf("open storage: %u byte-cut cases (seed + bond), old/new whole, no compaction loss, loader tails blank: PASS\n",2u*(4096+BLE_OBJECT_SIZE+33));
 }
+static void read_io_test(void)
+{
+    for(unsigned bank=0;bank<2;bank++) {
+        union ble_store_value v=value(1,0x55),out;
+        union ble_store_key k=keyof(&v); ble_bond_diag_t d;
+        fresh(); assert(!ble_bonds_write(1,&v)); ble_bonds_flush();
+        if(bank) { v.sec.ltk[0]=0x66; assert(!ble_bonds_write(1,&v)); ble_bonds_flush(); }
+        memcpy(baseline,nor+0xde000u,sizeof baseline);
+        unsigned e=erases,w=writes;
+        v.sec.ltk[0]=0x77; assert(!ble_bonds_write(1,&v));
+        /* The original idle-only contract still refuses a linked flush. */
+        ble_link.state=BLE_LINK_UP; ble_bonds_flush(); ble_bonds_get_diag(&d);
+        assert(d.pending && erases==e && writes==w);
+        ble_link.state=BLE_LINK_IDLE;
+        reads_fail=1; ble_bonds_flush(); reads_fail=0;
+        ble_bonds_get_diag(&d); assert(d.pending && d.failures && erases==e && writes==w);
+        assert(!memcmp(baseline,nor+0xde000u,sizeof baseline));
+        for(int point=0;point<3;point++) { /* either header, or winning payload */
+            read_cut=point; ble_bonds_flush(); read_cut=-1;
+            ble_bonds_get_diag(&d); assert(d.pending && erases==e && writes==w);
+            assert(!memcmp(baseline,nor+0xde000u,sizeof baseline));
+        }
+        ble_bonds_flush(); ble_bonds_get_diag(&d);
+        assert(!d.pending && erases==e+1);
+        reopen(); assert(!ble_bonds_read(1,&k,&out) && out.sec.ltk[0]==0x77);
+    }
+    puts("R8B idle store: linked flush refused; either header/winning payload I/O preserves both banks and pending retry; idle retry/reload: PASS");
+}
 #include "ble_bond_migration_test.inc"
-int main(void) { seed_test(); bonds_test(); cache_version_test(); downgrade_test(); cuts_test(); migration_test(); full_snapshot_cuts(); return 0; }
+int main(void) { seed_test(); bonds_test(); cache_version_test(); downgrade_test(); read_io_test(); cuts_test(); migration_test(); full_snapshot_cuts(); return 0; }

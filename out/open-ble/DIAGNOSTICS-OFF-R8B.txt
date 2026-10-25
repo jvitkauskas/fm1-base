@@ -1,0 +1,22 @@
+reliability: diagnostics=1 release=0
+reliability_worker: diagnostics=1 release=0
+reliability_kat: diagnostics=1 release=0
+reliability_dma: diagnostics=1 release=0
+r7_record: diagnostics=1 release=0
+ble_host_events: diagnostics=1 release=0
+ble_host_event: diagnostics=1 release=0
+r7_record : present in diagnostics; absent from release
+r7_ciphertext_tag: present in diagnostics; absent from release
+r7_check: present in diagnostics; absent from release
+r7_cost_ticks24: present in diagnostics; absent from release
+bond_writes: present in diagnostics; absent from release
+bond_erases: present in diagnostics; absent from release
+bond_pending: present in both profiles
+bond_failures: present in both profiles
+bond_count: present in both profiles
+bond_capacity: present in both profiles
+bond_identity: present in both profiles
+midi_packets_in: present in both profiles
+midi_packets_out: present in both profiles
+Controller, host, platform idle-only gate, linker/build policy: unchanged from fa1431b.
+No app_open_ram.ld; BSP working tree clean.

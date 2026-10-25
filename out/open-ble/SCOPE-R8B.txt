@@ -1,0 +1,31 @@
+base fa1431b7e0af5bfa7e53804199743502b6910ba8
+branch open-ble
+exact requested R8 source/test port: include/fastmath.h a72cb4fc3f3fb8f1c164049e45f15fc141df7d1f7c362fa37dc03f247f217e69
+exact requested R8 source/test port: device/mirror.c f94708bb2ffabf25af7c995fa66b7f2e8290d2472f048578251580b94a63c68f
+exact requested R8 source/test port: device/storage.c 26c88ea44070d1a7caa2bd90c3c94c10f58b46733c55d936f7e8bb0b386206fb
+exact requested R8 source/test port: tests/ldr_test.c 10e1cd1b16ceae67f1159df3669a2836b96b303a94f1ca28f0980b411855f1fa
+exact requested R8 source/test port: tests/run_tests.sh 73ae6fd01bd1a3ed0e5c8939bad9c416c9af5fed75fe433bfb19689e254c14b6
+unchanged from fa1431b: open_ble
+unchanged from fa1431b: device/ble_open.c
+unchanged from fa1431b: device/ble_open_platform.c
+unchanged from fa1431b: device/ble_open_diag.c
+unchanged from fa1431b: device/main_fm1.c
+unchanged from fa1431b: device/unity.c
+unchanged from fa1431b: device/app.ld
+unchanged from fa1431b: tools/build.py
+unchanged from fa1431b: bsp
+unchanged from fa1431b: tests/run_open_ble_tests.py
+unchanged from fa1431b: tests/run_ble_s3_tests.py
+No SRAM linker script; BSP working tree unmodified.
+changed paths:
+README.md
+device/mirror.c
+device/storage.c
+docs/OPEN-BLE.md
+include/fastmath.h
+tests/ble_open_sim_store.c
+tests/ble_open_store_test.c
+tests/ldr_test.c
+tests/ota_test.c
+tests/run_tests.sh
+tests/storage_test.c

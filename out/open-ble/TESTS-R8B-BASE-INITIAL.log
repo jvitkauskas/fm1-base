@@ -1,0 +1,26 @@
+  ok   encoder
+  ok   trs
+  ok   storage
+  ok   fastmath
+  ok   installer
+  ok   backup
+  ok   backup-tool
+  ok   backup-page
+  FAIL ota-entry (see template/build/tests/ota-entry.log)
+       
+       =================================================================
+       ==3568083==ERROR: LeakSanitizer: detected memory leaks
+       
+       Direct leak of 2097152 byte(s) in 1 object(s) allocated from:
+           #0 0x7cb9df7ecc57 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+           #1 0x40595e in main tests/ota_test.c:163
+           #2 0x7cb9def1aca7  (/lib/x86_64-linux-gnu/libc.so.6+0x29ca7) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+       
+       SUMMARY: AddressSanitizer: 2097152 byte(s) leaked in 1 allocation(s).
+  ok   update-loader
+  ok   host-build
+  ok   mirror
+  ok   mirror-viewer
+  ok   mirror-png
+  ok   template
+TESTS FAILED

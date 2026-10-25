@@ -1,0 +1,2 @@
+24caf769a4508f72e747d57a409eef70aba4d9ff8669aedcb134b7aa602b6ad4  template/build/template-open-r8b.fwsc
+1b62ac06c7523ee9883ebc1ab23a2815cc57d2b00d934f64f572395f3ac09b8a  template/build/template-open-r8b-release.fwsc

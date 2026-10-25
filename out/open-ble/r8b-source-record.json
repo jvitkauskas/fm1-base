@@ -1,0 +1,378 @@
+{
+  "base_head": "fa1431b7e0af5bfa7e53804199743502b6910ba8",
+  "branch": "open-ble",
+  "r8_port_source": "c1633e61e90903e5c488e7c8db7cce795d172362",
+  "bsp_head": "62a01ca7affe8de73707e309b57e98f1734c8b2d",
+  "bsp_worktree_clean": true,
+  "committed": false,
+  "hardware_access": false,
+  "sources": [
+    {
+      "path": "README.md",
+      "size": 14027,
+      "sha256": "3a23f998b3bd4540d7e3d8c7e246cdddc7d31379cbc071c8312b71db201763a1"
+    },
+    {
+      "path": "device/mirror.c",
+      "size": 23067,
+      "sha256": "f94708bb2ffabf25af7c995fa66b7f2e8290d2472f048578251580b94a63c68f"
+    },
+    {
+      "path": "device/storage.c",
+      "size": 6282,
+      "sha256": "26c88ea44070d1a7caa2bd90c3c94c10f58b46733c55d936f7e8bb0b386206fb"
+    },
+    {
+      "path": "docs/OPEN-BLE.md",
+      "size": 54081,
+      "sha256": "e47800bc74687a10af99483cad74453ae42beada43edc61bef4e50cd83c7a5f5"
+    },
+    {
+      "path": "include/fastmath.h",
+      "size": 7359,
+      "sha256": "a72cb4fc3f3fb8f1c164049e45f15fc141df7d1f7c362fa37dc03f247f217e69"
+    },
+    {
+      "path": "tests/ble_open_sim_store.c",
+      "size": 1803,
+      "sha256": "60e62b7087447e4cd382e2f7c817a62d2bbe31408a2df224bfa9d5ead9c6763f"
+    },
+    {
+      "path": "tests/ble_open_store_test.c",
+      "size": 11853,
+      "sha256": "b5689aafc02ae71e7a39ff6bb7ab39c77714468506010779c1a7e215b34c4053"
+    },
+    {
+      "path": "tests/ldr_test.c",
+      "size": 6836,
+      "sha256": "10e1cd1b16ceae67f1159df3669a2836b96b303a94f1ca28f0980b411855f1fa"
+    },
+    {
+      "path": "tests/ota_test.c",
+      "size": 8093,
+      "sha256": "12ccae6fcdce8ddcb5c386b231218bfcdd52ad0151a3765dcde815e9eb4219b4"
+    },
+    {
+      "path": "tests/run_tests.sh",
+      "size": 3792,
+      "sha256": "73ae6fd01bd1a3ed0e5c8939bad9c416c9af5fed75fe433bfb19689e254c14b6"
+    },
+    {
+      "path": "tests/storage_test.c",
+      "size": 7472,
+      "sha256": "a41a667ba82f3dc47847f3672e29d80348045f884eb13ed7374bed5a2de8f9c6"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "template/build/template-open-r8b-release.bin",
+      "size": 188256,
+      "sha256": "2b1cb1256e644bc2e0b40d22eea8a2e8535cb02096169452c8cd3cd6065a12f9"
+    },
+    {
+      "path": "template/build/template-open-r8b-release.dis",
+      "size": 2897978,
+      "sha256": "898c4142d5e83a9ba48ac507d441aa0a0d734ce44abf6fb0a8103619cb0b25dd"
+    },
+    {
+      "path": "template/build/template-open-r8b-release.elf",
+      "size": 247548,
+      "sha256": "90c6314ca77533f8df80c2474484eae064835d637c24e3e355bea7d6bfd9a25e"
+    },
+    {
+      "path": "template/build/template-open-r8b-release.fwsc",
+      "size": 610136,
+      "sha256": "1b62ac06c7523ee9883ebc1ab23a2815cc57d2b00d934f64f572395f3ac09b8a"
+    },
+    {
+      "path": "template/build/template-open-r8b-release.map",
+      "size": 274006,
+      "sha256": "b7544a2da4324a4666c02f1f00a370bc93900e1b62e8d02e409f09d594a371f1"
+    },
+    {
+      "path": "template/build/template-open-r8b-release.symbols",
+      "size": 88139,
+      "sha256": "7c27a5ea7184e8ab692f7bece606e25be8e04699985bd29587df51c389730735"
+    },
+    {
+      "path": "template/build/template-open-r8b.bin",
+      "size": 208944,
+      "sha256": "f2c8446170dee6684e74c21ba5313c7713c3a846a863b57250313afd6273ceff"
+    },
+    {
+      "path": "template/build/template-open-r8b.dis",
+      "size": 3189171,
+      "sha256": "fe1c1b8f53a9021b2e34b6893ff153c803e50a1f573a6754206b4c31c257b64f"
+    },
+    {
+      "path": "template/build/template-open-r8b.elf",
+      "size": 270396,
+      "sha256": "45c30e5bcb49a02d1a37bdb182c96d4007475ee75537922eea40b13ce6608a44"
+    },
+    {
+      "path": "template/build/template-open-r8b.fwsc",
+      "size": 610136,
+      "sha256": "24caf769a4508f72e747d57a409eef70aba4d9ff8669aedcb134b7aa602b6ad4"
+    },
+    {
+      "path": "template/build/template-open-r8b.map",
+      "size": 280663,
+      "sha256": "456970abbf797caf493670e152de26c09a98d105637c8d0102a7743c88bfa575"
+    },
+    {
+      "path": "template/build/template-open-r8b.symbols",
+      "size": 91964,
+      "sha256": "96827142f1da569678c09d52883c5093768587a121b00a550b990248ea9ba5e0"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "out/open-ble/ASAN-R8B-BASE.txt",
+      "size": 1096,
+      "sha256": "dcdcaea1b1077cba9ede1b29f1f0d957f621dfb7651928e69ddbbdb3b7d30cca"
+    },
+    {
+      "path": "out/open-ble/BUILD-POLICY-R8B.log",
+      "size": 102,
+      "sha256": "1cee68ebe8f447fbb457d0ad9985cb431695d43d0d464ce6a283cd66493db90e"
+    },
+    {
+      "path": "out/open-ble/BUILD-R8B-OFF.log",
+      "size": 1528,
+      "sha256": "5c8eb67d4be9338234e75c3109620bd375254a6a0dc307e19e53ab7ea226b4e9"
+    },
+    {
+      "path": "out/open-ble/BUILD-R8B-ON.log",
+      "size": 1525,
+      "sha256": "d37cc3853f72905bc56a14a554746326555f21fca3ab8ac81ee61e06d74df5c2"
+    },
+    {
+      "path": "out/open-ble/DIAGNOSTICS-OFF-R8B.txt",
+      "size": 1040,
+      "sha256": "5cba65b449ddd89fc2ffbf6d14f4f6421e679a87873a2aea2b635f7b7bfde72a"
+    },
+    {
+      "path": "out/open-ble/OWNER-BENCH-R8B.md",
+      "size": 12537,
+      "sha256": "e56c640132dd56a0ad8ab0806383a57a96bec26b8cda47e456fe415ff8d85dda"
+    },
+    {
+      "path": "out/open-ble/PACKAGES-R8B.json",
+      "size": 1316,
+      "sha256": "3eba3b36d723d2a14d1b0ef6a71a9336dae8426931121331de5f2e41e514846b"
+    },
+    {
+      "path": "out/open-ble/PRIOR-PACKAGES-R8B.txt",
+      "size": 637,
+      "sha256": "4ce35ca7e904039261b3e1306722c6ba88cbf3bf0ae742ea9d72a103e015c788"
+    },
+    {
+      "path": "out/open-ble/RESULTS-R8B.md",
+      "size": 16043,
+      "sha256": "1adc1441dc024f48b71f19d69c5ba17db5f508f836df652e6f0cee67ec41d7ea"
+    },
+    {
+      "path": "out/open-ble/SCOPE-R8B.txt",
+      "size": 1396,
+      "sha256": "7888af6c7c9d2049b6cf5c27392ec777e0fb79f8546b6200d00574c42b65926d"
+    },
+    {
+      "path": "out/open-ble/SHA256-R8B.txt",
+      "size": 216,
+      "sha256": "a68689b538633437a59de6ca18e903a814196ab61cf7ca8576562b1ed898f796"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-ALL.log",
+      "size": 51337,
+      "sha256": "344969002a9801dbb3efa9bfcb386917ac056d2976a507073d26d87ff41c014d"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-BASE-INITIAL.log",
+      "size": 884,
+      "sha256": "bd8364593ea84336572509adf8fe447a76490387e12591d4e56cf21dfd5e8f3b"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-BASE.log",
+      "size": 268,
+      "sha256": "63e4ccb1b0cba654c353929a2201fd603ddf1d1021754ed23ed09a52011fa872"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-MIC.log",
+      "size": 4750,
+      "sha256": "42c02d92a0294dd2a1c8ffb2a62b4c2bebfa133148f6501c9a2cab06d0268814"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-RELEASE.log",
+      "size": 5339,
+      "sha256": "328746ca65581d1ef178ffa1533fccaa729035ba382f0201255dd88a4ed7c1f3"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-RELIABILITY-HOST.log",
+      "size": 9018,
+      "sha256": "bfd66a2be6c68ba6a703c7f48fe863c6efc85720c88ee57bcde7429d9ac1d724"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-RELIABILITY-MIC.log",
+      "size": 6631,
+      "sha256": "12f1ba0d02a3017d0a05f3f951370a3cb05234bfa8085a685d06f1b127ddfc73"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-RESULTS.json",
+      "size": 2760,
+      "sha256": "43133e485ad40b34165e18673611defae8152cba0086cc9f1f43ad619c5b69cf"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-S3.log",
+      "size": 2510,
+      "sha256": "ff19a59d70dad198417226c2395e8400a5c252d5f5c77cb68e97c3b6e588bfca"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-S31.log",
+      "size": 8409,
+      "sha256": "d966eed0019ced5b08a7194a3e1c4fde629d7ee6e809fb7067591960a587d66d"
+    },
+    {
+      "path": "out/open-ble/TESTS-R8B-STORE.log",
+      "size": 9004,
+      "sha256": "3f4e3b1aa943b5de022956b06ac9bcf9b21fb7a692ca86938e255c9e0b72cc12"
+    },
+    {
+      "path": "out/open-ble/cc-asan-r8b",
+      "size": 100,
+      "sha256": "708ceb93a06f428d01fefb603f2ef2f9d26ab914f778a52e2222ad31d544ff7b"
+    }
+  ],
+  "felucca": {
+    "head": "fde574e68bc3c0ed15a08617f0bbbd6a88dd7321",
+    "branch": "ble-controller",
+    "sources": [
+      {
+        "path": "docs/BLE-S3.1.md",
+        "size": 30654,
+        "sha256": "c171b46432a45f7cd4544cfd640e48d44ae69fd57d684df5e55e42d870240ac0"
+      },
+      {
+        "path": "firmware/ble/ble_host.c",
+        "size": 18541,
+        "sha256": "af19e83194ec56e6b177dc00e8e92a3877da3c5ed5fb5e6c05f0503bb4051720"
+      },
+      {
+        "path": "tests/ble_s3_integration.c",
+        "size": 19646,
+        "sha256": "6c8049bf370e20b0bfbad8256943cba2839b82ebfe3f11b600af68917a7ef5a1"
+      }
+    ],
+    "evidence": [
+      {
+        "path": "out/TESTS-R8B-MIC-10M.log",
+        "size": 4750,
+        "sha256": "a416d599f8fc12d0b3b2e43e4bd6e99e4370116eefff35b724dfe765a1ba85d1"
+      },
+      {
+        "path": "out/TESTS-R8B-S1.log",
+        "size": 259,
+        "sha256": "9439e6707f340c059644a2a3bfbe5532765b673096d09540f03d83b418d0974b"
+      },
+      {
+        "path": "out/TESTS-R8B-S2.log",
+        "size": 845,
+        "sha256": "2db76d925642b97bb9a549ab4afefff8a5a1c09b9dfc64adbd53e51830c36be6"
+      },
+      {
+        "path": "out/TESTS-R8B-S3.log",
+        "size": 1623,
+        "sha256": "fcefd17db7afdd4e05b557319bcd33c5c1997a59c2647177264e442a0147d567"
+      },
+      {
+        "path": "out/TESTS-R8B-S31.log",
+        "size": 6622,
+        "sha256": "c2746680bb56f3d625ed0631c45e44905ebc895cf88bac49a6f6fa0d87d22ccb"
+      },
+      {
+        "path": "out/cc-asan-r8b",
+        "size": 100,
+        "sha256": "708ceb93a06f428d01fefb603f2ef2f9d26ab914f778a52e2222ad31d544ff7b"
+      }
+    ]
+  },
+  "validation": {
+    "profiles": {
+      "S3": {
+        "status": "PASS",
+        "log": "out/open-ble/TESTS-R8B-S3.log",
+        "sha256": "ff19a59d70dad198417226c2395e8400a5c252d5f5c77cb68e97c3b6e588bfca"
+      },
+      "S31": {
+        "status": "PASS",
+        "log": "out/open-ble/TESTS-R8B-S31.log",
+        "sha256": "d966eed0019ced5b08a7194a3e1c4fde629d7ee6e809fb7067591960a587d66d"
+      },
+      "STORE": {
+        "status": "PASS",
+        "log": "out/open-ble/TESTS-R8B-STORE.log",
+        "sha256": "3f4e3b1aa943b5de022956b06ac9bcf9b21fb7a692ca86938e255c9e0b72cc12"
+      },
+      "RELEASE": {
+        "status": "PASS",
+        "log": "out/open-ble/TESTS-R8B-RELEASE.log",
+        "sha256": "328746ca65581d1ef178ffa1533fccaa729035ba382f0201255dd88a4ed7c1f3"
+      },
+      "MIC": {
+        "status": "PASS",
+        "log": "out/open-ble/TESTS-R8B-MIC.log",
+        "sha256": "42c02d92a0294dd2a1c8ffb2a62b4c2bebfa133148f6501c9a2cab06d0268814"
+      },
+      "RELIABILITY-HOST": {
+        "status": "PASS",
+        "log": "out/open-ble/TESTS-R8B-RELIABILITY-HOST.log",
+        "sha256": "bfd66a2be6c68ba6a703c7f48fe863c6efc85720c88ee57bcde7429d9ac1d724"
+      },
+      "RELIABILITY-MIC": {
+        "status": "PASS",
+        "log": "out/open-ble/TESTS-R8B-RELIABILITY-MIC.log",
+        "sha256": "12f1ba0d02a3017d0a05f3f951370a3cb05234bfa8085a685d06f1b127ddfc73"
+      }
+    },
+    "base_platform": {
+      "status": "PASS",
+      "groups": 15,
+      "log": "out/open-ble/TESTS-R8B-BASE.log"
+    },
+    "felucca": {
+      "S1": {
+        "status": "PASS",
+        "log": "/root/fm1/Felucca-ble/out/TESTS-R8B-S1.log",
+        "sha256": "9439e6707f340c059644a2a3bfbe5532765b673096d09540f03d83b418d0974b"
+      },
+      "S2": {
+        "status": "PASS",
+        "log": "/root/fm1/Felucca-ble/out/TESTS-R8B-S2.log",
+        "sha256": "2db76d925642b97bb9a549ab4afefff8a5a1c09b9dfc64adbd53e51830c36be6"
+      },
+      "S3": {
+        "status": "PASS",
+        "log": "/root/fm1/Felucca-ble/out/TESTS-R8B-S3.log",
+        "sha256": "fcefd17db7afdd4e05b557319bcd33c5c1997a59c2647177264e442a0147d567"
+      },
+      "S31": {
+        "status": "PASS",
+        "log": "/root/fm1/Felucca-ble/out/TESTS-R8B-S31.log",
+        "sha256": "c2746680bb56f3d625ed0631c45e44905ebc895cf88bac49a6f6fa0d87d22ccb"
+      },
+      "MIC-10M": {
+        "status": "PASS",
+        "log": "/root/fm1/Felucca-ble/out/TESTS-R8B-MIC-10M.log",
+        "sha256": "a416d599f8fc12d0b3b2e43e4bd6e99e4370116eefff35b724dfe765a1ba85d1"
+      }
+    },
+    "aggregate_status": "PASS",
+    "stress_event_target": 40000000,
+    "felucca_stress_event_target": 20000000,
+    "aggregate_exit_code": 0,
+    "aggregate_log": "out/open-ble/TESTS-R8B-ALL.log",
+    "stress_events_completed": 40000000,
+    "felucca_stress_events_completed": 20000000,
+    "r7_directed_cases": 22,
+    "aggregate_sha256": "344969002a9801dbb3efa9bfcb386917ac056d2976a507073d26d87ff41c014d"
+  }
+}

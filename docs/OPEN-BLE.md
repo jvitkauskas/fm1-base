@@ -3,14 +3,41 @@
 # Open BLE-MIDI for fm1-base
 
 This is the clean-room WL82/AC79 controller from `/root/fm1/Felucca-ble`,
-now implementing frozen specification **r8** for round 5. The R2–R4 base is
-committed at **208ebfb** (`open-ble`); R4 passed the owner's Mac, two iPhones,
-Android and BlueZ first-pair/MIDI bench. R5 adds eight durable LRU bonds and a
-ten-entry resolving list. Its changes are uncommitted. Results, sizes, tests,
-format/migration rules and limits: [RESULTS-R5](../out/open-ble/RESULTS-R5.md).
-Owner hardware procedure: [OWNER-BENCH-R5](../out/open-ble/OWNER-BENCH-R5.md).
-No device, host on the bench network, flash, commit or push was accessed by the
-R5 implementer. Earlier round-specific sections below remain historical evidence.
+implementing frozen specification **r8**. This release candidate starts from
+`open-ble` at `fa1431b` (R7 plus Apache NimBLE 1.10.0), retaining the idle-only
+flash contract and eight durable LRU bonds. R8B ports only the sanitizer fixes
+and store read-error hardening; it excludes the SRAM runtime. R4 passed the
+owner's Mac, two iPhones, Android and BlueZ first-pair/MIDI bench. The R7 desktop
+MIC failures were traced to the Intel AX210 central; no controller workaround
+is included. Candidate results: [RESULTS-R8B](../out/open-ble/RESULTS-R8B.md).
+Combined hardware acceptance: [OWNER-BENCH-R8B](../out/open-ble/OWNER-BENCH-R8B.md).
+No device was contacted or flashed by the R8B implementer. Earlier
+round-specific sections below remain historical evidence.
+
+## Saving a pairing and MIDI subscription
+
+A new bond, or a change to the MIDI subscription, is written to flash only
+once the BLE link has closed. If the FM-1 is switched off while still connected
+after first pairing, the bond is lost. The central then fails to reconnect
+until you forget the device on the central and pair again.
+
+After pairing, **disconnect once, then reconnect** before switching the FM-1
+off. On macOS, “Disconnect” in Audio MIDI Setup does not close the BLE link;
+turn Bluetooth off and on instead. On iOS, toggle Bluetooth off and on. Check
+the USB readout: `bond_pending 1` means a bond is waiting to be saved. While
+Bluetooth is off and the link is closed, wait for `bond_pending 0`, then turn
+Bluetooth on and reconnect. The same disconnect step saves a changed MIDI
+subscription. A failed flash write stays pending for a later idle retry.
+
+R4→R5+ migrates existing bonds. R5+→R4 starts with no bonds, so forget the
+device on the central and pair again after downgrading.
+
+The opt-in `r8-sram-store` branch (`c1633e6`) saves while connected by running
+all code and constants from SRAM, including interrupt handlers. Its cost is a
+pool reduction from 344,064 to 188,416 bytes (336 to 184 KiB), plus a 208 KiB
+runtime limit and 40 KiB static-RAM region. It also requires its documented
+BSP flash-driver change. The owner chose not to merge that approach; this
+candidate uses the original XIP layout, pool capacity and idle-only save gate.
 
 ## Build and application interface
 
@@ -378,14 +405,16 @@ For an unpaired Apple-style central, the intended order is:
    choice. Busy submission retries after 1 second. **No Service Changed** is
    sent anywhere in this new-bond sequence.
 
-The pinned host's automatically generated MIDI CCCD is public: an early CCCD
-write succeeds and does **not itself trigger pairing**. It can be written
-again after encryption. MIDI value reads/writes still require encryption and
-notifications are held until encryption. A central that subscribes first must
-still read the protected MIDI value or initiate SMP. Do not describe an early
-CCCD as rejected/retried by this firmware; that is different from its protected
-read. There is no bench/spec evidence to add a new descriptor security hurdle
-or make the empty MIDI value public to cure the observed Apple disconnect.
+With NimBLE 1.10.0, writing the automatically generated MIDI CCCD also
+requires encryption inherited from the MIDI characteristic. An early write
+of `01 00` to descriptor `0x0011` is rejected with ATT Insufficient
+Authentication (`0x05`) and leaves notifications disabled. The central must
+pair/encrypt, then retry the write; `nimble_subscribed` becomes 1 only after
+that successful encrypted write. The descriptor can still be read before
+pairing and initially returns `00 00`. Public discovery remains available.
+MIDI value reads/writes and outgoing notifications still require encryption.
+This descriptor behavior changed from the earlier 1.9-based rounds; include
+subscribe-first clients in the R8B Apple and BlueZ bench.
 
 For a bonded reconnect: connect, central re-encrypts with the retained LTK
 (with RPA resolution when applicable), NimBLE restores that peer's CCCDs, then
@@ -544,7 +573,7 @@ write. Normal boot seed advancement is retained and often supplies that write.
 The old format has no use history, so initial order follows first valid record
 slot, later identity newer; true LRU starts with the next use. The old R4 parser
 rejects v2, including through its truncated 1,108-byte platform read. Downgrade
-can lose bonds, as r8 permits, but cannot reinterpret the new bytes as keys.
+starts with no bonds, but cannot reinterpret the new bytes as keys.
 See the actual `208ebfb` parser test and R4 synthetic fixture in the results.
 
 The existing store erases the inactive sector, writes the payload from +256,
@@ -555,7 +584,10 @@ shape. No raw NimBLE structs or private radio addresses become durable keys.
 Public and random-static identities (including normalized identity types)
 key OUR_SEC / PEER_SEC / CCCD records. Orphan CCCDs are discarded at load/snapshot;
 delete/recreate and subscribe churn that return to the durable net state do
-not write. Failed commits do not advance the durable cache baseline.
+not write. Failed commits do not advance the durable cache baseline. A read
+I/O failure while selecting the current A/B copy refuses the save before erase. Blank or
+CRC-invalid copies can still be replaced; an unreadable copy is not assumed
+blank.
 
 Boot commits the next seed together with unchanged bonds before radio start.
 After a link ends, pending bond net changes commit together with the unchanged

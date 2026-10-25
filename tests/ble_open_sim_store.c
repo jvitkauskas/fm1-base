@@ -8,12 +8,13 @@
 enum { OBJ_SETTINGS,OBJ_PANEL,OBJ_BLE,OBJ_NOBJ };
 #define APP_STORE_MAP {0xfc000u,0xdc000u,0xde000u}
 uint8_t nor[0x100000];
-int cut=-1,reads_fail,verify_fail;
+int cut=-1,reads_fail,verify_fail,read_cut=-1;
 unsigned writes,erases;
 static int st_read(uint32_t off,void *p,uint32_t n)
 {
     assert(off>=0xde000u && off+n<=0xe0000u);
-    if(reads_fail) return -1;
+    if(reads_fail || !read_cut) return -1;
+    if(read_cut>0) read_cut--;
     memcpy(p,nor+off,n); return 0;
 }
 static int step(void) { if(!cut) return -1; if(cut>0) cut--; return 0; }
@@ -46,5 +47,5 @@ int ble_port_object_save(const void *p,uint32_t n)
 
 void sim_object_reset(void)
 {
-    memset(nor,255,sizeof nor); cut=-1; reads_fail=verify_fail=0; writes=erases=0; ble_object_init();
+    memset(nor,255,sizeof nor); cut=read_cut=-1; reads_fail=verify_fail=0; writes=erases=0; ble_object_init();
 }

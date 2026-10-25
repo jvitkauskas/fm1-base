@@ -41,7 +41,7 @@ if command -v node >/dev/null 2>&1; then
 else
     echo "  skip backup-page (no node)"
 fi
-PKG=template/build/template.fwsc
+PKG=${PKG:-template/build/template.fwsc}
 if [ -f "$PKG" ]; then
     run ota-entry sh -c "$CC -w -o $OUT/ota_test tests/ota_test.c && $OUT/ota_test $PKG"
     run update-loader sh -c "head -c 60000 template/build/template.bin > $OUT/old_app.bin && \

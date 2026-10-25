@@ -1,0 +1,80 @@
+{
+  "profiles": {
+    "S3": {
+      "status": "PASS",
+      "log": "out/open-ble/TESTS-R8B-S3.log",
+      "sha256": "ff19a59d70dad198417226c2395e8400a5c252d5f5c77cb68e97c3b6e588bfca"
+    },
+    "S31": {
+      "status": "PASS",
+      "log": "out/open-ble/TESTS-R8B-S31.log",
+      "sha256": "d966eed0019ced5b08a7194a3e1c4fde629d7ee6e809fb7067591960a587d66d"
+    },
+    "STORE": {
+      "status": "PASS",
+      "log": "out/open-ble/TESTS-R8B-STORE.log",
+      "sha256": "3f4e3b1aa943b5de022956b06ac9bcf9b21fb7a692ca86938e255c9e0b72cc12"
+    },
+    "RELEASE": {
+      "status": "PASS",
+      "log": "out/open-ble/TESTS-R8B-RELEASE.log",
+      "sha256": "328746ca65581d1ef178ffa1533fccaa729035ba382f0201255dd88a4ed7c1f3"
+    },
+    "MIC": {
+      "status": "PASS",
+      "log": "out/open-ble/TESTS-R8B-MIC.log",
+      "sha256": "42c02d92a0294dd2a1c8ffb2a62b4c2bebfa133148f6501c9a2cab06d0268814"
+    },
+    "RELIABILITY-HOST": {
+      "status": "PASS",
+      "log": "out/open-ble/TESTS-R8B-RELIABILITY-HOST.log",
+      "sha256": "bfd66a2be6c68ba6a703c7f48fe863c6efc85720c88ee57bcde7429d9ac1d724"
+    },
+    "RELIABILITY-MIC": {
+      "status": "PASS",
+      "log": "out/open-ble/TESTS-R8B-RELIABILITY-MIC.log",
+      "sha256": "12f1ba0d02a3017d0a05f3f951370a3cb05234bfa8085a685d06f1b127ddfc73"
+    }
+  },
+  "base_platform": {
+    "status": "PASS",
+    "groups": 15,
+    "log": "out/open-ble/TESTS-R8B-BASE.log"
+  },
+  "felucca": {
+    "S1": {
+      "status": "PASS",
+      "log": "/root/fm1/Felucca-ble/out/TESTS-R8B-S1.log",
+      "sha256": "9439e6707f340c059644a2a3bfbe5532765b673096d09540f03d83b418d0974b"
+    },
+    "S2": {
+      "status": "PASS",
+      "log": "/root/fm1/Felucca-ble/out/TESTS-R8B-S2.log",
+      "sha256": "2db76d925642b97bb9a549ab4afefff8a5a1c09b9dfc64adbd53e51830c36be6"
+    },
+    "S3": {
+      "status": "PASS",
+      "log": "/root/fm1/Felucca-ble/out/TESTS-R8B-S3.log",
+      "sha256": "fcefd17db7afdd4e05b557319bcd33c5c1997a59c2647177264e442a0147d567"
+    },
+    "S31": {
+      "status": "PASS",
+      "log": "/root/fm1/Felucca-ble/out/TESTS-R8B-S31.log",
+      "sha256": "c2746680bb56f3d625ed0631c45e44905ebc895cf88bac49a6f6fa0d87d22ccb"
+    },
+    "MIC-10M": {
+      "status": "PASS",
+      "log": "/root/fm1/Felucca-ble/out/TESTS-R8B-MIC-10M.log",
+      "sha256": "a416d599f8fc12d0b3b2e43e4bd6e99e4370116eefff35b724dfe765a1ba85d1"
+    }
+  },
+  "aggregate_status": "PASS",
+  "stress_event_target": 40000000,
+  "felucca_stress_event_target": 20000000,
+  "aggregate_exit_code": 0,
+  "aggregate_log": "out/open-ble/TESTS-R8B-ALL.log",
+  "stress_events_completed": 40000000,
+  "felucca_stress_events_completed": 20000000,
+  "r7_directed_cases": 22,
+  "aggregate_sha256": "344969002a9801dbb3efa9bfcb386917ac056d2976a507073d26d87ff41c014d"
+}

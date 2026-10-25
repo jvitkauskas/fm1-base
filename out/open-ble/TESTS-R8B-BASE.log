@@ -1,0 +1,16 @@
+  ok   encoder
+  ok   trs
+  ok   storage
+  ok   fastmath
+  ok   installer
+  ok   backup
+  ok   backup-tool
+  ok   backup-page
+  ok   ota-entry
+  ok   update-loader
+  ok   host-build
+  ok   mirror
+  ok   mirror-viewer
+  ok   mirror-png
+  ok   template
+all tests passed

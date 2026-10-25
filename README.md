@@ -57,8 +57,8 @@ template once with `python3 tools/build.py template --open-ble`. The output is
 `template/build/template-open.fwsc`. `ble = true` retains the existing JieLi
 stack and central option; `--no-ble` removes both alternatives.
 
-The open stack uses Apache NimBLE 1.9.0 and supports one peripheral BLE-MIDI
-link, legacy/SC Just Works pairing, two persistent peer bonds, encrypted
+The open stack uses Apache NimBLE 1.10.0 and supports one peripheral BLE-MIDI
+link, legacy/SC Just Works pairing, eight persistent peer bonds, encrypted
 reconnects and central-initiated connection updates. Apps keep the same plat.h
 API and give it `OBJ_BLE` in `APP_STORE_MAP`. The open build links nothing of
 JieLi's except the transcribed Apache-2.0 radio tables. The open host simulator
@@ -66,11 +66,27 @@ and browser emulator keep BLE off.
 
 See [docs/OPEN-BLE.md](docs/OPEN-BLE.md) for the platform/interrupt map,
 A/B persistence, size results, native sanitizer tests, known limits and owner
-bench checklist. This fm1-base port has not been tested on hardware. The
+bench checklist. This candidate has not been tested on hardware. The
 source controller was device-passed through Felucca S3.1d; A9 disconnect
 provenance and physical timing qualification remain open. Android chooses
 legacy pairing; BlueZ can use SC. The old one-sector bond compaction window
 is replaced here by an atomic A/B object snapshot.
+
+A new bond, or a change to the MIDI subscription, is written to flash only
+once the BLE link has closed. If you switch the FM-1 off while still connected
+after first pairing, the bond is lost. The central then cannot reconnect until
+you forget the device there and pair again. After pairing, **disconnect once,
+then reconnect** before switching the FM-1 off. On macOS, “Disconnect” in Audio
+MIDI Setup does not close the BLE link: turn Bluetooth off and on instead. On
+iOS, toggle Bluetooth off and on. The USB readout shows `bond_pending 1` while
+a bond is waiting to be saved; wait for `bond_pending 0` after disconnecting.
+
+R4→R5+ migrates existing bonds. R5+→R4 starts with no bonds: forget the device
+on the central and pair again. The opt-in `r8-sram-store` branch can save while
+connected, but moves all runtime code and constants into SRAM: the pool drops
+from 344,064 to 188,416 bytes (336 to 184 KiB), with a 208 KiB runtime limit.
+That approach is not part of this candidate. See [R8B results](out/open-ble/RESULTS-R8B.md)
+and the [combined owner bench](out/open-ble/OWNER-BENCH-R8B.md).
 
 ### Turning Bluetooth on
 

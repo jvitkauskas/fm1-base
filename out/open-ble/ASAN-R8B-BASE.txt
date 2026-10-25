@@ -1,0 +1,14 @@
+CC=/root/fm1/fm1-base-open/out/open-ble/cc-asan-r8b
+#!/bin/sh
+exec cc -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie "$@"
+ASAN_OPTIONS=detect_leaks=1:halt_on_error=1
+UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+template/build/tests/encoder_test: ASan runtime linked; UBSan flags applied by compiler wrapper
+template/build/tests/trs_test: ASan runtime linked; UBSan flags applied by compiler wrapper
+template/build/tests/storage_test: ASan runtime linked; UBSan flags applied by compiler wrapper
+template/build/tests/fastmath_test: ASan runtime linked; UBSan flags applied by compiler wrapper
+template/build/tests/backup_test: ASan runtime linked; UBSan flags applied by compiler wrapper
+template/build/tests/ota_test: ASan runtime linked; UBSan flags applied by compiler wrapper
+template/build/tests/ldr_test: ASan runtime linked; UBSan flags applied by compiler wrapper
+template/build/tests/mirror_test: ASan runtime linked; UBSan flags applied by compiler wrapper
+template/build/host/template_host: ASan runtime linked; UBSan flags applied by compiler wrapper

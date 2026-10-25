@@ -1,0 +1,4 @@
+610136 bytes  b829afc4cd2d3980fa3e1a73c63393ce891a97fa04a54c89c447ea601599ffea  template/build/template-open-r7.fwsc  [hashed in this worktree]
+610136 bytes  049117a52063e83c92461e97fc47e329615c9b3f7faf616c287b4ef26e6d134e  template/build/template-open-r7-diag-off.fwsc  [hashed in this worktree]
+610136 bytes  870e39f2617a132fc12d9c85d6b9cbe9c5fa7b982fe6f71005959734c8f627b3  template/build/template-open-nimble110.fwsc  [recorded baseline; package absent here]
+610136 bytes  96ffbbc2e76be42827dbf8b6d05b30de03d6e4bbf1b8a4d800448be6f2a4d920  template/build/template-open-nimble110-release.fwsc  [recorded baseline; package absent here]

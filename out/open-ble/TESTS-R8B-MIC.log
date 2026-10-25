@@ -1,0 +1,33 @@
++ python3 tests/run_ble_s3_tests.py --mic-stress
+independent central CCM: both directions, lengths 1..27, high counters, corrupted tags rejected: PASS
+ping interval=12 events=1000000 requests=141210 replies=141210 writes=71358 central_repeats=63141 peripheral_repeats=10977 crc=11759 empty_pending_loads=141210 zero MIC failures
+ping interval=12 events=2000000 requests=282399 replies=282399 writes=142775 central_repeats=126817 peripheral_repeats=21944 crc=23553 empty_pending_loads=282399 zero MIC failures
+ping interval=12 events=3000000 requests=423528 replies=423528 writes=214033 central_repeats=190797 peripheral_repeats=33028 crc=35450 empty_pending_loads=423528 zero MIC failures
+ping interval=12 events=4000000 requests=564741 replies=564741 writes=285116 central_repeats=253848 peripheral_repeats=43962 crc=47151 empty_pending_loads=564741 zero MIC failures
+ping interval=12 events=5000000 requests=705930 replies=705929 writes=356540 central_repeats=317456 peripheral_repeats=54981 crc=59002 empty_pending_loads=705930 zero MIC failures
+ping final interval=12 events=5000000 requests=705930 replies=705929 writes=356540 central_repeats=317456 peripheral_repeats=54981 crc=59002 empty_pending_loads=705930: PASS
+ping interval=24 events=1000000 requests=196771 replies=196771 writes=66981 central_repeats=63774 peripheral_repeats=10990 crc=11795 empty_pending_loads=196771 zero MIC failures
+ping interval=24 events=2000000 requests=393558 replies=393557 writes=134131 central_repeats=127282 peripheral_repeats=21779 crc=23343 empty_pending_loads=393557 zero MIC failures
+ping interval=24 events=3000000 requests=590349 replies=590349 writes=201138 central_repeats=190450 peripheral_repeats=32496 crc=34921 empty_pending_loads=590349 zero MIC failures
+ping interval=24 events=4000000 requests=787175 replies=787174 writes=268225 central_repeats=253597 peripheral_repeats=43268 crc=46508 empty_pending_loads=787175 zero MIC failures
+ping interval=24 events=5000000 requests=984008 replies=984008 writes=335279 central_repeats=316805 peripheral_repeats=54098 crc=58163 empty_pending_loads=984008 zero MIC failures
+ping final interval=24 events=5000000 requests=984008 replies=984008 writes=335279 central_repeats=316805 peripheral_repeats=54098 crc=58163 empty_pending_loads=984008: PASS
+events=1000000 accepted_encrypted=229025 delivered=913472 repeats=25533 crc=12871 both=117281 pressure=192897 refused=311547 updates=229
+events=2000000 accepted_encrypted=457743 delivered=1134822 repeats=51063 crc=25387 both=157423 pressure=385833 refused=481474 updates=458
+events=3000000 accepted_encrypted=685621 delivered=1355393 repeats=76576 crc=37972 both=197480 pressure=578060 refused=651205 updates=693
+events=4000000 accepted_encrypted=914186 delivered=1576400 repeats=102450 crc=50656 both=237427 pressure=770107 refused=820872 updates=930
+events=5000000 accepted_encrypted=1142914 delivered=1797718 repeats=128115 crc=63509 both=277041 pressure=961980 refused=990145 updates=1168
+events=6000000 accepted_encrypted=1371168 delivered=2018590 repeats=153622 crc=76112 both=316829 pressure=1154533 refused=1159679 updates=1397
+events=7000000 accepted_encrypted=1598141 delivered=2238281 repeats=179292 crc=88873 both=356389 pressure=1346676 refused=1329427 updates=1628
+events=8000000 accepted_encrypted=1824959 delivered=2457902 repeats=204992 crc=101510 both=396279 pressure=1539242 refused=1499171 updates=1866
+events=9000000 accepted_encrypted=2051716 delivered=2677273 repeats=230787 crc=114286 both=436157 pressure=1731487 refused=1668700 updates=2097
+events=10000000 accepted_encrypted=2280220 delivered=2898448 repeats=256465 crc=126643 both=475985 pressure=1924187 refused=1838753 updates=2333
+random seed=4d494334 events=10000000 counter=2280220 missed=48073 lost_ack=256465 zero spontaneous MIC failures: PASS
+radio ring: 32 active events, empty/duplicate/CRC rows, exact auth counter, load/ACK once, frozen through Reset/reconnect: PASS
+corrupted MIC: 0x3d, exact counter/header/history/pressure flags, journal survives stop and HCI Reset: PASS
+DMA reuse during both-full service preserves A/B/C FIFO; lengths 32/255 filtered, 1..4 fail once; four-record journal wraps: PASS
+RX_ON reservation blocked with one full slot: wait retains delayed/pressure state, marker/PDU recover once: PASS
+production HAL RX_ON/RX_OFF: clear/encrypted coalescing, old encrypted terminate before pause marker, new key/counter-zero restart: PASS
+MIC after update/tick wrap: event=5676 interval=24 age_ms=170040 exact counter=2: PASS
+production USB/CDC MIC formatter: complete fields, 39-bit hex counters, all logical rows fit USB frame: PASS
+central-side MIC/silent timeout: last 32 active events retained across 559 silent closes, frozen reason 08: PASS

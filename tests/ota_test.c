@@ -220,5 +220,6 @@ int main(int argc, char **argv)
     }
 
     printf("%s\n", bad ? "OTA TEST FAILED" : "ota test passed");
+    free(raw); free(logical);
     return bad != 0;
 }
