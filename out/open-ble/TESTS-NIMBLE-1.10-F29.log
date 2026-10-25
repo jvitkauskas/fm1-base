@@ -1,0 +1,1 @@
+F-29: 8 real mixed SC/legacy SMP bonds + both CCCDs, reload + HCI resync, known LRU order, 3 repeats ZERO programs/erases, real ninth-pair overflow/2028/2027/204E, exact victim negative LTK, second reload, persistent ranks/replacement count, all 8 surviving RPA/CCCD/encrypted reconnects: PASS

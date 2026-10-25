@@ -197,6 +197,6 @@ int main(void)
     assert(!ble_host_connected());
     ble_host_get_diag(&d);
     assert(!d.resets && !d.event_drop && !d.acl_drop && !d.heap_fail && d.connection==0xffff);
-    printf("NimBLE 1.9.0 integration: startup, GATT discovery/empty read/CCCD, bidirectional MIDI, fragmented ACL, update, 10-minute simulated link, 10 reconnects, backstop timeout: PASS\nheap peak %u; HCI credits %u; MIDI packets in %u out %u; controller control PDUs %u\n",d.heap_peak,ble_hs_hci_avail_pkts,d.midi_in,d.midi_out,control_count);
+    printf("NimBLE 1.10.0 integration: startup, GATT discovery/empty read/CCCD, bidirectional MIDI, fragmented ACL, update, 10-minute simulated link, 10 reconnects, backstop timeout: PASS\nheap peak %u; HCI credits %u; MIDI packets in %u out %u; controller control PDUs %u\n",d.heap_peak,ble_hs_hci_avail_pkts,d.midi_in,d.midi_out,control_count);
     return 0;
 }

@@ -10,6 +10,10 @@
 #include "host/ble_store.h"
 #include "tinycrypt/ecc.h"
 #include "../third_party/nimble/nimble/host/src/ble_sm_priv.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include "../third_party/nimble/nimble/host/src/ble_hs_priv.h"
+#pragma GCC diagnostic pop
 #include "ble_s3_sim.h"
 #include "../open_ble/ble_host.h"
 #include "../open_ble/ble_crypto.h"
@@ -23,6 +27,8 @@ static const uint8_t pub[6]={0x58,0x65,0x67,0x8b,0x40,0x62};
 static uint8_t central[6]={1,0,0,0,0,0};
 static int missing_expected,missing_seen;
 static uint8_t smp[32][70],smp_len[32],l2[524],att[524];
+static uint8_t signaling[16];
+static unsigned signaling_len;
 static unsigned smp_n,l2_n,l2_want,att_n,fragments65,sc_indications;
 static uint8_t sc_ack_due;
 static int auto_confirm=1;
@@ -61,6 +67,9 @@ static void take_slot(unsigned slot)
             if(ble_get16(l2+2)==6) {
                 assert(smp_n<32 && l2_n-4u<=70); smp_len[smp_n]=(uint8_t)(l2_n-4u);
                 memcpy(smp[smp_n++],l2+4,l2_n-4u); if(l2_n==69) fragments65++;
+            } else if(ble_get16(l2+2)==5) {
+                signaling_len=l2_n-4u; assert(signaling_len<=sizeof signaling);
+                memcpy(signaling,l2+4,signaling_len);
             } else if(ble_get16(l2+2)==4) { att_n=l2_n-4u; memcpy(att,l2+4,att_n);
                 if(att[0]==0x1d) {
                     assert(att_n==7 && ble_get16(att+3)==1 && ble_get16(att+5)==0xffff);
@@ -107,6 +116,7 @@ static void smp_send(uint8_t op,const uint8_t *p,unsigned n)
     uint8_t data[70]; data[0]=op; memcpy(data+1,p,n); l2send(6,data,n+1);
 }
 static void control_rx(const uint8_t *p,unsigned n) { central_rx(p,n,3); pump(); }
+#include "ble_nimble110_test.inc"
 static void connect_link(void)
 {
     ble_conn_t c=sim_connection();
@@ -115,6 +125,7 @@ static void connect_link(void)
     assert(ble_link.state==BLE_LINK_IDLE && ble_ll_create(&c,sim_ticks)); assert(ble_ll_rx(1,1,0,sim_ticks,0)); pump();
     control_rx((uint8_t[9]){8,1,0,0,0,0,0,0,0},9);
     control_rx((uint8_t[6]){12,6,1,0,2,0},6);
+    observe_connection();
 }
 static void encryption_start(const uint8_t key[16],const uint8_t rand_ediv[10])
 {
@@ -144,10 +155,17 @@ static void privacy_ready(unsigned entries)
 {
     ble_privacy_diag_t privacy;
 #if FM1B_BLE_DIAG
+    static uint32_t mask_verified_sync;
+    ble_host_diag_t host;
     unsigned i; int found=0;
 #endif
     ble_privacy_get_diag(&privacy); assert(privacy.enabled && privacy.count==entries);
 #if FM1B_BLE_DIAG
+    ble_host_get_diag(&host);
+    /* ECDH blinding adds LE Rand traffic. Across eight real pairings the
+     * finite trace can evict the startup mask; verify it once per sync while
+     * fresh, and continue checking live privacy state on every invocation. */
+    if(mask_verified_sync==host.syncs) return;
     ble_trace_freeze(1);
     for(i=ble_trace_size();i;i--) {
         const ble_trace_t *t=ble_trace_record(i-1);
@@ -156,6 +174,7 @@ static void privacy_ready(unsigned entries)
         }
     }
     ble_trace_freeze(0); assert(found);
+    mask_verified_sync=host.syncs;
 #else
     assert(!ble_trace_size() && !ble_trace_record(0));
 #endif
@@ -214,6 +233,8 @@ static void pair_link(int sc,int rpa,uint8_t saved_ltk[16],uint8_t rand_ediv[10]
     uint8_t preq[7]={1,3,0,1,16,1,1},pres[70],nc[16],np[16],confirm[70],packet[70],key[16],zero[16]={0};
     uint8_t pubc[64],privc[32]={2},pubp[64],dhkey[32],mackey[16],expected[16];
     unsigned i,fragments_before=fragments65; ble_host_diag_t d;
+    unsigned completions_before=persisted_completions;
+    expect_pair_complete=1; expected_sc=(unsigned)sc;
     memset(rand_ediv,0,10);
     if(rpa) preq[5]=preq[6]=3;
     for(i=0;i<16;i++) nc[i]=(uint8_t)(i+80);
@@ -255,6 +276,7 @@ static void pair_link(int sc,int rpa,uint8_t saved_ltk[16],uint8_t rand_ediv[10]
     }
     pump(); ble_host_get_diag(&d);
     assert(d.encrypted && d.key_size==16 && d.bonded && d.pair_method==(sc ? 2 : 1) && !d.pair_failures );
+    assert(!expect_pair_complete && persisted_completions==completions_before+1u);
 }
 #if FM1B_BLE_OPEN
 #include "ble_bond_capacity_test.inc"
@@ -286,8 +308,11 @@ int main(int argc,char **argv)
      * protected MIDI read -> central SMP -> empty retried read -> CCCD write. */
     uint16_t midi_start=discover_all(),midi_value=(uint16_t)(midi_start+2u);
     check_midi_read(midi_value,0);
+    protected_cccd_before_pairing(midi_value);
+    att_110_regressions(midi_value);
     subscribe_changed(); assert(!sc_indications);
     pair_link(sc,rpa,saved_ltk,rand_ediv);
+    puts("NimBLE 1.10 behavior: protected CCCD rejects unencrypted write and remains readable, long Read By Type, exact Find By Type Value, MTU 517, keys visible in pairing-complete callback: PASS");
     check_midi_read(midi_value,1); assert(!sc_indications);
     if(rpa) {
         union ble_store_value other; memset(&other,0,sizeof other);
@@ -296,8 +321,10 @@ int main(int argc,char **argv)
         assert(d.identity_known && d.pair_method==(sc ? 2 : 1) && d.sc==sc); /* latest write belongs to the other peer */
     }
     /* Open ATT read still works encrypted; timestamped write flows to MIDI. */
-    l2send(4,(uint8_t[]){2,5,2},3); assert(att_n==3 && att[0]==3 && ble_get16(att+1)==517);
-    ble_seed_get_diag(&seed); assert(seed.rand_calls==(sc ? 10u : 6u));
+    ble_host_get_diag(&d); assert(d.mtu==517); /* exchanged by the ATT regression */
+    /* Each of the host and test central now supplies a fresh 32-byte ECDH
+     * blinding Z through the per-call RNG: eight additional LE Rand calls. */
+    ble_seed_get_diag(&seed); assert(seed.rand_calls==(sc ? 18u : 6u));
     {
         static const uint8_t uuid[16]={0x00,0xc7,0xc4,0x4e,0xe3,0x6c,0x51,0xa7,0x33,0x4b,0xe8,0xed,0x5a,0x0e,0xb8,0x03};
         uint8_t q[32]={6,1,0,255,255,0,0x28}; uint16_t start,end,value,cccd; uint32_t pkt,ts;

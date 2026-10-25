@@ -42,7 +42,7 @@ APP_DIR holds the app (app.h, app.c, its sources) and its fm1.toml:
                              tools/fm1_backup.py); app.h gives APP_BACKUP_OBJS, _MAGIC, _VERSION and the app_backup_* hooks
 Optional parts: only what an fm1.toml asks for is built in (Bluetooth, USB audio; an app's lib/touch by APP_TOUCH in
 app.h); the build prints what it has.
-  ble = "open"               open peripheral BLE-MIDI (FM1B_BLE_OPEN=1 and FM1B_BLE=1), NimBLE 1.9.0;
+  ble = "open"               open peripheral BLE-MIDI (FM1B_BLE_OPEN=1 and FM1B_BLE=1), NimBLE 1.10.0;
                              requires ble_central = false. --open-ble selects it for one build and disables central.
   ble = true                 Bluetooth MIDI (FM1B_BLE): ble/ on JieLi's BT libraries, from the AC79 SDK ($AC79_SDK);
                              --no-ble builds without it (NAME-usb.fwsc), and the build checks nothing of JieLi's is in

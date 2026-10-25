@@ -1,0 +1,23 @@
++ python3 tools/build.py template --open-ble --ble-diag off
+font T: BarlowSemiCondensed-SemiBold.ttf 10px h 12, digit adv 5, 3600 B
+font XS: BarlowSemiCondensed-SemiBold.ttf 12px h 15, digit adv 6, 7005 B
+font S: BarlowSemiCondensed-Medium.ttf 15px h 16, digit adv 7, 8576 B
+font B: BarlowSemiCondensed-Bold.ttf 15px h 16, digit adv 8, 8752 B
+font M: BarlowSemiCondensed-SemiBold.ttf 23px h 24, digit adv 12, 11832 B
+font L: BarlowSemiCondensed-Bold.ttf 31px h 32, digit adv 16, 19776 B
+font set barlow: 60782 B (approx)
+words: 3 own + 51 common -> /root/fm1/fm1-base-nimble110/template/web/words/95a41ce197.json (1059 B)
+loader: image 8264 B at 0x1c0a800, bss end 0x1c0f540
+loader: ota.bin 6980 B
+  ok    .ram_text: 966 insns, no calls
+  ok    no 64-bit multiply inlined beside a load
+  ok    open BLE: source-only link map; no JieLi objects, archives or shim
+  ok    no soft-double routines (single-precision FPU only)
+  ok    open BLE: DMA 0x01c37378..0x01c3846c; trace 0 B of RAMTEXT
+  ok    RAMTEXT code 3112 B
+  ok    image 188224 B; RAM .data+.bss 33760 B of 98304; pool 99436 B of 344064
+  ok    register access: felucca-bsp and open_ble/hal only (platform and app checked)
+parts    Bluetooth MIDI, USB audio in, USB audio out, velocity and pressure  (not built in: Bluetooth MIDI devices, WiFi, screen mirroring, backup and restore)
+app      /root/fm1/fm1-base-nimble110/template/build/template.bin  188224 B
+loader   /root/fm1/fm1-base-nimble110/template/build/loader/ota.bin  6980 B
+package  /root/fm1/fm1-base-nimble110/template/build/template-open.fwsc  610136 B, identity FM-1_1100

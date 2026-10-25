@@ -10,7 +10,9 @@ def includes():
 def sources():
     port=[BASE/'porting/nimble/src'/n for n in ('os_mbuf.c','os_mempool.c','os_msys.c','mem.c','endian.c')]
     host=[p for p in sorted((BASE/'nimble/host/src').glob('*.c')) if p.name!='ble_gatts_lcl.c']
-    crypto=([BASE/"ext/tinycrypt/src"/n for n in ("aes_encrypt.c","cmac_mode.c","ecc.c","ecc_dh.c","sha256.c","utils.c")] if os.environ.get("FELUCCA_BLE_STAGE","3")=="3" else [])
+    # 1.10 SM calls Mbed TLS. The private source adapter retains the offline
+    # TinyCrypt backend; no external library or additional vendor patch.
+    crypto=([ROOT/'open_ble/ble_sm_crypto.c']+[BASE/"ext/tinycrypt/src"/n for n in ("aes_encrypt.c","cmac_mode.c","ecc.c","ecc_dh.c","sha256.c","utils.c")] if os.environ.get("FELUCCA_BLE_STAGE","3")=="3" else [])
     return crypto+port+host+[BASE/'nimble/host/services'/svc/'src'/f'ble_svc_{svc}.c' for svc in ('gap','gatt')]+[BASE/'nimble/transport/src/transport.c']
 def flags(target=False,vendor=True):
     opts=(['-Wno-missing-field-initializers','-Wno-sign-compare','-Wno-unused-parameter'] if vendor else [])+['-include',str(ROOT/'open_ble/port/felucca_nimble_config.h')]

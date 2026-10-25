@@ -1,0 +1,155 @@
+--- a/nimble/host/src/ble_att_svr.c
++++ b/nimble/host/src/ble_att_svr.c
+@@ -25,6 +25,9 @@
+ #include "nimble/ble.h"
+ #include "host/ble_uuid.h"
+ #include "ble_hs_priv.h"
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++#include "ble_host.h"
++#endif
+ 
+ #if NIMBLE_BLE_CONNECT
+ /**
+@@ -407,6 +410,10 @@
+     if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+         rc = ble_att_svr_check_perms(conn_handle, 1, entry, &att_err);
+         if (rc != 0) {
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++            ble_host_event(BLE_HE_ATT_REJECT, conn_handle, entry->ha_handle_id,
++                           BLE_ATT_ACCESS_OP_READ, att_err);
++#endif
+             goto err;
+         }
+     }
+--- a/nimble/host/src/ble_gap.c
++++ b/nimble/host/src/ble_gap.c
+@@ -25,6 +25,11 @@
+ #include "host/ble_hs_adv.h"
+ #include "host/ble_hs_hci.h"
+ #include "ble_hs_priv.h"
++/* FM-1 diagnostics: metadata only, main context, no key material. */
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++#include "ble_host.h"
++#endif
++
+ #include "ble_gap_priv.h"
+ 
+ #ifndef min
+@@ -6129,6 +6134,9 @@
+ static void
+ ble_gap_update_l2cap_cb(uint16_t conn_handle, int status, void *arg)
+ {
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++    ble_host_event(BLE_HE_PARAM_RESULT, conn_handle, status, 0, 0);
++#endif
+     struct ble_gap_update_entry *entry;
+ 
+     /* Report failures and rejections.  Success gets reported when the
+--- a/nimble/host/src/ble_gatts.c
++++ b/nimble/host/src/ble_gatts.c
+@@ -25,6 +25,9 @@
+ #include "host/ble_uuid.h"
+ #include "host/ble_store.h"
+ #include "ble_hs_priv.h"
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++#include "ble_host.h"
++#endif
+ 
+ #define BLE_GATTS_INCLUDE_SZ    6
+ #define BLE_GATTS_CHR_MAX_SZ    19
+@@ -789,6 +792,14 @@
+     uint8_t prev_flags;
+     uint8_t cur_flags;
+     int rc;
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++    uint8_t diag_cfg[2];
++    uint32_t diag_flags = 0xffff;
++    if (op == BLE_ATT_ACCESS_OP_WRITE && OS_MBUF_PKTLEN(*om) == 2 &&
++        os_mbuf_copydata(*om, 0, 2, diag_cfg) == 0) {
++        diag_flags = get_le16(diag_cfg);
++    }
++#endif
+ 
+     ble_hs_lock();
+ 
+@@ -802,6 +813,13 @@
+     }
+ 
+     ble_hs_unlock();
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++    /* Subscribe events also fire on CCCD reads in this pin. Log actual writes,
++     * including rejected values, rather than labelling every access a write. */
++    if (op == BLE_ATT_ACCESS_OP_WRITE) {
++        ble_host_event(BLE_HE_CCCD_WRITE, conn_handle, attr_handle, diag_flags, rc);
++    }
++#endif
+ 
+     if (rc != 0) {
+         return rc;
+--- a/nimble/host/src/ble_sm.c
++++ b/nimble/host/src/ble_sm.c
+@@ -47,6 +47,11 @@
+ #include "nimble/nimble_opt.h"
+ #include "host/ble_sm.h"
+ #include "ble_hs_priv.h"
++/* FM-1 diagnostics: metadata only, main context, no key material. */
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++#include "ble_host.h"
++#endif
++
+ 
+ #if NIMBLE_BLE_CONNECT
+ 
+@@ -944,6 +949,13 @@
+ 
+         ble_hs_unlock();
+ 
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++        if (res->enc_cb && !res->restore && proc != NULL) {
++            ble_host_event(BLE_HE_SMP_RESULT, conn_handle, res->app_status,
++                           (proc->flags & BLE_SM_PROC_F_SC) ? 2 : 1,
++                           proc->pair_alg);
++        }
++#endif
+         if (res->enc_cb &&
+             res->app_status != BLE_HS_ENOTCONN) {
+             /* Do not send this event on broken connection */
+@@ -2727,6 +2739,13 @@
+     if (rx_cb != NULL) {
+         memset(&res, 0, sizeof res);
+ 
++#if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
++        if (op == BLE_SM_OP_PAIR_REQ) {
++            uint8_t auth = 0;
++            os_mbuf_copydata(*om, 2, 1, &auth);
++            ble_host_event(BLE_HE_SMP_START, conn_handle, op, auth, 0);
++        }
++#endif
+         rx_cb(conn_handle, om, &res);
+         ble_sm_process_result(conn_handle, &res, op == BLE_SM_OP_PAIR_FAIL ?
+                               false : true);
+--- a/ext/tinycrypt/src/ecc.c
++++ b/ext/tinycrypt/src/ecc.c
+@@ -1,3 +1,10 @@
++/* fm1-base change, Copyright (c) 2026 Julius Vitkauskas:
++ * the conditional multiply call is MIT OR MPL-2.0. Original notices below
++ * remain in force. Keep pi32v2 32x32->64 multiplies clear of loads (bsp/docs/CPU.md). */
++#if FM1B_BLE_OPEN
++#include <stdint.h>
++extern uint64_t ble_wl82_mul32(uint32_t a,uint32_t b);
++#endif
+ /* ecc.c - TinyCrypt implementation of common ECC functions */
+ 
+ /*
+@@ -246,7 +253,11 @@
+ 		   uECC_word_t *r1, uECC_word_t *r2)
+ {
+ 
++#if FM1B_BLE_OPEN
++	uECC_dword_t p = ble_wl82_mul32(a,b);
++#else
+ 	uECC_dword_t p = (uECC_dword_t)a * b;
++#endif
+ 	uECC_dword_t r01 = ((uECC_dword_t)(*r1) << uECC_WORD_BITS) | *r0;
+ 	r01 += p;
+ 	*r2 += (r01 < p);

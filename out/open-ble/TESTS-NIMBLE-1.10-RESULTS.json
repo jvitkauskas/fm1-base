@@ -1,0 +1,72 @@
+{
+  "aggregate": {
+    "command": "python3 tests/run_open_ble_tests.py",
+    "result": "PASS",
+    "log": "TESTS-NIMBLE-1.10-ALL.log"
+  },
+  "profiles": [
+    {
+      "command": "python3 tests/run_ble_s3_tests.py",
+      "result": "PASS",
+      "log": "TESTS-NIMBLE-1.10-S3.log",
+      "pass_lines": 13
+    },
+    {
+      "command": "python3 tests/run_ble_s3_tests.py --s31",
+      "result": "PASS",
+      "log": "TESTS-NIMBLE-1.10-S31.log",
+      "pass_lines": 47
+    },
+    {
+      "command": "python3 tests/run_ble_s3_tests.py --s31 --open-store",
+      "result": "PASS",
+      "log": "TESTS-NIMBLE-1.10-STORE.log",
+      "pass_lines": 50
+    },
+    {
+      "command": "python3 tests/run_ble_s3_tests.py --s31 --open-store --no-diag",
+      "result": "PASS",
+      "log": "TESTS-NIMBLE-1.10-RELEASE.log",
+      "pass_lines": 23
+    },
+    {
+      "command": "python3 tests/run_ble_s3_tests.py --mic-stress",
+      "result": "PASS",
+      "log": "TESTS-NIMBLE-1.10-MIC.log",
+      "pass_lines": 12,
+      "ping": [
+        "ping final interval=12 events=5000000 requests=705930 replies=705929 writes=356540 central_repeats=317456 peripheral_repeats=54981 crc=59002 empty_pending_loads=705930: PASS",
+        "ping final interval=24 events=5000000 requests=984008 replies=984008 writes=335279 central_repeats=316805 peripheral_repeats=54098 crc=58163 empty_pending_loads=984008: PASS"
+      ],
+      "inherited_stress": [
+        "random seed=4d494334 events=10000000 counter=2280220 missed=48073 lost_ack=256465 zero spontaneous MIC failures: PASS"
+      ]
+    },
+    {
+      "command": "python3 tests/run_ble_s3_tests.py --s31 --open-store --reliability",
+      "result": "PASS",
+      "log": "TESTS-NIMBLE-1.10-RELIABILITY-HOST.log",
+      "pass_lines": 55
+    },
+    {
+      "command": "python3 tests/run_ble_s3_tests.py --mic-stress --reliability",
+      "result": "PASS",
+      "log": "TESTS-NIMBLE-1.10-RELIABILITY-MIC.log",
+      "pass_lines": 27,
+      "ping": [
+        "ping final interval=12 events=5000000 requests=705930 replies=705929 writes=356540 central_repeats=317456 peripheral_repeats=54981 crc=59002 empty_pending_loads=705930: PASS",
+        "ping final interval=24 events=5000000 requests=984008 replies=984008 writes=335279 central_repeats=316805 peripheral_repeats=54098 crc=58163 empty_pending_loads=984008: PASS"
+      ],
+      "inherited_stress": [
+        "random seed=4d494334 events=10000000 counter=1513033 missed=48320 lost_ack=229713 zero spontaneous MIC failures: PASS"
+      ],
+      "directed_cases": 22
+    }
+  ],
+  "build_policy": {
+    "command": "python3 tests/open_ble_build_test.py",
+    "result": "PASS",
+    "tests": 4,
+    "log": "BUILD-POLICY-NIMBLE-1.10.log"
+  }
+}

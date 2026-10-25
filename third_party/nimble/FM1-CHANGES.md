@@ -10,14 +10,34 @@ TinyCrypt license/copyright notices remain intact.
 `open_ble/ble_crypto.c`. The pure multiply consumes its product before the
 next memory load. This follows felucca-bsp's documented pi32v2 hazard in
 `bsp/docs/CPU.md`; final disassembly passes the existing multiply/load check.
-Apart from the diagnostic hooks listed below, other upstream files are
-byte-identical to the allowed Felucca-ble pin.
+Apart from the diagnostic hooks listed below, all NimBLE files are
+byte-identical to the 1.10.0 pin. The retained TinyCrypt files match 1.9.0,
+except for this multiply hook. The complete per-file review and hashes are
+in `out/open-ble/NIMBLE-1.10-INVENTORY.json`.
 The conditional additions are Copyright (c) 2026 Julius Vitkauskas,
 MIT OR MPL-2.0; the original TinyCrypt BSD notices still apply.
 
 The NPL and configuration live outside this vendor directory, in
-`open_ble/port/` and `open_ble/ble_npl.c`. The host privacy cache and repeated
-pairing fixes remain application callbacks.
+`open_ble/port/` and `open_ble/ble_npl.c`. No NPL interface change was needed.
+The privacy cache reset at IRK generation and the repeated-pairing fixes remain
+application callbacks. NimBLE 1.10 now also resets its privacy cache during
+host Reset. The removed `ble_sm_alg_ecc_init` call is no longer needed: 1.10
+passes its RNG directly to each ECC call.
+
+1.10's SM crypto source calls Mbed TLS instead of TinyCrypt and upstream removes
+`ext/tinycrypt/`. Keep the existing TinyCrypt source and licenses because the
+allowed sources contain no Mbed TLS implementation. The private source adapter
+in `open_ble/ble_sm_crypto.c` and `open_ble/port/mbedtls/` handles only AES-128
+encryption, one-shot CMAC, fixed-size integer serialization and uncompressed
+P-256 operations used by `ble_sm_alg.c`. It is not Mbed TLS or its general API
+or ABI. Unsupported modes, lengths, groups, points and scalars fail. It uses
+fixed storage, wipes its private contexts, scopes/restores the TinyCrypt RNG,
+and takes shared-secret projective blinding entropy from the supplied RNG.
+The existing ECC multiply hook covers these operations too. No upstream SM
+algorithm was replaced or patched for this backend. Config additions and
+their upstream defaults are in `out/open-ble/NIMBLE-1.10-SETTINGS.json`;
+`open_ble/port/fm1_nimble110_config.h` explicitly disables unused additions.
+The software-revision DIS value now identifies NimBLE 1.10.0.
 
 R3 adds metadata-only hooks under `FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3`:
 `ble_sm.c` records the received Pairing Request and actual result/method/

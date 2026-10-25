@@ -1,0 +1,11 @@
+reliability: diagnostics=1 release=0
+reliability_worker: diagnostics=1 release=0
+reliability_kat: diagnostics=1 release=0
+reliability_dma: diagnostics=1 release=0
+r7_record: diagnostics=1 release=0
+ble_host_events: diagnostics=1 release=0
+ble_host_event: diagnostics=1 release=0
+r7_record : present in diagnostics; absent from release
+r7_ciphertext_tag: present in diagnostics; absent from release
+r7_check: present in diagnostics; absent from release
+r7_cost_ticks24: present in diagnostics; absent from release

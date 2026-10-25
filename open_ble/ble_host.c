@@ -33,7 +33,6 @@ static uint8_t bond_flush_due=1;
 static uint8_t gatt_change_inflight;
 static ble_addr_t gatt_change_peer;
 static uint16_t service_changed_handle;
-extern void ble_sm_alg_ecc_init(void); /* NimBLE's normally generated sysinit hook */
 #endif
 #define MIDI_Q 128u
 /* A maximum 512-byte attribute can expand to 509 USB program changes. */
@@ -122,7 +121,7 @@ static const struct ble_gatt_chr_def info_chars[]={
     {.uuid=BLE_UUID16_DECLARE(0x2a29),.access_cb=info_access,.arg="M-VAVE",.flags=BLE_GATT_CHR_F_READ},
     {.uuid=BLE_UUID16_DECLARE(0x2a24),.access_cb=info_access,.arg="FM-1",.flags=BLE_GATT_CHR_F_READ},
     {.uuid=BLE_UUID16_DECLARE(0x2a26),.access_cb=info_access,.arg=APP_VERSION,.flags=BLE_GATT_CHR_F_READ},
-    {.uuid=BLE_UUID16_DECLARE(0x2a28),.access_cb=info_access,.arg="NimBLE 1.9.0 / open R3",.flags=BLE_GATT_CHR_F_READ},
+    {.uuid=BLE_UUID16_DECLARE(0x2a28),.access_cb=info_access,.arg="NimBLE 1.10.0 / open R3",.flags=BLE_GATT_CHR_F_READ},
     {.uuid=0}
 };
 static const struct ble_gatt_chr_def midi_chars[]={
@@ -264,8 +263,8 @@ static int gen_key(uint8_t key,struct ble_store_gen_key *out,uint16_t conn)
         uint8_t address[6];
         if(ble_hs_id_copy_addr(BLE_ADDR_PUBLIC,address,0)) return BLE_HS_ENOADDR;
         ble_host_local_irk(address,out->irk);
-        /* NimBLE preserves its IRK cache on an HCI error/reset. Without this,
-         * set_our_irk skips 202D/2029 after Reset cleared controller state. */
+        /* Keep initial IRK installation deterministic too. NimBLE 1.10 also
+         * clears this cache itself on the HCI error/reset path. */
         ble_hs_pvcy_reset();
     }
 #endif
@@ -432,9 +431,6 @@ void ble_host_start(void)
     int rc;
     ble_set_host(receive); os_mempool_module_init(); os_msys_init();
     ble_transport_init(); ble_hs_init();
-#if FELUCCA_BLE_STAGE >= 3
-    ble_sm_alg_ecc_init(); /* routes host ECC key generation through LE Rand */
-#endif
     ble_hs_cfg.sync_cb=synced; ble_hs_cfg.reset_cb=reset; ble_hs_cfg.store_gen_key_cb=gen_key;
 #if FELUCCA_BLE_STAGE >= 3
     ble_bonds_init();

@@ -1,0 +1,174 @@
++ cc -DBLE_HOST_TEST=1 -std=c11 -O1 -g -Wall -Wextra -Werror -Wno-misleading-indentation -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie -DFM1B_BLE_OPEN=1 -I/root/fm1/fm1-base-nimble110/build/open-seam-tests tests/ble_open_seam_test.c open_ble/ble_health.c -o /root/fm1/fm1-base-nimble110/build/open-seam-tests/ble_open_seam_test
++ /root/fm1/fm1-base-nimble110/build/open-seam-tests/ble_open_seam_test
+open peripheral seam: OFF/STARTING/READY/FAILED, linked/subscribed, off/on, queues, crash gate, clean reset and retained log: PASS
++ cc -DBLE_HOST_TEST=1 -std=c11 -O1 -g -Wall -Wextra -Werror -Wno-misleading-indentation -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie -DFM1B_BLE_OPEN=1 -I/root/fm1/fm1-base-nimble110/build/open-seam-tests tests/ble_open_midi_test.c open_ble/ble_health.c -o /root/fm1/fm1-base-nimble110/build/open-seam-tests/ble_open_midi_test
++ /root/fm1/fm1-base-nimble110/build/open-seam-tests/ble_open_midi_test
+actual platform MIDI: mixed/full/absent queues, USB/BLE packets, input port, counters/realtime and activity: PASS
++ cc -DBLE_HOST_TEST=1 -std=c11 -O1 -g -Wall -Wextra -Werror -Wno-misleading-indentation -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie -DFM1B_BLE_OPEN=1 -I/root/fm1/fm1-base-nimble110/build/open-seam-tests tests/ble_open_ranges_test.c open_ble/ble_health.c -o /root/fm1/fm1-base-nimble110/build/open-seam-tests/ble_open_ranges_test
++ /root/fm1/fm1-base-nimble110/build/open-seam-tests/ble_open_ranges_test
+actual BSP flash ranges: calibration/BTIF protected, former seed/journal XDATA free, A/B store allowed, overflow refused: PASS
++ cc -DBLE_HOST_TEST=1 -std=c11 -O1 -g -Wall -Wextra -Werror -Wno-misleading-indentation -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie -DFM1B_BLE_OPEN=1 -I/root/fm1/fm1-base-nimble110/build/open-seam-tests -DFM1B_BLE_DIAG=0 tests/ble_open_health_test.c open_ble/ble_health.c -o /root/fm1/fm1-base-nimble110/build/open-seam-tests/health-0
++ /root/fm1/fm1-base-nimble110/build/open-seam-tests/health-0
+gap attribution: tick wrap, strict threshold, time/state/reasons/epoch, last four/max, session reset: PASS
++ cc -DBLE_HOST_TEST=1 -std=c11 -O1 -g -Wall -Wextra -Werror -Wno-misleading-indentation -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie -DFM1B_BLE_OPEN=1 -I/root/fm1/fm1-base-nimble110/build/open-seam-tests -DFM1B_BLE_DIAG=1 tests/ble_open_health_test.c open_ble/ble_health.c -o /root/fm1/fm1-base-nimble110/build/open-seam-tests/health-1
++ /root/fm1/fm1-base-nimble110/build/open-seam-tests/health-1
+gap attribution: tick wrap, strict threshold, time/state/reasons/epoch, last four/max, session reset: PASS
++ cc -DBLE_HOST_TEST=1 -std=c11 -O1 -g -Wall -Wextra -Werror -Wno-misleading-indentation -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie -DFM1B_BLE_OPEN=1 -I/root/fm1/fm1-base-nimble110/build/open-seam-tests -DFM1B_BLE_DIAG=0 tests/ble_open_adv_test.c open_ble/ble_logic.c open_ble/ble_link_logic.c open_ble/ble_health.c -o /root/fm1/fm1-base-nimble110/build/open-seam-tests/adv-0
++ /root/fm1/fm1-base-nimble110/build/open-seam-tests/adv-0
+HAL restart: closed while preparing; first ADV_IND accepts CONNECT_IND before start returns; six sessions stable; invalid counted: PASS
++ cc -DBLE_HOST_TEST=1 -std=c11 -O1 -g -Wall -Wextra -Werror -Wno-misleading-indentation -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie -DFM1B_BLE_OPEN=1 -I/root/fm1/fm1-base-nimble110/build/open-seam-tests -DFM1B_BLE_DIAG=1 tests/ble_open_adv_test.c open_ble/ble_logic.c open_ble/ble_link_logic.c open_ble/ble_health.c -o /root/fm1/fm1-base-nimble110/build/open-seam-tests/adv-1
++ /root/fm1/fm1-base-nimble110/build/open-seam-tests/adv-1
+HAL restart: closed while preparing; first ADV_IND accepts CONNECT_IND before start returns; six sessions stable; invalid counted: PASS
++ python3 tests/ble_conn_update_bench_test.py
+.{"label": "fixture wrap", "seconds": 15, "event_delta": 1000, "serviced_delta": 1000, "measured_ms": 15.0, "expected_ms": 15.0, "epoch": 2}
+{"label": "fixture must fail", "seconds": 15, "event_delta": 0, "serviced_delta": 1000, "measured_ms": Infinity, "expected_ms": 15.0, "epoch": 2}
+{"label": "fixture must fail", "seconds": 15, "event_delta": 5036, "serviced_delta": 1000, "measured_ms": 2.9785544082605244, "expected_ms": 15.0, "epoch": 2}
+.desktop Update Complete 00: 7.5 ms
+..
+----------------------------------------------------------------------
+Ran 4 tests in 0.006s
+
+OK
++ python3 tests/ble_soak_test.py
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.023s
+
+OK
++ bash tests/run_ble_s1_tests.sh
+BLE S1: CRC, records, identity, channel/frame/PDU, H4 validation, commands, queue, stop/reset, driver, trace PASS
+BLE S1: CRC, records, identity, channel/frame/PDU, H4 validation, commands, queue, stop/reset, driver, trace PASS
++ python3 tests/run_ble_s2_tests.py
+BLE S2 frame alignment, breadcrumbs, logic, HCI, lifecycle, credits, and MIDI tests: PASS
+central update matrix: 48 cases + 48 immediate updates, near/far, tick wrap, WinOffset 0/mid/max, WinSize 1/max: PASS
+invalid NEW-interval limits ignored; busy/length diagnostics; both late kinds/missing-close watchdog and I-1 receipt: PASS
+map/update pending and programmed: 7 closing causes, supervision expiry, reconnect timing/epoch/queues clean: PASS
+600-second event grid crosses stale-first half-wrap and multiple tick wraps with no frozen counters: PASS
+NimBLE 1.10.0 integration: startup, GATT discovery/empty read/CCCD, bidirectional MIDI, fragmented ACL, update, 10-minute simulated link, 10 reconnects, backstop timeout: PASS
+heap peak 1160; HCI credits 5; MIDI packets in 3 out 130; controller control PDUs 25
++ python3 tests/run_ble_s3_tests.py
+NimBLE 1.10 crypto: AES/f4/f5/f6 vectors, P-256 generator/2G, endian, blinded ECDH, invalid points/scalars, RNG failure/restoration, context erasure: PASS
+NimBLE 1.10 GAP: peripheral HCI 0x1a -> real L2CAP update/rejection cleanup; other errors and central role do not fall back: PASS
+S3 AES/Core CCM, negative MIC/counter/LLID, seed parsing/wrap/conflicts/wear/failures, deferred persistent bonds, encryption phase/marker/barrier/exhaustion tests: PASS
+NimBLE 1.10.0 integration: startup, GATT discovery/empty read/CCCD, bidirectional MIDI, fragmented ACL, update, 10-minute simulated link, 10 reconnects, backstop timeout: PASS
+heap peak 1160; HCI credits 5; MIDI packets in 0 out 0; controller control PDUs 25
+central update matrix: 48 cases + 48 immediate updates, near/far, tick wrap, WinOffset 0/mid/max, WinSize 1/max: PASS
+invalid NEW-interval limits ignored; busy/length diagnostics; both late kinds/missing-close watchdog and I-1 receipt: PASS
+map/update pending and programmed: 7 closing causes, supervision expiry, reconnect timing/epoch/queues clean: PASS
+600-second event grid crosses stale-first half-wrap and multiple tick wraps with no frozen counters: PASS
+12 encrypted central interval changes, WinOffset 0/mid/max and maximum WinSize, real CCM/ordered control path: PASS
+R3 GATT clients: public mixed-UUID discovery, protected read/SMP/empty read/CCCD, new bond quiet, stale R2 pending-bit migration, unconfirmed retry, confirmed bond quiet across reconnect: PASS
+NimBLE legacy Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 517/max MIDI value, Service Changed, encrypted MIDI both directions, MIC failure: PASS; LE Rand 6, heap peak 1160
+R3 GATT clients: public mixed-UUID discovery, protected read/SMP/empty read/CCCD, new bond quiet, stale R2 pending-bit migration, unconfirmed retry, confirmed bond quiet across reconnect: PASS
+NimBLE SC Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 517/max MIDI value, Service Changed, encrypted MIDI both directions, MIC failure: PASS; LE Rand 18, heap peak 1160
++ python3 tests/run_ble_s3_tests.py --s31
+NimBLE 1.10 crypto: AES/f4/f5/f6 vectors, P-256 generator/2G, endian, blinded ECDH, invalid points/scalars, RNG failure/restoration, context erasure: PASS
+NimBLE 1.10 GAP: peripheral HCI 0x1a -> real L2CAP update/rejection cleanup; other errors and central role do not fall back: PASS
+S3 AES/Core CCM, negative MIC/counter/LLID, seed parsing/wrap/conflicts/wear/failures, deferred persistent bonds, encryption phase/marker/barrier/exhaustion tests: PASS
+NimBLE 1.10.0 integration: startup, GATT discovery/empty read/CCCD, bidirectional MIDI, fragmented ACL, update, 10-minute simulated link, 10 reconnects, backstop timeout: PASS
+heap peak 1160; HCI credits 5; MIDI packets in 0 out 0; controller control PDUs 25
+central update matrix: 48 cases + 48 immediate updates, near/far, tick wrap, WinOffset 0/mid/max, WinSize 1/max: PASS
+invalid NEW-interval limits ignored; busy/length diagnostics; both late kinds/missing-close watchdog and I-1 receipt: PASS
+map/update pending and programmed: 7 closing causes, supervision expiry, reconnect timing/epoch/queues clean: PASS
+600-second event grid crosses stale-first half-wrap and multiple tick wraps with no frozen counters: PASS
+12 encrypted central interval changes, WinOffset 0/mid/max and maximum WinSize, real CCM/ordered control path: PASS
+H-22..H-25 / K-11 / F-24 connection path: PASS (legacy OTA RPA 01; Enhanced identity 02/03 plus RPA)
+F-25 NOR simulation: two bonds, net churn/no writes, compaction/reload, orphan drop, RPA refusal/migration, failed-write retry: PASS
+F-27 arithmetic: signed dispatch/wrap/error, nested preemption counted once, own budget/item, split refill, stable nonzero local IRK: PASS
+F-27 resumable RNG: synchronous/async byte equality; normal 3, reseed 5 SHA blocks over separate items; model 60 us/block, per-kind max 60 us; owner exclusion/cancel/rekey: PASS
+r7 Reset queued ENC_REQ: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset decoded ENC_REQ: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset entropy requested: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset entropy mid-reseed: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset LTK event pending: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset LTK delivered: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset LTK reply pending: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset START_ENC_REQ loaded: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset RX_ON marker pending: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset decoded START_ENC_RSP: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset response/refill pending: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset entropy output ready before consumption: 45 resumed calls, modeled item max 1512 ticks, clear 1512, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset active advertising: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset mid-resolution: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset: mid-advertising publication FIFO, power/defaults/public/DRBG persistence, pending-resolution cancellation and queued-reply ordering: PASS
+r7 control opcode 06: AES 8 us/block + controller memory 1 tick/byte MODEL; control_rx 1014, control 1, one-slot refill 1444 ticks; each <=70 us: PASS
+r7 split control: first encrypted response takes TX counter 0 ahead of ACL; pause RX_OFF marker and clear response remain ordered: PASS
+r7 failed control MIC: opcode FFFF (unavailable), no dispatch/refill: PASS
+r8 full RL miss: 10 entries, 10 AES blocks in 10 items, modeled resolution max 1260 ticks <=2400, event deferred: PASS
+r8 full RL last match: 10 entries, 10 AES blocks in 10 items, modeled resolution max 1260 ticks <=2400, event deferred: PASS
+r8 full RL miss: 10 entries, 9 AES blocks in 10 items, modeled resolution max 1254 ticks <=2400, event deferred: PASS
+r8 full RL last match: 10 entries, 9 AES blocks in 10 items, modeled resolution max 1260 ticks <=2400, event deferred: PASS
+R3 GATT clients: public mixed-UUID discovery, protected read/SMP/empty read/CCCD, new bond quiet, stale R2 pending-bit migration, unconfirmed retry, confirmed bond quiet across reconnect: PASS
+NimBLE legacy Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 517/max MIDI value, Service Changed, encrypted MIDI both directions, MIC failure: PASS; LE Rand 6, heap peak 1160
+R3 GATT clients: public mixed-UUID discovery, protected read/SMP/empty read/CCCD, new bond quiet, stale R2 pending-bit migration, unconfirmed retry, confirmed bond quiet across reconnect: PASS
+NimBLE SC Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 517/max MIDI value, Service Changed, encrypted MIDI both directions, MIC failure: PASS; LE Rand 18, heap peak 1160
+R3 GATT clients: public mixed-UUID discovery, protected read/SMP/empty read/CCCD, new bond quiet, stale R2 pending-bit migration, unconfirmed retry, confirmed bond quiet across reconnect: PASS
+NimBLE legacy/RPA+HCI-Reset/S-13 Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 517/max MIDI value, Service Changed, encrypted MIDI both directions, MIC failure: PASS; LE Rand 6, heap peak 1160
+R3 GATT clients: public mixed-UUID discovery, protected read/SMP/empty read/CCCD, new bond quiet, stale R2 pending-bit migration, unconfirmed retry, confirmed bond quiet across reconnect: PASS
+F-28: real NimBLE repeat pairing, same IRK, changed IRK with old RPA, changed IRK with new unresolved RPA, OTA c1/f5/f6, 2028 before 2027 without disconnect, three fresh-RPA encrypted reconnects each: PASS
+NimBLE legacy/RPA+HCI-Reset/S-13 Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 517/max MIDI value, Service Changed, encrypted MIDI both directions, MIC failure: PASS; LE Rand 6, heap peak 1160
+R3 GATT clients: public mixed-UUID discovery, protected read/SMP/empty read/CCCD, new bond quiet, stale R2 pending-bit migration, unconfirmed retry, confirmed bond quiet across reconnect: PASS
+F-28: real NimBLE repeat pairing, same IRK, changed IRK with old RPA, changed IRK with new unresolved RPA, OTA c1/f5/f6, 2028 before 2027 without disconnect, three fresh-RPA encrypted reconnects each: PASS
+NimBLE SC/RPA+HCI-Reset/S-13 Just Works: real SMP, HCI LTK, CCM link, key size 16, persistent bond reconnect, MTU 517/max MIDI value, Service Changed, encrypted MIDI both directions, MIC failure: PASS; LE Rand 18, heap peak 1160
++ python3 tests/run_ble_s3_tests.py --s31 --open-store
+NimBLE 1.10 crypto: AES/f4/f5/f6 vectors, P-256 generator/2G, endian, blinded ECDH, invalid points/scalars, RNG failure/restoration, context erasure: PASS
+NimBLE 1.10 GAP: peripheral HCI 0x1a -> real L2CAP update/rejection cleanup; other errors and central role do not fall back: PASS
+NimBLE 1.10.0 integration: startup, GATT discovery/empty read/CCCD, bidirectional MIDI, fragmented ACL, update, 10-minute simulated link, 10 reconnects, backstop timeout: PASS
+heap peak 1160; HCI credits 5; MIDI packets in 0 out 0; controller control PDUs 25
+central update matrix: 48 cases + 48 immediate updates, near/far, tick wrap, WinOffset 0/mid/max, WinSize 1/max: PASS
+invalid NEW-interval limits ignored; busy/length diagnostics; both late kinds/missing-close watchdog and I-1 receipt: PASS
+map/update pending and programmed: 7 closing causes, supervision expiry, reconnect timing/epoch/queues clean: PASS
+600-second event grid crosses stale-first half-wrap and multiple tick wraps with no frozen counters: PASS
+12 encrypted central interval changes, WinOffset 0/mid/max and maximum WinSize, real CCM/ordered control path: PASS
+r7 Reset queued ENC_REQ: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset decoded ENC_REQ: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset entropy requested: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset entropy mid-reseed: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset LTK event pending: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset LTK delivered: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset LTK reply pending: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset START_ENC_REQ loaded: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset RX_ON marker pending: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset decoded START_ENC_RSP: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset response/refill pending: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset entropy output ready before consumption: 45 resumed calls, modeled item max 1512 ticks, clear 1512, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset active advertising: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset mid-resolution: 45 resumed calls, modeled item max 1056 ticks, clear 744, defaults 453, stats 1056, complete 132; no stale events: PASS
+r7 Reset: mid-advertising publication FIFO, power/defaults/public/DRBG persistence, pending-resolution cancellation and queued-reply ordering: PASS
+r7 control opcode 06: AES 8 us/block + controller memory 1 tick/byte MODEL; control_rx 1014, control 1, one-slot refill 1444 ticks; each <=70 us: PASS
+r7 split control: first encrypted response takes TX counter 0 ahead of ACL; pause RX_OFF marker and clear response remain ordered: PASS
+r7 failed control MIC: opcode FFFF (unavailable), no dispatch/refill: PASS
+r8 full RL miss: 10 entries, 10 AES blocks in 10 items, modeled resolution max 1260 ticks <=2400, event deferred: PASS
+r8 full RL last match: 10 entries, 10 AES blocks in 10 items, modeled resolution max 1260 ticks <=2400, event deferred: PASS
+r8 full RL miss: 10 entries, 9 AES blocks in 10 items, modeled resolution max 1254 ticks <=2400, event deferred: PASS
+r8 full RL last match: 10 entries, 9 AES blocks in 10 items, modeled resolution max 1260 ticks <=2400, event deferred: PASS
+open storage: first/chained/provisioned/wrap/unpersisted/FAILED seeds, one erase per boot: PASS
+open storage: deferred identity bonds, two peers, 40 net no-ops, boot preserves bonds, RPA refusal: PASS
+R3 cache store: old v1 migration, key rewrite preserves stale generation, no linked flash, failed save retries, independent peers, confirmation/re-pair/no-op: PASS
+downgrade: actual git 208ebfb R4 parser rejects truncated FMOB v2 as empty; no flash mutation: PASS
+open storage: 10730 byte-cut cases (seed + bond), old/new whole, no compaction loss, loader tails blank: PASS
+R4 fixture: both peers/directions/all keys/properties/CCCDs/generations/seed, load ZERO writes, normal seed write migrates; 5365 migration byte cuts: PASS
+full 8-peer snapshot: 5365 replacement byte cuts (all 32 records, rank, counter atomic), 1236 corruptions and 1236 truncations rejected: PASS
+pairing-f29: tests/ble_s3_integration.c:169: privacy_ready: Assertion `found' failed.
+Traceback (most recent call last):
+  File "/root/fm1/fm1-base-nimble110/tests/run_ble_s3_tests.py", line 93, in <module>
+    run('pairing-'+mode,[*base,*sim,*vendor,*port,integration],[mode])
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/fm1/fm1-base-nimble110/tests/run_ble_s3_tests.py", line 52, in run
+    subprocess.run([str(exe),*args],check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/root/fm1/fm1-base-nimble110/build/open-tests/pairing-f29', 'f29']' died with <Signals.SIGABRT: 6>.
+Traceback (most recent call last):
+  File "/root/fm1/fm1-base-nimble110/tests/run_open_ble_tests.py", line 59, in <module>
+    run('python3','tests/run_ble_s3_tests.py','--s31','--open-store')
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/fm1/fm1-base-nimble110/tests/run_open_ble_tests.py", line 17, in run
+    subprocess.run(list(map(str,cmd)),check=True,env=s)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['python3', 'tests/run_ble_s3_tests.py', '--s31', '--open-store']' returned non-zero exit status 1.

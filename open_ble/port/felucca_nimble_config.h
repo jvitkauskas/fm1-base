@@ -9,6 +9,7 @@
 #define calloc ble_nm_calloc
 #define realloc ble_nm_realloc
 #define free ble_nm_free
+#include "fm1_nimble110_config.h"
 #define NIMBLE_CFG_CONTROLLER 0
 #define MYNEWT_VAL_BLE_CONTROLLER 0
 #define MYNEWT_VAL_BLE_ROLE_PERIPHERAL 1

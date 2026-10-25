@@ -44,11 +44,11 @@ def compile(p,flags=()):
     obj=out/(str(p).replace('/','_')+'.o')
     subprocess.run([cc,*common,*flags,'-c',str(p),'-o',str(obj)],check=True)
     return obj
-def run(name,objects,args=()):
+def run(name,objects,args=(),extra_ldflags=()):
     exe=out/name
     subprocess.run([cc,'-no-pie','-fsanitize=address,undefined','-Wl,--gc-sections',
                     '-Wl,--wrap=tc_sha256_update,--wrap=tc_sha256_final,--wrap=memset,--wrap=memcpy,--wrap=ble_secure_zero',
-                    *(['-Wl,--wrap=ble_ccm,--wrap=tc_aes_encrypt,--wrap=tc_aes128_set_encrypt_key'] if reliability and mic else []),*map(str,objects),'-o',str(exe)],check=True)
+                    *(['-Wl,--wrap=ble_ccm,--wrap=tc_aes_encrypt,--wrap=tc_aes128_set_encrypt_key'] if reliability and mic else []),*extra_ldflags,*map(str,objects),'-o',str(exe)],check=True)
     subprocess.run([str(exe),*args],check=True)
 base=[compile(Path('open_ble')/(n+'.c'),nb.flags(vendor=False)) for n in ('ble_logic','ble_controller','ble_link_logic','ble_link','ble_midi','ble_heap','ble_crypto','ble_seed','ble_bonds','ble_timing','ble_privacy')]
 if objects:
@@ -77,6 +77,9 @@ if '--capacity-only' in sys.argv:
     assert objects and s31
     run('pairing-f29', [*base,*sim,*vendor,*port,compile(Path('tests/ble_s3_integration.c'),nb.flags(vendor=False))],['f29'])
     sys.exit(0)
+run('nimble110-crypto', [*base,*sim,*vendor,*port,compile(Path('tests/ble_nimble110_crypto.c'),nb.flags(vendor=False))])
+run('nimble110-gap', [*base,*sim,*vendor,*port,compile(Path('tests/ble_nimble110_gap.c'),nb.flags(vendor=False))],
+    extra_ldflags=['-Wl,--wrap=ble_hs_hci_cmd_tx'])
 if not objects and not release: run('logic' ,[*base,*sim,*vendor,*port,compile(Path('tests/ble_s3_test.c'),nb.flags(vendor=False))])
 run('s2-regression',[*base,*sim,*vendor,*port,compile(Path('tests/ble_s2_integration.c'),nb.flags(vendor=False))])
 if not release: run('connection-updates', [*base,*sim,*vendor,*port,compile(Path('tests/ble_conn_update_test.c'),nb.flags(vendor=False))])

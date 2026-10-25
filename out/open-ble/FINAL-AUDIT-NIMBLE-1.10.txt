@@ -1,0 +1,6 @@
+Source fingerprint: 221 files match; branch/base unchanged.
+template/build/template-open-nimble110.fwsc: 610136 bytes; SHA-256 870e39f2617a132fc12d9c85d6b9cbe9c5fa7b982fe6f71005959734c8f627b3
+template/build/template-open-nimble110-release.fwsc: 610136 bytes; SHA-256 96ffbbc2e76be42827dbf8b6d05b30de03d6e4bbf1b8a4d800448be6f2a4d920
+Both target build logs: all existing gates passed, no policy changes.
+Sanitizers: aggregate + all 7 S3 profiles PASS; full 40-million-event model matrix and 22 R7 directed cases. Build policy: 4/4 PASS.
+Report finalized; git diff --check clean. No commit, flash, or device I/O performed.

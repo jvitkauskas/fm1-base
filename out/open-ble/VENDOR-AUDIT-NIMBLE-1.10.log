@@ -1,0 +1,11 @@
+All 152 vendor hashes checked against NIMBLE-1.10-INVENTORY.json.
+129 NimBLE files: 20 changed upstream, 109 unchanged.
+23 retained TinyCrypt files from 1.9.
+Only ble_sm.c, ble_gap.c, ble_att_svr.c, ble_gatts.c and ecc.c differ from their corresponding pins.
+69 new MYNEWT_VAL names have explicit integration values/reasons.
+Reverse-hook dry run:
+checking file nimble/host/src/ble_att_svr.c
+checking file nimble/host/src/ble_gap.c
+checking file nimble/host/src/ble_gatts.c
+checking file nimble/host/src/ble_sm.c
+checking file ext/tinycrypt/src/ecc.c

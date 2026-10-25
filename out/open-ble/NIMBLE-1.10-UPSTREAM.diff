@@ -1,0 +1,1532 @@
+--- a/LICENSE
++++ b/LICENSE
+@@ -212,10 +212,6 @@
+     COPYRIGHT (C) 1986 Gary S. Brown.  You may use this program, or
+     code or tables extracted from it, as desired without restriction.
+ 
+-This product bundles tinycrypt, which is available under the "3-clause BSD"
+-license. For details, and bundled files see:
+-    * ext/tinycrypt/LICENSE
+-
+ This product bundles and partly derives from parts of the Nordic nRF52 SDK,
+ which are available under a BSD style license.  Relevant files are:
+     * babblesim/hw/mcu/nordic/nrf52_bsim/src/system_nrf52.c
+--- a/NOTICE
++++ b/NOTICE
+@@ -1,5 +1,5 @@
+ Apache Mynewt NimBLE
+-Copyright 2015-2025 The Apache Software Foundation
++Copyright 2015-2026 The Apache Software Foundation
+ 
+ This product includes software developed at
+ The Apache Software Foundation (http://www.apache.org/).
+--- a/nimble/host/include/host/ble_gap.h
++++ b/nimble/host/include/host/ble_gap.h
+@@ -248,9 +248,6 @@
+ 
+ /** GAP event: Pairing complete */
+ #define BLE_GAP_EVENT_PAIRING_COMPLETE      27
+-
+-/** GAP event: Pairing complete (deprecated) */
+-#define BLE_GAP_EVENT_PARING_COMPLETE BLE_GAP_EVENT_PAIRING_COMPLETE
+ 
+ /** GAP event: Subrate change */
+ #define BLE_GAP_EVENT_SUBRATE_CHANGE        28
+@@ -1249,7 +1246,6 @@
+          *
+          * Valid for the following event types:
+          *     o BLE_GAP_EVENT_PAIRING_COMPLETE
+-         *     o BLE_GAP_EVENT_PARING_COMPLETE (deprecated)
+          */
+         struct {
+             /**
+--- a/nimble/host/include/host/ble_gatt.h
++++ b/nimble/host/include/host/ble_gatt.h
+@@ -711,20 +711,6 @@
+                                      struct ble_gatt_notif *tuples);
+ 
+ /**
+- * @deprecated Should not be used. Use ble_gatts_notify_custom instead.
+- *
+- * @param conn_handle           The connection over which to execute the
+- *                                  procedure.
+- * @param att_handle            The attribute handle to indicate in the
+- *                                  outgoing notification.
+- * @param om                    The value to write to the characteristic.
+- *
+- * @return                      0 on success; nonzero on failure.
+- */
+-int ble_gattc_notify_custom(uint16_t conn_handle, uint16_t att_handle,
+-                            struct os_mbuf *om);
+-
+-/**
+  * Sends a characteristic notification.  The content of the message is read
+  * from the specified characteristic.
+  *
+@@ -737,19 +723,6 @@
+  * @return                      0 on success; nonzero on failure.
+  */
+ int ble_gatts_notify(uint16_t conn_handle, uint16_t chr_val_handle);
+-
+-/**
+- * @deprecated Should not be used. Use ble_gatts_notify instead.
+- *
+- * @param conn_handle           The connection over which to execute the
+- *                                  procedure.
+- * @param chr_val_handle        The value attribute handle of the
+- *                                  characteristic to include in the outgoing
+- *                                  notification.
+- *
+- * @return                      0 on success; nonzero on failure.
+- */
+-int ble_gattc_notify(uint16_t conn_handle, uint16_t chr_val_handle);
+ 
+ /**
+  * Sends a multiple handle variable length characteristic notification.  The
+@@ -795,39 +768,18 @@
+                               struct os_mbuf *txom);
+ 
+ /**
+- * @deprecated Should not be used. Use ble_gatts_indicate_custom instead.
++ * Sends a characteristic indication.  The content of the message is read from
++ * the specified characteristic.
+  *
+  * @param conn_handle           The connection over which to execute the
+  *                                  procedure.
+  * @param chr_val_handle        The value attribute handle of the
+  *                                  characteristic to include in the outgoing
+  *                                  indication.
+- * @param txom                  The data to include in the indication.
+- *
+- * @return                      0 on success; nonzero on failure.
+- */
+-int ble_gattc_indicate_custom(uint16_t conn_handle, uint16_t chr_val_handle,
+-                              struct os_mbuf *txom);
+-
+-/**
+- * Sends a characteristic indication.  The content of the message is read from
+- * the specified characteristic.
+- *
+- * @param conn_handle           The connection over which to execute the
+- *                                  procedure.
+- * @param chr_val_handle        The value attribute handle of the
+- *                                  characteristic to include in the outgoing
+- *                                  indication.
+  *
+  * @return                      0 on success; nonzero on failure.
+  */
+ int ble_gatts_indicate(uint16_t conn_handle, uint16_t chr_val_handle);
+-
+-/**
+- * @deprecated Should not be used. Use ble_gatts_indicate instead.
+- * @copydoc ble_gatts_indicate
+- */
+-int ble_gattc_indicate(uint16_t conn_handle, uint16_t chr_val_handle);
+ 
+ /**
+  * Initialize the BLE GATT client
+--- a/nimble/host/src/ble_att_svr.c
++++ b/nimble/host/src/ble_att_svr.c
+@@ -1089,8 +1089,9 @@
+                             uint16_t mtu, uint8_t *out_att_err)
+ {
+     struct ble_att_svr_entry *ha;
+-    uint8_t buf[16];
++    struct os_mbuf *attr_om;
+     uint16_t attr_len;
++    uint16_t req_val_len;
+     uint16_t first;
+     uint16_t prev;
+     int any_entries;
+@@ -1099,6 +1100,11 @@
+     first = 0;
+     prev = 0;
+     rc = 0;
++    attr_om = NULL;
++
++    /* Length of the attribute value in the request. */
++    req_val_len = OS_MBUF_PKTLEN(rxom) -
++                  sizeof(struct ble_att_find_type_value_req);
+ 
+     /* Iterate through the attribute list, keeping track of the current
+      * matching group.  For each attribute entry, determine if data needs to be
+@@ -1141,15 +1147,31 @@
+          * determine if this attribute matches.
+          */
+         if (ble_uuid_cmp(ha->ha_uuid, &attr_type.u) == 0) {
+-            rc = ble_att_svr_read_flat(conn_handle, ha, 0, sizeof buf, buf,
+-                                       &attr_len, out_att_err);
++            /* Lazily allocate a temporary mbuf for reading attribute values. */
++            if (attr_om == NULL) {
++                attr_om = ble_hs_mbuf_l2cap_pkt();
++                if (attr_om == NULL) {
++                    *out_att_err = BLE_ATT_ERR_INSUFFICIENT_RES;
++                    rc = BLE_HS_ENOMEM;
++                    goto done;
++                }
++            } else {
++                os_mbuf_adj(attr_om, OS_MBUF_PKTLEN(attr_om));
++            }
++
++            /* Read attribute value into temporary mbuf. */
++            rc = ble_att_svr_read(conn_handle, ha, 0, attr_om, out_att_err);
+             if (rc != 0) {
+                 goto done;
+             }
+-            /* value is at the end of req */
+-            rc = os_mbuf_cmpf(rxom, sizeof(struct ble_att_find_type_value_req),
+-                              buf, attr_len);
+-            if (rc == 0) {
++
++            attr_len = OS_MBUF_PKTLEN(attr_om);
++
++            /* Compare attribute value with the value from the request. */
++            if (attr_len == req_val_len &&
++                os_mbuf_cmpm(rxom,
++                             sizeof(struct ble_att_find_type_value_req),
++                             attr_om, 0, attr_len) == 0) {
+                 first = ha->ha_handle_id;
+                 prev = ha->ha_handle_id;
+             }
+@@ -1170,6 +1192,8 @@
+     }
+ 
+ done:
++    os_mbuf_free_chain(attr_om);
++
+     any_entries = OS_MBUF_PKTHDR(txom)->omp_len >
+                   BLE_ATT_FIND_TYPE_VALUE_RSP_BASE_SZ;
+     if (rc == 0 && !any_entries) {
+@@ -1293,9 +1317,10 @@
+     struct ble_att_read_type_rsp *rsp;
+     struct ble_att_svr_entry *entry;
+     struct os_mbuf *txom;
++    struct os_mbuf *attr_om;
+     uint16_t attr_len;
++    uint16_t max_attr_len;
+     uint16_t mtu;
+-    uint8_t buf[19];
+     int entry_written;
+     int txomlen;
+     int prev_attr_len;
+@@ -1306,6 +1331,7 @@
+     *err_handle = start_handle;
+     entry_written = 0;
+     prev_attr_len = 0;
++    attr_om = NULL;
+ 
+     /* Just reuse the request buffer for the response. */
+     txom = *rxom;
+@@ -1325,6 +1351,12 @@
+     }
+ 
+     mtu = ble_att_mtu_by_cid(conn_handle, cid);
++
++    /* Per Core Spec: max attribute value length is min(ATT_MTU - 4, 253). */
++    max_attr_len = mtu - 4;
++    if (max_attr_len > 253) {
++        max_attr_len = 253;
++    }
+ 
+     /* Find all matching attributes, writing a record for each. */
+     entry = NULL;
+@@ -1336,15 +1368,29 @@
+         }
+ 
+         if (entry->ha_handle_id >= start_handle) {
+-            rc = ble_att_svr_read_flat(conn_handle, entry, 0, sizeof buf, buf,
+-                                       &attr_len, att_err);
++            /* Lazily allocate a temporary mbuf for reading attribute values. */
++            if (attr_om == NULL) {
++                attr_om = ble_hs_mbuf_l2cap_pkt();
++                if (attr_om == NULL) {
++                    *att_err = BLE_ATT_ERR_INSUFFICIENT_RES;
++                    *err_handle = entry->ha_handle_id;
++                    rc = BLE_HS_ENOMEM;
++                    goto done;
++                }
++            } else {
++                os_mbuf_adj(attr_om, OS_MBUF_PKTLEN(attr_om));
++            }
++
++            /* Read attribute value into temporary mbuf. */
++            rc = ble_att_svr_read(conn_handle, entry, 0, attr_om, att_err);
+             if (rc != 0) {
+                 *err_handle = entry->ha_handle_id;
+                 goto done;
+             }
+ 
+-            if (attr_len > mtu - 4) {
+-                attr_len = mtu - 4;
++            attr_len = OS_MBUF_PKTLEN(attr_om);
++            if (attr_len > max_attr_len) {
++                attr_len = max_attr_len;
+             }
+ 
+             if (prev_attr_len == 0) {
+@@ -1367,12 +1413,14 @@
+             }
+ 
+             data->handle = htole16(entry->ha_handle_id);
+-            memcpy(data->value, buf, attr_len);
++            os_mbuf_copydata(attr_om, 0, attr_len, data->value);
+             entry_written = 1;
+         }
+     }
+ 
+ done:
++    os_mbuf_free_chain(attr_om);
++
+     if (!entry_written) {
+         /* No matching attributes. */
+         if (*att_err == 0) {
+@@ -1682,10 +1730,9 @@
+     tmp = os_msys_get_pkthdr(2, 0);
+ 
+     /* Iterate through requested handles, reading the corresponding attribute
+-     * for each.  Stop when there are no more handles to process, or the
+-     * response is full.
++     * for each.  Stop when there are no more handles to process.
+      */
+-    while (OS_MBUF_PKTLEN(*rxom) >= 2 && OS_MBUF_PKTLEN(txom) < mtu) {
++    while (OS_MBUF_PKTLEN(*rxom) >= 2) {
+         /* Ensure the full 16-bit handle is contiguous at the start of the
+          * mbuf.
+          */
+@@ -1707,27 +1754,42 @@
+             goto done;
+         }
+         tuple_len = OS_MBUF_PKTLEN(tmp);
+-        rc = os_mbuf_append(txom, &tuple_len, sizeof(tuple_len));
+-        if (rc != 0) {
+-            *err_handle = handle;
+-            goto done;
+-        }
+-        if (tuple_len != 0) {
+-            rc = os_mbuf_appendfrom(txom, tmp, 0, tuple_len);
++
++        if (OS_MBUF_PKTLEN(txom) < mtu) {
++            rc = os_mbuf_append(txom, &tuple_len, sizeof(tuple_len));
+             if (rc != 0) {
+                 *err_handle = handle;
+                 goto done;
+             }
++            if (tuple_len != 0) {
++                rc = os_mbuf_appendfrom(txom, tmp, 0, tuple_len);
++                if (rc != 0) {
++                    *err_handle = handle;
++                    goto done;
++                }
++            }
++        }
++
++        if (tuple_len != 0) {
+             os_mbuf_adj(tmp, tuple_len);
+         }
+     }
+     rc = 0;
+ 
+ done:
+-
+     if (tmp) {
+         os_mbuf_free_chain(tmp);
+     }
++
++    /* If an execution error occurred, immediately release the bloated success
++     * buffer back to the memory pool so the error handler has room to generate
++     * an error Response.
++     */
++    if (rc != 0 && txom != NULL) {
++        os_mbuf_free_chain(txom);
++        txom = NULL;
++    }
++
+     *out_txom = txom;
+     return rc;
+ }
+@@ -1773,7 +1835,7 @@
+                          ble_uuid_any_t *uuid, uint8_t *out_att_err)
+ {
+     uint8_t val[16];
+-    uint16_t attr_len;
++    uint16_t attr_len = 0;
+     int rc;
+ 
+     rc = ble_att_svr_read_flat(BLE_HS_CONN_HANDLE_NONE, entry, 0, sizeof(val), val,
+--- a/nimble/host/src/ble_gap.c
++++ b/nimble/host/src/ble_gap.c
+@@ -1198,6 +1198,9 @@
+ ble_gap_master_failed(int status)
+ {
+     switch (ble_gap_master.op) {
++    case BLE_GAP_OP_NULL:
++        break;
++
+ #if NIMBLE_BLE_CONNECT
+     case BLE_GAP_OP_M_CONN:
+         STATS_INC(ble_gap_stats, initiate_fail);
+@@ -1276,7 +1279,7 @@
+     ble_sm_connection_broken(conn_handle);
+     ble_gatts_connection_broken(conn_handle);
+     ble_gattc_connection_broken(conn_handle);
+-    ble_hs_flow_connection_broken(conn_handle);;
++    ble_hs_flow_connection_broken(conn_handle);
+ 
+     ble_hs_atomic_conn_delete(conn_handle);
+ 
+@@ -6344,6 +6347,18 @@
+         rc = 0;
+     } else {
+         rc = ble_gap_update_tx(conn_handle, params);
++
++        /*
++         * If the controller rejects the LL update with "Unsupported Remote
++         * Feature" and we are the slave, fall back to L2CAP signaling.  This
++         * happens when the local controller supports the Connection Parameters
++         * Request procedure but the peer's controller does not.
++         */
++        if (rc == BLE_HS_HCI_ERR(BLE_ERR_UNSUPP_REM_FEATURE) &&
++            !(conn->bhc_flags & BLE_HS_CONN_F_MASTER)) {
++            l2cap_update = 1;
++            rc = 0;
++        }
+     }
+ 
+ done:
+--- a/nimble/host/src/ble_gattc.c
++++ b/nimble/host/src/ble_gattc.c
+@@ -3361,49 +3361,62 @@
+     for (i = 0; i < proc->read_mult.num_handles; i++) {
+         attr[i].handle = proc->read_mult.handles[i];
+         attr[i].offset = 0;
+-        if (om == NULL || OS_MBUF_PKTLEN(*om) == 0) {
+-            continue;
++    }
++
++    if (status == 0) {
++        for (i = 0; i < proc->read_mult.num_handles; i++) {
++            if (OS_MBUF_PKTLEN(*om) < 2) {
++                break;
++            }
++
++            *om = os_mbuf_pullup(*om, 2);
++            if (*om == NULL) {
++                break;
++            }
++
++            attr_len = get_le16((*om)->om_data);
++            os_mbuf_adj(*om, 2);
++
++            if (attr_len > BLE_ATT_ATTR_MAX_LEN) {
++                break;
++            }
++
++            attr[i].om = os_msys_get_pkthdr(attr_len, 0);
++            if (!attr[i].om) {
++                /* this is OOM condition*/
++                status = BLE_HS_ENOMEM;
++                break;
++            }
++
++            rc = os_mbuf_appendfrom(attr[i].om, *om, 0, attr_len);
++            if (rc) {
++                break;
++            }
++
++            os_mbuf_adj(*om, attr_len);
+         }
+ 
+-        *om = os_mbuf_pullup(*om, 2);
+-        assert(*om);
+-
+-        attr_len = get_le16((*om)->om_data);
+-
+-        os_mbuf_adj(*om, 2);
+-
+-        if (attr_len > BLE_ATT_ATTR_MAX_LEN) {
+-            /*TODO Figure out what to do here */
+-            break;
++        /* failed to correctly parse response,
++         * cleanup any partial data and set status if not set already
++         */
++        if (i < proc->read_mult.num_handles || OS_MBUF_PKTLEN(*om) != 0) {
++            for (i = 0; i < proc->read_mult.num_handles; i++) {
++                os_mbuf_free_chain(attr[i].om);
++                attr[i].om = NULL;
++            }
++
++            if (status == 0) {
++                status = BLE_HS_EBADDATA;
++            }
+         }
+-
+-        attr[i].om = os_msys_get_pkthdr(attr_len, 0);
+-        if (!attr[i].om) {
+-            /*TODO Figure out what to do here */
+-            break;
+-        }
+-
+-        rc = os_mbuf_appendfrom(attr[i].om, *om, 0, attr_len);
+-        if (rc) {
+-            /*TODO Figure out what to do here */
+-            break;
+-        }
+-
+-        os_mbuf_adj(*om, attr_len);
+-    }
+-
+-    /*FIXME Testing assert */
+-    assert(i == proc->read_mult.num_handles);
++    }
+ 
+     proc->read_mult.cb_mult(proc->conn_handle,
+-                    ble_gattc_error(status, att_handle), &attr[0],
+-                    i,
+-                    proc->read_mult.cb_arg);
++                            ble_gattc_error(status, att_handle), &attr[0],
++                            proc->read_mult.num_handles, proc->read_mult.cb_arg);
+ 
+     for (i = 0; i < proc->read_mult.num_handles; i++) {
+-        if (attr[i].om != NULL) {
+-            os_mbuf_free_chain(attr[i].om);
+-        }
++        os_mbuf_free_chain(attr[i].om);
+     }
+ 
+     return 0;
+@@ -4400,16 +4413,6 @@
+     return rc;
+ }
+ 
+-/**
+- * Deprecated. Should not be used. Use ble_gatts_notify_custom instead.
+- */
+-int
+-ble_gattc_notify_custom(uint16_t conn_handle, uint16_t chr_val_handle,
+-                        struct os_mbuf *txom)
+-{
+-    return ble_gatts_notify_custom(conn_handle, chr_val_handle, txom);
+-}
+-
+ int
+ ble_gatts_notify(uint16_t conn_handle, uint16_t chr_val_handle)
+ {
+@@ -4434,7 +4437,7 @@
+ #endif
+ 
+     int rc;
+-    int i = 0;
++    size_t i = 0;
+     uint16_t cur_chr_cnt = 0;
+     /* mtu = MTU - 1 octet (OP code) */
+     uint16_t mtu = ble_att_mtu(conn_handle) - 1;
+@@ -4524,7 +4527,8 @@
+ #if !MYNEWT_VAL(BLE_GATT_NOTIFY_MULTIPLE)
+     return BLE_HS_ENOTSUP;
+ #endif
+-    int rc, i;
++    int rc;
++    size_t i;
+     struct ble_gatt_notif tuples[num_handles];
+     struct ble_hs_conn *conn;
+ 
+@@ -4557,15 +4561,6 @@
+     return rc;
+ }
+ 
+-/**
+- * Deprecated. Should not be used. Use ble_gatts_notify instead.
+- */
+-int
+-ble_gattc_notify(uint16_t conn_handle, uint16_t chr_val_handle)
+-{
+-    return ble_gatts_notify(conn_handle, chr_val_handle);
+-}
+-
+ /*****************************************************************************
+  * $indicate                                                                 *
+  *****************************************************************************/
+@@ -4718,29 +4713,10 @@
+     return rc;
+ }
+ 
+-/**
+- * Deprecated. Should not be used. Use ble_gatts_indicate_custom instead.
+- */
+-int
+-ble_gattc_indicate_custom(uint16_t conn_handle, uint16_t chr_val_handle,
+-                          struct os_mbuf *txom)
+-{
+-    return ble_gatts_indicate_custom(conn_handle, chr_val_handle, txom);
+-}
+-
+ int
+ ble_gatts_indicate(uint16_t conn_handle, uint16_t chr_val_handle)
+ {
+     return ble_gatts_indicate_custom(conn_handle, chr_val_handle, NULL);
+-}
+-
+-/**
+- * Deprecated. Should not be used. Use ble_gatts_indicate instead.
+- */
+-int
+-ble_gattc_indicate(uint16_t conn_handle, uint16_t chr_val_handle)
+-{
+-    return ble_gatts_indicate(conn_handle, chr_val_handle);
+ }
+ 
+ /*****************************************************************************
+--- a/nimble/host/src/ble_gatts.c
++++ b/nimble/host/src/ble_gatts.c
+@@ -20,6 +20,7 @@
+ #include <stddef.h>
+ #include <stdlib.h>
+ #include <string.h>
++#include "os/util.h"
+ #include "nimble/ble.h"
+ #include "host/ble_gatt.h"
+ #include "host/ble_uuid.h"
+@@ -829,11 +830,29 @@
+ }
+ 
+ static int
+-ble_gatts_register_clt_cfg_dsc(uint16_t *att_handle)
+-{
++ble_gatts_register_clt_cfg_dsc(const struct ble_gatt_chr_def *chr, uint16_t *att_handle)
++{
++    uint8_t chr_att_flags;
++    uint8_t att_flags;
+     int rc;
+ 
+-    rc = ble_att_svr_register(uuid_ccc, BLE_ATT_F_READ | BLE_ATT_F_WRITE, 0,
++    /* Writing the CCCD enables notifications/indications of the
++     * characteristic value, so require the same encryption/authentication
++     * level as the characteristic itself. Authorization is not inherited:
++     * the stack cannot enforce it on the internal CCCD access callback,
++     * and its flag alone would wrongly activate the key-size check.
++     */
++    chr_att_flags = ble_gatts_att_flags_from_chr_flags(chr->flags);
++
++    att_flags = BLE_ATT_F_READ | BLE_ATT_F_WRITE;
++    if (chr_att_flags & (BLE_ATT_F_READ_ENC | BLE_ATT_F_WRITE_ENC)) {
++        att_flags |= BLE_ATT_F_WRITE_ENC;
++    }
++    if (chr_att_flags & (BLE_ATT_F_READ_AUTHEN | BLE_ATT_F_WRITE_AUTHEN)) {
++        att_flags |= BLE_ATT_F_WRITE_AUTHEN;
++    }
++
++    rc = ble_att_svr_register(uuid_ccc, att_flags, chr->min_key_size,
+                               att_handle, ble_gatts_clt_cfg_access, NULL);
+     if (rc != 0) {
+         return rc;
+@@ -957,7 +976,7 @@
+     }
+ 
+     if (ble_gatts_chr_clt_cfg_allowed(chr) != 0) {
+-        rc = ble_gatts_register_clt_cfg_dsc(&dsc_handle);
++        rc = ble_gatts_register_clt_cfg_dsc(chr, &dsc_handle);
+         if (rc != 0) {
+             return rc;
+         }
+--- a/nimble/host/src/ble_hs.c
++++ b/nimble/host/src/ble_hs.c
+@@ -375,6 +375,9 @@
+     /* Clear configured addresses. */
+     ble_hs_id_reset();
+ 
++    /* Drop cached privacy state so sync re-runs the full setup. */
++    ble_hs_pvcy_reset();
++
+     if (ble_hs_cfg.reset_cb != NULL && ble_hs_reset_reason != 0) {
+         ble_hs_cfg.reset_cb(ble_hs_reset_reason);
+     }
+--- a/nimble/host/src/ble_hs_conn.c
++++ b/nimble/host/src/ble_hs_conn.c
+@@ -481,11 +481,14 @@
+ #endif
+ 
+     struct ble_hs_conn *conn;
+-    ble_npl_time_t now = ble_npl_time_get();
+     int32_t next_exp_in = BLE_HS_FOREVER;
+     int32_t next_exp_in_new;
+     bool next_exp_in_updated;
++
++#if BLE_HS_ATT_SVR_QUEUED_WRITE_TMO || MYNEWT_VAL(BLE_L2CAP_RX_FRAG_TIMEOUT) != 0
++    ble_npl_time_t now = ble_npl_time_get();
+     int32_t time_diff;
++#endif
+ 
+     ble_hs_lock();
+ 
+--- a/nimble/host/src/ble_hs_hci.c
++++ b/nimble/host/src/ble_hs_hci.c
+@@ -313,8 +313,8 @@
+     struct ble_hs_hci_ack ack;
+     int rc;
+ 
++    ble_hs_hci_lock();
+     BLE_HS_DBG_ASSERT(ble_hs_hci_ack == NULL);
+-    ble_hs_hci_lock();
+ 
+     rc = ble_hs_hci_cmd_send_buf(opcode, cmd, cmd_len);
+     if (rc != 0) {
+@@ -560,8 +560,17 @@
+         BLE_HS_LOG(DEBUG, "\n");
+ #endif
+ 
++        /* Account for the controller buf that will hold the txed fragment.
++         * Do this before ble_hs_tx_data() to avoid a race with the Number of
++         * Completed Packets event that may arrive before tx returns.
++         */
++        conn->bhc_outstanding_pkts++;
++        ble_hs_hci_avail_pkts--;
++
+         rc = ble_hs_tx_data(frag);
+         if (rc != 0) {
++            conn->bhc_outstanding_pkts--;
++            ble_hs_hci_avail_pkts++;
+             goto err;
+         }
+ 
+@@ -570,10 +579,6 @@
+          */
+         conn->bhc_flags |= BLE_HS_CONN_F_TX_FRAG;
+         pb = BLE_HCI_PB_MIDDLE;
+-
+-        /* Account for the controller buf that will hold the txed fragment. */
+-        conn->bhc_outstanding_pkts++;
+-        ble_hs_hci_avail_pkts--;
+     }
+ 
+     if (txom != NULL) {
+--- a/nimble/host/src/ble_hs_hci_evt.c
++++ b/nimble/host/src/ble_hs_hci_evt.c
+@@ -523,7 +523,7 @@
+     for (i = 0; i < ev->num_reports; i++) {
+         rpt = data;
+ 
+-        data += sizeof(rpt) + rpt->data_len + 1;
++        data += sizeof(*rpt) + rpt->data_len + 1;
+ 
+         desc.event_type = rpt->type;
+         desc.addr.type = rpt->addr_type;
+--- a/nimble/host/src/ble_hs_stop.c
++++ b/nimble/host/src/ble_hs_stop.c
+@@ -69,17 +69,20 @@
+ 
+     ble_hs_enabled_state = BLE_HS_ENABLED_STATE_OFF;
+ 
++    ble_hs_unlock();
++
+     ble_hs_stop_hci_reset();
+ 
+-    /* Clear advertising, scanning and connection states. */
++    /* Clear advertising, scanning and connection states.
++     * Called outside the lock because ble_gap_reset_state() acquires
++     * it internally (via ble_gap_conn_broken, ble_hs_atomic_*, etc).
++     */
+     ble_gap_reset_state(0);
+ 
+     /* After LL reset the controller loses its random address */
+     ble_hs_id_reset();
+ 
+     ble_hs_pvcy_reset();
+-
+-    ble_hs_unlock();
+ 
+     SLIST_FOREACH(listener, &slist, link) {
+         listener->fn(status, listener->arg);
+--- a/nimble/host/src/ble_sm.c
++++ b/nimble/host/src/ble_sm.c
+@@ -944,6 +944,16 @@
+ 
+         ble_hs_unlock();
+ 
++        /* Persist keys if bonding has successfully completed.
++         * This must happen before firing the pairing complete callback
++         * so that applications can read the persisted keys from the store.
++         */
++        if (res->app_status == 0 && rm && proc != NULL &&
++            proc->flags & BLE_SM_PROC_F_BONDING) {
++
++            ble_sm_persist_keys(proc);
++        }
++
+         if (res->enc_cb &&
+             res->app_status != BLE_HS_ENOTCONN) {
+             /* Do not send this event on broken connection */
+@@ -963,14 +973,6 @@
+             res->passkey_params.action != BLE_SM_IOACT_NONE) {
+ 
+             ble_gap_passkey_event(conn_handle, &res->passkey_params);
+-        }
+-
+-        /* Persist keys if bonding has successfully completed. */
+-        if (res->app_status == 0    &&
+-            rm                      &&
+-            proc->flags & BLE_SM_PROC_F_BONDING) {
+-
+-            ble_sm_persist_keys(proc);
+         }
+ 
+         if (rm) {
+@@ -1365,6 +1367,13 @@
+     memset(&res, 0, sizeof res);
+ 
+     ble_hs_lock();
++
++    conn = ble_hs_conn_find_assert(conn_handle);
++    if (conn == NULL) {
++        ble_hs_unlock();
++        return BLE_HS_ENOENT;
++    }
++
+     proc = ble_sm_proc_find(conn_handle, BLE_SM_PROC_STATE_NONE, 0, NULL);
+     if (proc == NULL) {
+         /* The peer is attempting to restore a encrypted connection via the
+@@ -1404,7 +1413,6 @@
+     }
+ 
+     if (restore) {
+-        conn = ble_hs_conn_find_assert(conn_handle);
+         ble_hs_conn_addrs(conn, &addrs);
+         memcpy(peer_id_addr, addrs.peer_id_addr.val, 6);
+     }
+--- a/nimble/host/src/ble_sm_alg.c
++++ b/nimble/host/src/ble_sm_alg.c
+@@ -28,13 +28,13 @@
+ 
+ #include "nimble/ble.h"
+ #include "ble_hs_priv.h"
+-#include "tinycrypt/aes.h"
+-#include "tinycrypt/constants.h"
+-#include "tinycrypt/utils.h"
++
++#include <mbedtls/aes.h>
+ 
+ #if MYNEWT_VAL(BLE_SM_SC)
+-#include "tinycrypt/cmac_mode.h"
+-#include "tinycrypt/ecc_dh.h"
++#include <mbedtls/cmac.h>
++#include <mbedtls/ecp.h>
++#include <mbedtls/ecdh.h>
+ #if MYNEWT_VAL(TRNG)
+ #include "trng/trng.h"
+ #endif
+@@ -58,24 +58,23 @@
+ ble_sm_alg_encrypt(const uint8_t *key, const uint8_t *plaintext,
+                    uint8_t *enc_data)
+ {
+-    struct tc_aes_key_sched_struct s;
++    int ret = 0;
++    struct mbedtls_aes_context ctx;
+     uint8_t tmp[16];
+ 
+     swap_buf(tmp, key, 16);
+ 
+-    if (tc_aes128_set_encrypt_key(&s, tmp) == TC_CRYPTO_FAIL) {
+-        return BLE_HS_EUNKNOWN;
+-    }
+-
++    mbedtls_aes_init(&ctx);
++    mbedtls_aes_setkey_enc(&ctx, tmp, 128);
+     swap_buf(tmp, plaintext, 16);
+-
+-    if (tc_aes_encrypt(enc_data, tmp, &s) == TC_CRYPTO_FAIL) {
+-        return BLE_HS_EUNKNOWN;
+-    }
+-
+-    swap_in_place(enc_data, 16);
+-
+-    return 0;
++    if (mbedtls_aes_crypt_ecb(&ctx, MBEDTLS_AES_ENCRYPT, tmp, enc_data)) {
++        ret = BLE_HS_EUNKNOWN;
++    } else {
++        swap_in_place(enc_data, 16);
++    }
++    mbedtls_aes_free(&ctx);
++
++    return ret;
+ }
+ 
+ int
+@@ -206,18 +205,8 @@
+ ble_sm_alg_aes_cmac(const uint8_t *key, const uint8_t *in, size_t len,
+                     uint8_t *out)
+ {
+-    struct tc_aes_key_sched_struct sched;
+-    struct tc_cmac_struct state;
+-
+-    if (tc_cmac_setup(&state, key, &sched) == TC_CRYPTO_FAIL) {
+-        return BLE_HS_EUNKNOWN;
+-    }
+-
+-    if (tc_cmac_update(&state, in, len) == TC_CRYPTO_FAIL) {
+-        return BLE_HS_EUNKNOWN;
+-    }
+-
+-    if (tc_cmac_final(out, &state) == TC_CRYPTO_FAIL) {
++    if (mbedtls_cipher_cmac(mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_ECB),
++                            key, 128, in, len, out)) {
+         return BLE_HS_EUNKNOWN;
+     }
+ 
+@@ -552,28 +541,86 @@
+ }
+ 
+ int
++ble_sm_alg_rng(void *arg, unsigned char *buf, size_t size)
++{
++    (void)arg;
++
++#if MYNEWT_VAL(SELFTEST)
++    while (size--) {
++        buf[size] = 9;
++    }
++
++    return 0;
++#elif MYNEWT_VAL(TRNG)
++    size_t num;
++
++    if (!g_trng) {
++        g_trng = (struct trng_dev *)os_dev_open("trng", OS_WAIT_FOREVER, NULL);
++        assert(g_trng);
++    }
++
++    while (size) {
++        num = trng_read(g_trng, buf, size);
++        buf += num;
++        size -= num;
++    }
++
++    return 0;
++#else
++    return ble_hs_hci_rand(buf, size);
++#endif
++}
++
++int
+ ble_sm_alg_gen_dhkey(const uint8_t *peer_pub_key_x, const uint8_t *peer_pub_key_y,
+                      const uint8_t *our_priv_key, uint8_t *out_dhkey)
+ {
+-    uint8_t dh[32];
+-    uint8_t pk[64];
+-    uint8_t priv[32];
+-    int rc;
+-
+-    swap_buf(pk, peer_pub_key_x, 32);
+-    swap_buf(&pk[32], peer_pub_key_y, 32);
+-    swap_buf(priv, our_priv_key, 32);
+-
+-    if (uECC_valid_public_key(pk, &curve_secp256r1) < 0) {
+-        return BLE_HS_EUNKNOWN;
+-    }
+-
+-    rc = uECC_shared_secret(pk, priv, dh, &curve_secp256r1);
+-    if (rc == TC_CRYPTO_FAIL) {
+-        return BLE_HS_EUNKNOWN;
+-    }
+-
+-    swap_buf(out_dhkey, dh, 32);
++    int err;
++    mbedtls_mpi priv;
++    mbedtls_mpi shared;
++    mbedtls_ecp_group group;
++    mbedtls_ecp_point point;
++    uint8_t pub_key[65];
++
++    mbedtls_mpi_init(&priv);
++    mbedtls_mpi_init(&shared);
++    mbedtls_ecp_point_init(&point);
++    mbedtls_ecp_group_init(&group);
++
++    pub_key[0] = 0x04; /* Uncompressed point identifier */
++    swap_buf(&pub_key[1], peer_pub_key_x, 32);
++    swap_buf(&pub_key[33], peer_pub_key_y, 32);
++
++    err = mbedtls_ecp_group_load(&group, MBEDTLS_ECP_DP_SECP256R1);
++
++    if (err == 0) {
++        err = mbedtls_ecp_point_read_binary(&group, &point, pub_key, sizeof(pub_key));
++    }
++
++    if (err == 0) {
++        err = mbedtls_ecp_check_pubkey(&group, &point);
++    }
++
++    if (err == 0) {
++        err = mbedtls_mpi_read_binary_le(&priv, our_priv_key, 32);
++    }
++
++    if (err == 0) {
++        err = mbedtls_ecdh_compute_shared(&group, &shared, &point, &priv,
++                                          ble_sm_alg_rng, NULL);
++    }
++
++    if (err == 0) {
++        err = mbedtls_mpi_write_binary_le(&shared, out_dhkey, 32);
++    }
++
++    mbedtls_ecp_group_free(&group);
++    mbedtls_ecp_point_free(&point);
++    mbedtls_mpi_free(&priv);
++    mbedtls_mpi_free(&shared);
++    if (err) {
++        return BLE_HS_EUNKNOWN;
++    }
+ 
+     return 0;
+ }
+@@ -610,61 +657,66 @@
+     swap_buf(&pub[32], &ble_sm_alg_dbg_pub_key[32], 32);
+     swap_buf(priv, ble_sm_alg_dbg_priv_key, 32);
+ #else
+-    uint8_t pk[64];
++    uint8_t pub_buf[65];
++    size_t pub_len = 0;
++    mbedtls_ecp_keypair keypair;
++    mbedtls_ecp_group group;
++    mbedtls_ecp_point point;
++    mbedtls_mpi d;
++    int err;
++
++    mbedtls_ecp_keypair_init(&keypair);
++    mbedtls_ecp_group_init(&group);
++    mbedtls_ecp_point_init(&point);
++    mbedtls_mpi_init(&d);
+ 
+     do {
+-        if (uECC_make_key(pk, priv, &curve_secp256r1) != TC_CRYPTO_SUCCESS) {
+-            return BLE_HS_EUNKNOWN;
++        err = mbedtls_ecp_gen_key(MBEDTLS_ECP_DP_SECP256R1, &keypair,
++                                  ble_sm_alg_rng, NULL);
++        if (err) {
++            break;
+         }
+ 
++        err = mbedtls_ecp_export(&keypair, &group, &d, &point);
++        if (err) {
++            break;
++        }
++
++        err = mbedtls_mpi_write_binary_le(&d, priv, 32);
++        if (err) {
++            break;
++        }
+         /* Make sure generated key isn't debug key. */
+     } while (memcmp(priv, ble_sm_alg_dbg_priv_key, 32) == 0);
+ 
+-    swap_buf(pub, pk, 32);
+-    swap_buf(&pub[32], &pk[32], 32);
+-    swap_in_place(priv, 32);
+-#endif
+-
+-    return 0;
+-}
+-
+-#if MYNEWT_VAL(SELFTEST)
+-/* Unit tests rely on custom RNG function not being set */
+-#define ble_sm_alg_rand NULL
+-#else
+-/* used by uECC to get random data */
+-static int
+-ble_sm_alg_rand(uint8_t *dst, unsigned int size)
+-{
+-#if MYNEWT_VAL(TRNG)
+-    size_t num;
+-
+-    if (!g_trng) {
+-        g_trng = (struct trng_dev *)os_dev_open("trng", OS_WAIT_FOREVER, NULL);
+-        assert(g_trng);
+-    }
+-
+-    while (size) {
+-        num = trng_read(g_trng, dst, size);
+-        dst += num;
+-        size -= num;
+-    }
+-#else
+-    if (ble_hs_hci_rand(dst, size)) {
+-        return 0;
+-    }
+-#endif
+-
+-    return 1;
+-}
+-#endif
+-
+-void
+-ble_sm_alg_ecc_init(void)
+-{
+-    uECC_set_rng(ble_sm_alg_rand);
+-}
+-
+-#endif
+-#endif
+-#endif
++    if (err == 0) {
++        err = mbedtls_ecp_point_write_binary(&group, &point, MBEDTLS_ECP_PF_UNCOMPRESSED,
++                                             &pub_len, pub_buf, sizeof(pub_buf));
++    }
++
++    if (err == 0) {
++        if (pub_len == sizeof(pub_buf)) {
++            swap_buf(pub, &pub_buf[1], 32);
++            swap_buf(pub + 32, &pub_buf[33], 32);
++        } else {
++            err = BLE_HS_EUNKNOWN;
++        }
++    }
++
++    mbedtls_ecp_keypair_free(&keypair);
++    mbedtls_ecp_group_free(&group);
++    mbedtls_ecp_point_free(&point);
++    mbedtls_mpi_free(&d);
++
++    if (err) {
++        return BLE_HS_EUNKNOWN;
++    }
++
++#endif
++
++    return 0;
++}
++
++#endif
++#endif
++#endif
+--- a/nimble/host/src/ble_sm_lgcy.c
++++ b/nimble/host/src/ble_sm_lgcy.c
+@@ -215,6 +215,18 @@
+ 
+     ble_sm_ia_ra(proc, &iat, ia, &rat, ra);
+ 
++    /* If the peer echoed our own random back (Srand == Mrand), the c1 check
++     * would trivially pass because the peer also mirrored Mconfirm.
++     * Reject this immediately with Confirm Value Failed.
++     */
++    if ((proc->flags & BLE_SM_PROC_F_INITIATOR) &&
++        memcmp(ble_sm_peer_pair_rand(proc), ble_sm_our_pair_rand(proc), 16) == 0) {
++        res->app_status = BLE_HS_SM_US_ERR(BLE_SM_ERR_CONFIRM_MISMATCH);
++        res->sm_err = BLE_SM_ERR_CONFIRM_MISMATCH;
++        res->enc_cb = 1;
++        return;
++    }
++
+     rc = ble_sm_alg_c1(proc->tk, ble_sm_peer_pair_rand(proc), proc->pair_req,
+                        proc->pair_rsp, iat, rat, ia, ra, confirm_val);
+     if (rc != 0) {
+--- a/nimble/host/src/ble_sm_priv.h
++++ b/nimble/host/src/ble_sm_priv.h
+@@ -326,7 +326,6 @@
+                          const uint8_t *peer_pub_key_y,
+                          const uint8_t *our_priv_key, uint8_t *out_dhkey);
+ int ble_sm_alg_gen_key_pair(uint8_t *pub, uint8_t *priv);
+-void ble_sm_alg_ecc_init(void);
+ 
+ int ble_sm_csis_generate_rsi(const uint8_t *sirk, uint8_t *out);
+ int ble_sm_csis_encrypt_sirk(const uint8_t *ltk, const uint8_t *plaintext_sirk,
+--- a/nimble/host/src/ble_sm_sc.c
++++ b/nimble/host/src/ble_sm_sc.c
+@@ -910,7 +910,6 @@
+ void
+ ble_sm_sc_init(void)
+ {
+-    ble_sm_alg_ecc_init();
+     ble_sm_sc_keys_generated = 0;
+ }
+ 
+--- a/nimble/include/nimble/hci_common.h
++++ b/nimble/include/nimble/hci_common.h
+@@ -1724,7 +1724,7 @@
+ struct comp_pkt {
+     uint16_t handle;
+     uint16_t packets;
+-} __attribute__((packed));;
++} __attribute__((packed));
+ struct ble_hci_ev_num_comp_pkts {
+     uint8_t count;
+     struct comp_pkt completed[0];
+@@ -2380,6 +2380,8 @@
+ #define BLE_HCI_VER_BCS_5_4                 (13)
+ #define BLE_HCI_VER_BCS_6_0                 (14)
+ #define BLE_HCI_VER_BCS_6_1                 (15)
++#define BLE_HCI_VER_BCS_6_2                 (16)
++#define BLE_HCI_VER_BCS_6_3                 (17)
+ 
+ #define BLE_LMP_VER_BCS_1_0b                (0)
+ #define BLE_LMP_VER_BCS_1_1                 (1)
+@@ -2397,6 +2399,8 @@
+ #define BLE_LMP_VER_BCS_5_4                 (13)
+ #define BLE_LMP_VER_BCS_6_0                 (14)
+ #define BLE_LMP_VER_BCS_6_1                 (15)
++#define BLE_LMP_VER_BCS_6_2                 (16)
++#define BLE_LMP_VER_BCS_6_3                 (17)
+ 
+ /* selected HCI and LMP version */
+ #if MYNEWT_VAL(BLE_VERSION) == 50
+@@ -2420,6 +2424,12 @@
+ #elif MYNEWT_VAL(BLE_VERSION) == 61
+ #define BLE_HCI_VER_BCS BLE_HCI_VER_BCS_6_1
+ #define BLE_LMP_VER_BCS BLE_LMP_VER_BCS_6_1
++#elif MYNEWT_VAL(BLE_VERSION) == 62
++#define BLE_HCI_VER_BCS BLE_HCI_VER_BCS_6_2
++#define BLE_LMP_VER_BCS BLE_LMP_VER_BCS_6_2
++#elif MYNEWT_VAL(BLE_VERSION) == 63
++#define BLE_HCI_VER_BCS BLE_HCI_VER_BCS_6_3
++#define BLE_LMP_VER_BCS BLE_LMP_VER_BCS_6_3
+ #else
+ #error Unsupported BLE_VERSION selected
+ #endif
+@@ -2463,7 +2473,7 @@
+ 
+ #define BLE_HCI_ISO_PKT_STATUS_VALID    0x00
+ #define BLE_HCI_ISO_PKT_STATUS_INVALID  0x01
+-#define BLE_HCI_ISO_PKT_STATUS_LOST     0x10
++#define BLE_HCI_ISO_PKT_STATUS_LOST     0x02
+ 
+ #define BLE_HCI_ISO_BIG_HANDLE_MIN      0x00
+ #define BLE_HCI_ISO_BIG_HANDLE_MAX      0xEF
+--- a/porting/nimble/include/syscfg/syscfg.h
++++ b/porting/nimble/include/syscfg/syscfg.h
+@@ -23,16 +23,264 @@
+ #define MYNEWT_VAL(_name)                       MYNEWT_VAL_ ## _name
+ #define MYNEWT_VAL_CHOICE(_name, _val)          MYNEWT_VAL_ ## _name ## __ ## _val
+ 
+-#ifndef MYNEWT_VAL_TINYCRYPT_SYSINIT_STAGE
+-#define MYNEWT_VAL_TINYCRYPT_SYSINIT_STAGE (200)
+-#endif
+-
+-#ifndef MYNEWT_VAL_TINYCRYPT_UECC_RNG_TRNG_DEV_NAME
+-#define MYNEWT_VAL_TINYCRYPT_UECC_RNG_TRNG_DEV_NAME "trng"
+-#endif
+-
+-#ifndef MYNEWT_VAL_TINYCRYPT_UECC_RNG_USE_TRNG
+-#define MYNEWT_VAL_TINYCRYPT_UECC_RNG_USE_TRNG (0)
++#ifndef MYNEWT_VAL_MBEDTLS_AES_ALT
++#define MYNEWT_VAL_MBEDTLS_AES_ALT (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_AES_C
++#define MYNEWT_VAL_MBEDTLS_AES_C (1)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_AES_FEWER_TABLES
++#define MYNEWT_VAL_MBEDTLS_AES_FEWER_TABLES (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_AES_ROM_TABLES
++#define MYNEWT_VAL_MBEDTLS_AES_ROM_TABLES (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ARC4_C
++#define MYNEWT_VAL_MBEDTLS_ARC4_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ARIA_C
++#define MYNEWT_VAL_MBEDTLS_ARIA_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_BASE64_C
++#define MYNEWT_VAL_MBEDTLS_BASE64_C (1)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_BIGNUM_ALT
++#define MYNEWT_VAL_MBEDTLS_BIGNUM_ALT (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_BLOWFISH_C
++#define MYNEWT_VAL_MBEDTLS_BLOWFISH_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CAMELLIA_C
++#define MYNEWT_VAL_MBEDTLS_CAMELLIA_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CCM_C
++#define MYNEWT_VAL_MBEDTLS_CCM_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CHACHA20_C
++#define MYNEWT_VAL_MBEDTLS_CHACHA20_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CHACHAPOLY_C
++#define MYNEWT_VAL_MBEDTLS_CHACHAPOLY_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CIPHER_MODE_CBC
++#define MYNEWT_VAL_MBEDTLS_CIPHER_MODE_CBC (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CIPHER_MODE_CFB
++#define MYNEWT_VAL_MBEDTLS_CIPHER_MODE_CFB (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CIPHER_MODE_CTR
++#define MYNEWT_VAL_MBEDTLS_CIPHER_MODE_CTR (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CIPHER_MODE_OFB
++#define MYNEWT_VAL_MBEDTLS_CIPHER_MODE_OFB (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CIPHER_MODE_XTS
++#define MYNEWT_VAL_MBEDTLS_CIPHER_MODE_XTS (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CMAC_C
++#define MYNEWT_VAL_MBEDTLS_CMAC_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_CTR_DRBG_C
++#define MYNEWT_VAL_MBEDTLS_CTR_DRBG_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_DES_C
++#define MYNEWT_VAL_MBEDTLS_DES_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECDH_COMPUTE_SHARED_ALT
++#define MYNEWT_VAL_MBEDTLS_ECDH_COMPUTE_SHARED_ALT (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECDH_GEN_PUBLIC_ALT
++#define MYNEWT_VAL_MBEDTLS_ECDH_GEN_PUBLIC_ALT (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECDSA_GENKEY_ALT
++#define MYNEWT_VAL_MBEDTLS_ECDSA_GENKEY_ALT (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECDSA_SIGN_ALT
++#define MYNEWT_VAL_MBEDTLS_ECDSA_SIGN_ALT (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECDSA_VERIFY_ALT
++#define MYNEWT_VAL_MBEDTLS_ECDSA_VERIFY_ALT (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECJPAKE_C
++#define MYNEWT_VAL_MBEDTLS_ECJPAKE_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_ALT
++#define MYNEWT_VAL_MBEDTLS_ECP_ALT (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_BP256R1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_BP256R1 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_BP384R1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_BP384R1 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_BP512R1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_BP512R1 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_CURVE25519
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_CURVE25519 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_CURVE448
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_CURVE448 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_SECP192K1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_SECP192K1 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_SECP192R1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_SECP192R1 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_SECP224K1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_SECP224K1 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_SECP224R1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_SECP224R1 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_SECP256K1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_SECP256K1 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_SECP256R1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_SECP256R1 (1)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_SECP384R1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_SECP384R1 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_DP_SECP521R1
++#define MYNEWT_VAL_MBEDTLS_ECP_DP_SECP521R1 (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ECP_RESTARTABLE
++#define MYNEWT_VAL_MBEDTLS_ECP_RESTARTABLE (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ENTROPY_C
++#define MYNEWT_VAL_MBEDTLS_ENTROPY_C (1)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_ENTROPY_HARDWARE_ALT
++#define MYNEWT_VAL_MBEDTLS_ENTROPY_HARDWARE_ALT (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_GENPRIME
++#define MYNEWT_VAL_MBEDTLS_GENPRIME (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_HKDF_C
++#define MYNEWT_VAL_MBEDTLS_HKDF_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
++#define MYNEWT_VAL_MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
++#define MYNEWT_VAL_MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
++#define MYNEWT_VAL_MBEDTLS_KEY_EXCHANGE_RSA_ENABLED (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED
++#define MYNEWT_VAL_MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_MD2_C
++#define MYNEWT_VAL_MBEDTLS_MD2_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_MD4_C
++#define MYNEWT_VAL_MBEDTLS_MD4_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_MD5_C
++#define MYNEWT_VAL_MBEDTLS_MD5_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_MPI_MAX_SIZE
++#define MYNEWT_VAL_MBEDTLS_MPI_MAX_SIZE (1024)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_NIST_KW_C
++#define MYNEWT_VAL_MBEDTLS_NIST_KW_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_PKCS1_V15
++#define MYNEWT_VAL_MBEDTLS_PKCS1_V15 (1)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_PKCS1_V21
++#define MYNEWT_VAL_MBEDTLS_PKCS1_V21 (1)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_POLY1305_C
++#define MYNEWT_VAL_MBEDTLS_POLY1305_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_RIPEMD160_C
++#define MYNEWT_VAL_MBEDTLS_RIPEMD160_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_SHA1_C
++#define MYNEWT_VAL_MBEDTLS_SHA1_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_SHA256_ALT
++#define MYNEWT_VAL_MBEDTLS_SHA256_ALT (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_SHA256_C
++#define MYNEWT_VAL_MBEDTLS_SHA256_C (1)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_SHA512_C
++#define MYNEWT_VAL_MBEDTLS_SHA512_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_SSL_TLS_C
++#define MYNEWT_VAL_MBEDTLS_SSL_TLS_C (0)
++#endif
++
++#ifndef MYNEWT_VAL_MBEDTLS_TIMING_C
++#define MYNEWT_VAL_MBEDTLS_TIMING_C (0)
+ #endif
+ 
+ #ifndef MYNEWT_VAL_BSP_SIMULATED
+@@ -299,8 +547,6 @@
+ #define MYNEWT_VAL_NATIVE_SOCKETS_POLL_INTERVAL_MS (200)
+ #endif
+ 
+-#undef MYNEWT_VAL_NATIVE_SOCKETS_POLL_ITVL
+-
+ #ifndef MYNEWT_VAL_NATIVE_SOCKETS_PRIO
+ #define MYNEWT_VAL_NATIVE_SOCKETS_PRIO (2)
+ #endif
+@@ -1037,20 +1283,6 @@
+ #define MYNEWT_VAL_BLE_SVC_TPS_SYSINIT_STAGE (303)
+ #endif
+ 
+-#undef MYNEWT_VAL_BLE_ACL_BUF_COUNT
+-
+-#undef MYNEWT_VAL_BLE_ACL_BUF_SIZE
+-
+-#undef MYNEWT_VAL_BLE_HCI_BRIDGE
+-
+-#undef MYNEWT_VAL_BLE_HCI_EVT_BUF_SIZE
+-
+-#undef MYNEWT_VAL_BLE_HCI_EVT_HI_BUF_COUNT
+-
+-#undef MYNEWT_VAL_BLE_HCI_EVT_LO_BUF_COUNT
+-
+-#undef MYNEWT_VAL_BLE_HCI_TRANSPORT
+-
+ #ifndef MYNEWT_VAL_BLE_MONITOR_CONSOLE_BUFFER_SIZE
+ #define MYNEWT_VAL_BLE_MONITOR_CONSOLE_BUFFER_SIZE (128)
+ #endif
+@@ -1210,8 +1442,21 @@
+ #define MYNEWT_VAL_BLE_SOCK_TCP_PORT (14433)
+ #endif
+ 
++#ifndef MYNEWT_VAL_BLE_SOCK_TYPE__linux_blue
++#define MYNEWT_VAL_BLE_SOCK_TYPE__linux_blue (1)
++#endif
++#ifndef MYNEWT_VAL_BLE_SOCK_TYPE__linux_tcp
++#define MYNEWT_VAL_BLE_SOCK_TYPE__linux_tcp (0)
++#endif
++#ifndef MYNEWT_VAL_BLE_SOCK_TYPE__nuttx
++#define MYNEWT_VAL_BLE_SOCK_TYPE__nuttx (0)
++#endif
++#ifndef MYNEWT_VAL_BLE_SOCK_TYPE
++#define MYNEWT_VAL_BLE_SOCK_TYPE (1)
++#endif
++
+ #ifndef MYNEWT_VAL_BLE_SOCK_USE_LINUX_BLUE
+-#define MYNEWT_VAL_BLE_SOCK_USE_LINUX_BLUE (1)
++#define MYNEWT_VAL_BLE_SOCK_USE_LINUX_BLUE (0)
+ #endif
+ 
+ #ifndef MYNEWT_VAL_BLE_SOCK_USE_NUTTX
+@@ -1263,10 +1508,10 @@
+ #endif
+ 
+ #define MYNEWT_PKG_apache_mynewt_core__compiler_sim 1
+-#define MYNEWT_PKG_apache_mynewt_core__crypto_tinycrypt 1
++#define MYNEWT_PKG_apache_mynewt_core__crypto_mbedtls 1
+ #define MYNEWT_PKG_apache_mynewt_core__hw_bsp_native 1
+ #define MYNEWT_PKG_apache_mynewt_core__hw_drivers_flash_enc_flash 1
+-#define MYNEWT_PKG_apache_mynewt_core__hw_drivers_flash_enc_flash_ef_tinycrypt 1
++#define MYNEWT_PKG_apache_mynewt_core__hw_drivers_flash_enc_flash_ef_mbedtls 1
+ #define MYNEWT_PKG_apache_mynewt_core__hw_drivers_trng 1
+ #define MYNEWT_PKG_apache_mynewt_core__hw_drivers_trng_trng_sw 1
+ #define MYNEWT_PKG_apache_mynewt_core__hw_drivers_uart 1
