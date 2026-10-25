@@ -35,7 +35,7 @@ follow_new_link() {   # restart the sniffer, force a reconnect, retry until the 
 }
 sample() { echo "$(date +%T) $(python3 tools/fm1_remote.py --port "$P" log | grep -E "^log: (sample_ms|mic_failures|mic_records|link_epoch|supervision_fail|executor_kind control_rx)" | sort -u | sed "s/log: //" | tr "\n" " ")" >> $D/samples.txt; }
 end=$((SECONDS+43200))
-( while [ $SECONDS -lt $end ]; do aplaymidi -p 128:0 out/open-ble/soak-r4/notes.mid >/dev/null 2>&1; sleep 1; done ) &
+( while [ $SECONDS -lt $end ]; do aplaymidi -p 128:0 out/open-ble/soak-r4/notes.mid >/dev/null 2>&1; sleep 1; done ) & notes=$!
 python3 tools/fm1_remote.py --port "$P" log > $D/before-log.txt
 cycle=0
 while [ $SECONDS -lt $end ]; do
@@ -51,7 +51,7 @@ while [ $SECONDS -lt $end ]; do
   done
   cycle=$((cycle+1))
 done
-kill %1 2>/dev/null; pkill aplaymidi
+kill $notes 2>/dev/null; pkill aplaymidi
 python3 tools/fm1_remote.py --port "$P" log > $D/final-log.txt
 sleep 5; pkill -INT -f "nrfutil-ble-sniffer sniff"
 log done
