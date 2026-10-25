@@ -7,10 +7,36 @@
 #include "ble_s3_sim.h"
 #include "../open_ble/ble_seed.h"
 #include "../open_ble/ble_crypto.h"
+#include "../open_ble/ble_reliability.h"
 uint8_t sim_flash[12288];
 int sim_flash_fault,sim_flash_idle=1,sim_flash_mismatch,sim_aes_fault;
+int sim_aes_wrong_blocks;
+#if FM1B_BLE_RELIABILITY && defined(BLE_MIC_RADIO)
+uint32_t sim_sw_aes_cost_ticks,sim_sw_key_cost_ticks;
+static unsigned sim_aes_hardware;
+extern void (*sim_sw_aes_hook)(void);
+int __real_tc_aes_encrypt(uint8_t *,const uint8_t *,const TCAesKeySched_t);
+int __wrap_tc_aes_encrypt(uint8_t *out,const uint8_t *in,const TCAesKeySched_t key)
+{
+    if(!sim_aes_hardware) {
+        sim_ticks+=sim_sw_aes_cost_ticks;
+        if(sim_sw_aes_hook) { void (*hook)(void)=sim_sw_aes_hook; sim_sw_aes_hook=0; hook(); }
+    }
+    return __real_tc_aes_encrypt(out,in,key);
+}
+int __real_tc_aes128_set_encrypt_key(TCAesKeySched_t,const uint8_t *);
+int __wrap_tc_aes128_set_encrypt_key(TCAesKeySched_t key,const uint8_t *in)
+{
+    if(!sim_aes_hardware) sim_ticks+=sim_sw_key_cost_ticks;
+    return __real_tc_aes128_set_encrypt_key(key,in);
+}
+#endif
 unsigned sim_erases[3],sim_programs[3];
 static struct tc_aes_key_sched_struct aes;
+#if FM1B_BLE_RELIABILITY
+static ble_aes_state_t aes_state;
+void ble_port_aes_state(ble_aes_state_t *out) { *out=aes_state; }
+#endif
 #ifdef BLE_MIC_RADIO
 static int aes_busy;
 static uint32_t aes_lock;
@@ -51,20 +77,44 @@ int ble_port_aes_begin(const uint8_t key[16])
 #ifdef BLE_MIC_RADIO
     aes_lock=ble_port_lock(); assert(!aes_busy); aes_busy=1;
 #endif
+    #if FM1B_BLE_RELIABILITY
+    aes_state.busy=1; aes_state.epoch=ble_link.epoch; aes_state.operations++;
+#endif
     uint32_t cost=sim_memory_cost_ticks; int rc;
-    sim_memory_cost_ticks=0; rc=!sim_aes_fault && tc_aes128_set_encrypt_key(&aes,key);
+    sim_memory_cost_ticks=0;
+#if FM1B_BLE_RELIABILITY && defined(BLE_MIC_RADIO)
+    sim_aes_hardware++;
+#endif
+    rc=!sim_aes_fault && tc_aes128_set_encrypt_key(&aes,key);
+#if FM1B_BLE_RELIABILITY && defined(BLE_MIC_RADIO)
+    sim_aes_hardware--;
+#endif
     sim_memory_cost_ticks=cost; return rc;
 }
 int ble_port_aes_block(const uint8_t in[16],uint8_t out[16])
 {
     uint32_t cost=sim_memory_cost_ticks; int rc;
     sim_aes_blocks++; sim_ticks+=sim_aes_cost_ticks;
+#if FM1B_BLE_RELIABILITY
+    aes_state.blocks++;
+#endif
     /* TinyCrypt simulates the AES peripheral. Its internal software copies
      * are not CPU work in the target driver; charge the block once. */
-    sim_memory_cost_ticks=0; rc=!sim_aes_fault && tc_aes_encrypt(out,in,&aes);
+    sim_memory_cost_ticks=0;
+#if FM1B_BLE_RELIABILITY && defined(BLE_MIC_RADIO)
+    sim_aes_hardware++;
+#endif
+    rc=!sim_aes_fault && tc_aes_encrypt(out,in,&aes);
+#if FM1B_BLE_RELIABILITY && defined(BLE_MIC_RADIO)
+    sim_aes_hardware--;
+#endif
+    if(rc && sim_aes_wrong_blocks) { out[0]^=1; if(sim_aes_wrong_blocks>0) sim_aes_wrong_blocks--; }
     sim_memory_cost_ticks=cost; return rc;
 }
 void ble_port_aes_end(void) {
+#if FM1B_BLE_RELIABILITY
+    aes_state.busy=0; aes_state.last_epoch=aes_state.epoch;
+#endif
 #ifdef BLE_MIC_RADIO
     assert(aes_busy); aes_busy=0; ble_port_unlock(aes_lock);
 #endif

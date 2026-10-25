@@ -1,0 +1,1 @@
+18:38:09 executor_kind control_rx max_ticks 2333 count 590 over100 0 opcode FFFF link_epoch 8 mic_failures 1 mic_records 1 sample_ms 119128 supervision_fail 0 

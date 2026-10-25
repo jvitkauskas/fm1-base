@@ -1,0 +1,3 @@
+18:26:05 start health port TEMPLATE FM-1:TEMPLATE FM-1 MIDI 1 28:0
+18:32:09 HIT
+18:32:09 done

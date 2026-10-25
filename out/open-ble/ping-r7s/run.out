@@ -1,0 +1,1 @@
+Terminated                 aplaymidi -p 128:0 out/open-ble/soak-r4/notes.mid > /dev/null 2>&1

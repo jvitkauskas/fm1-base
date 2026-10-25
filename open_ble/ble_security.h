@@ -4,6 +4,7 @@
 #define FELUCCA_BLE_SECURITY_H
 #include <stdint.h>
 #include "ble_diag.h"
+#include "ble_reliability.h"
 enum { BLE_ENC_N, BLE_ENC_S1, BLE_ENC_S2, BLE_ENC_PA, BLE_ENC_PB, BLE_ENC_PC };
 enum { BLE_MARK_RX_ON=1, BLE_MARK_RX_OFF, BLE_MARK_REJECT_ACK };
 typedef struct {
@@ -27,7 +28,7 @@ typedef struct {
     ble_mic_pdu_t rx[4],tx[2]; /* oldest first; metadata only */
 } ble_mic_record_t;
 unsigned ble_security_mic_records(ble_mic_record_t out[BLE_MIC_RECORDS]);
-void ble_security_tx_loaded(uint8_t sn);
+void ble_security_tx_loaded(unsigned id,uint8_t sn);
 /* R6 descriptor observations; no claim of an on-air TX sniffer. */
 enum { BLE_RADIO_EVENTS=32, BLE_RADIO_ROWS=64 };
 enum { BLE_RADIO_RX=1, BLE_RADIO_LOAD, BLE_RADIO_ACK, BLE_RADIO_TX_STATE, BLE_RADIO_PREP };
@@ -54,7 +55,7 @@ void ble_radio_freeze(uint8_t reason);
 void ble_radio_summary(ble_radio_summary_t *out);
 int ble_radio_read(uint32_t serial,ble_radio_event_t *out);
 #else
-#define ble_security_tx_loaded(sn) ((void)(sn))
+#define ble_security_tx_loaded(id,sn) ((void)(id),(void)(sn))
 #define ble_radio_event(event,closed) ((void)0)
 #define ble_radio_rx(event,status,header,slot,flags) 0u
 #define ble_radio_tx(kind,event,slot,id,header,status) ((void)0)

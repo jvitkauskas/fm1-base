@@ -74,6 +74,12 @@ static void open_ble_bonds_dump(void)
 #define BRD_DEC ob_dec
 #define BRD_HEX ob_hex
 #include "../open_ble/ble_radio_dump.inc"
+#if FM1B_BLE_RELIABILITY
+#define BRD_PUTS ob_puts
+#define BRD_DEC ob_dec
+#define BRD_HEX ob_hex
+#include "../open_ble/ble_reliability_dump.inc"
+#endif
 static void open_ble_mic_dump(void)
 {
     /* Snapshot before USB output yields: failures cannot tear a readout. */
@@ -181,6 +187,9 @@ static void open_ble_health_dump(void)
 #if FM1B_BLE_DIAG
     open_ble_events_dump();
     open_ble_mic_dump();
+#if FM1B_BLE_RELIABILITY
+    ble_reliability_dump();
+#endif
     ble_radio_dump();
 #endif
 }

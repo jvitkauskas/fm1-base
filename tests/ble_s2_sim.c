@@ -55,6 +55,12 @@ void ble_port_unlock(uint32_t key) { (void)key; }
 #ifdef BLE_MIC_RADIO
 #include "ble_mic_radio.inc"
 #else
+#if FM1B_BLE_RELIABILITY
+int ble_port_diag_rx_read(unsigned slot,uint16_t *header,uint16_t *status,uint8_t out[31])
+{ (void)slot; (void)header; (void)status; (void)out; return 0; }
+void ble_port_diag_rx_release(unsigned slot) { (void)slot; }
+int ble_port_diag_radio_idle(void) { return 1; }
+#endif
 static void refill(unsigned limit)
 {
     unsigned i;

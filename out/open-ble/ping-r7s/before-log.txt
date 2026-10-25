@@ -1,0 +1,484 @@
+log: no crash recorded
+log: rails boot 0B 1B now 0F 1F x1
+log: last watchdog reset in ?
+log: open BLE S3.1d / NimBLE 1.9.0 starting
+log: open BLE READY
+log: gap 00000083 late 00000000 tick 0000002C
+log: lock 00000000 from 00000000
+log: peripheral_state 2
+log: peripheral_linked 1
+log: peripheral_connected 1
+log: audio_late 0
+log: audio_max_wall_us 155
+log: audio_xruns 0
+log: midi_ble_in 1
+log: midi_ble_out 0
+log: ble_diag 1
+log: sample_ms 33152
+log: peripheral_state 2
+log: peripheral_linked 1
+log: link_state_idle_created_up_closing_stopped 2
+log: link_epoch 2
+log: conn_interval_1250us 12
+log: conn_latency 0
+log: conn_timeout_10ms 600
+log: conn_event 2100
+log: conn_events 2101
+log: conn_updates 1
+log: pending_kind 0
+log: supervision_fail 0
+log: late_instants 0
+log: disconnects 0
+log: enc_enabled 1
+log: mic_failures 0
+log: nimble_bonded 1
+log: nimble_subscribed 1
+log: nimble_mtu 517
+log: nimble_resets 0
+log: nimble_error 0
+log: param_pending 0
+log: param_requests 1
+log: param_status 0
+log: gatt_invalidations 0
+log: gatt_confirmations 0
+log: gatt_peer_version 3
+log: bond_pending 0
+log: bond_failures 0
+log: bond_count 1
+log: bond_capacity 8
+log: bond_replacements 0
+log: bond_identity E8:BF:B8:9C:77:40 type 0 rank 1 SC cccd 0008=0002 cccd 0010=0001
+log: midi_packets_in 1
+log: midi_packets_out 0
+log: midi_bad 0
+log: midi_drop 0
+log: error 0
+log: dma_canary_errors 0
+log: executor_selftest 1
+log: executor_dispatch_live_max_us 176
+log: executor_item_max_us 74
+log: executor_item_over_100us 0
+log: executor_own_over_250us 0
+log: executor_over_250us_plus_item 0
+log: refill_max_us 73
+log: refill_over_80us 0
+log: worker_timer_calls 31946
+log: worker_timer_max_gap_us 1211
+log: worker_timer_over_7500us 0
+log: worker_gap_max ms 6699 us 1211 state link_up end_state link_up reason radio_start, epoch 2
+log: adv_session 1
+log: connect_seen 1
+log: connect_accepted 1
+log: adv_session_record id 1 ms 1486 seen 1 accepted 1
+log: audio_late 0
+log: audio_max_wall_us 155
+log: audio_xruns 0
+log: ble_event ms 1746 session 1 conn 80 connect a 0 b 0 c 0
+log: ble_event ms 1840 session 1 conn 80 enc_start a 0 b 1 c 0
+log: ble_event ms 1840 session 1 conn 80 cccd_restore a 9 b 2 c 0
+log: ble_event ms 1840 session 1 conn 80 cccd_restore a 17 b 1 c 0
+log: ble_event ms 1875 session 1 conn 80 mtu a 517 b 0 c 0
+log: ble_event ms 1899 session 1 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 1989 session 1 conn 80 cccd_write a 17 b 1 c 0
+log: ble_event ms 2154 session 1 conn 80 cccd_write a 9 b 2 c 0
+log: ble_event ms 2184 session 1 conn 80 midi_read a 16 b 0 c 0
+log: ble_event ms 6746 session 1 conn 80 l2cap_request a 12 b 600 c 0
+log: ble_event ms 6775 session 1 conn 80 l2cap_result a 0 b 0 c 0
+log: ble_event ms 6879 session 1 conn 80 conn_update a 12 b 0 c 600
+log: mic_records 0
+log: r7_diag 1 hex_fields results_0_fail_1_pass_2_unavailable
+log: r7_background kat_runs 00000020 kat_failures 00000000 tx_checked 0000000E tx_mismatches 00000000
+log: r7_cost_ticks24 steps 00000094 max 000006BD over100 00000000 wall_max 0000109E
+log: r7_total_ticks24 000000000001E40E tx_hold_max 00005114
+log: r7_record rx kind 00000000 complete 00000000 epoch 00000000 ms 00000000
+log: r7_record tx kind 00000000 complete 00000000 epoch 00000000 ms 00000000
+log: r7_end
+log: radio_frozen 0 reason 00 events 32
+log: radio_tx_source descriptor_only nesn_unknown air_new_repeat_unknown
+log: radio_event serial 2072 epoch 2 event 2071 closed 1 rows 3 overflow 0
+log: radio 2072/0 tx_state t 2EEB734D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2072/1 tx_state t 2EEB738A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2072/2 rx t 2EEB740E slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 0101 flags 00 decision 1 ctr none
+log: radio_event serial 2073 epoch 2 event 2072 closed 1 rows 3 overflow 0
+log: radio 2073/0 tx_state t 2EF0F18B slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2073/1 tx_state t 2EF0F1C8 slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2073/2 rx t 2EF0F26A slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 3501 flags 00 decision 1 ctr none
+log: radio_event serial 2074 epoch 2 event 2073 closed 1 rows 3 overflow 0
+log: radio 2074/0 tx_state t 2EF66FCE slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2074/1 tx_state t 2EF6700B slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2074/2 rx t 2EF670AC slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 6901 flags 00 decision 1 ctr none
+log: radio_event serial 2075 epoch 2 event 2074 closed 1 rows 3 overflow 0
+log: radio 2075/0 tx_state t 2EFBEE0F slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2075/1 tx_state t 2EFBEE4B slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2075/2 rx t 2EFBEEED slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 0901 flags 00 decision 1 ctr none
+log: radio_event serial 2076 epoch 2 event 2075 closed 1 rows 3 overflow 0
+log: radio 2076/0 tx_state t 2F016C4D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2076/1 tx_state t 2F016C8A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2076/2 rx t 2F016CFD slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 3D01 flags 00 decision 1 ctr none
+log: radio_event serial 2077 epoch 2 event 2076 closed 1 rows 3 overflow 0
+log: radio 2077/0 tx_state t 2F06EA8D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2077/1 tx_state t 2F06EACA slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2077/2 rx t 2F06EB6B slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 7101 flags 00 decision 1 ctr none
+log: radio_event serial 2078 epoch 2 event 2077 closed 1 rows 3 overflow 0
+log: radio 2078/0 tx_state t 2F0C68CD slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2078/1 tx_state t 2F0C690A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2078/2 rx t 2F0C69AA slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 1101 flags 00 decision 1 ctr none
+log: radio_event serial 2079 epoch 2 event 2078 closed 1 rows 3 overflow 0
+log: radio 2079/0 tx_state t 2F11E70E slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2079/1 tx_state t 2F11E74B slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2079/2 rx t 2F11E7EC slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 4501 flags 00 decision 1 ctr none
+log: radio_event serial 2080 epoch 2 event 2079 closed 1 rows 3 overflow 0
+log: radio 2080/0 tx_state t 2F17654D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2080/1 tx_state t 2F17658A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2080/2 rx t 2F17662C slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 7901 flags 00 decision 1 ctr none
+log: radio_event serial 2081 epoch 2 event 2080 closed 1 rows 3 overflow 0
+log: radio 2081/0 tx_state t 2F1CE38D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2081/1 tx_state t 2F1CE3CA slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2081/2 rx t 2F1CE46C slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 1901 flags 00 decision 1 ctr none
+log: radio_event serial 2082 epoch 2 event 2081 closed 1 rows 3 overflow 0
+log: radio 2082/0 tx_state t 2F2261CE slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2082/1 tx_state t 2F22620B slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2082/2 rx t 2F2262AB slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 4D01 flags 00 decision 1 ctr none
+log: radio_event serial 2083 epoch 2 event 2082 closed 1 rows 3 overflow 0
+log: radio 2083/0 tx_state t 2F27E017 slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2083/1 tx_state t 2F27E054 slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2083/2 rx t 2F27E0F4 slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 8101 flags 00 decision 1 ctr none
+log: radio_event serial 2084 epoch 2 event 2083 closed 1 rows 3 overflow 0
+log: radio 2084/0 tx_state t 2F2D5E4D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2084/1 tx_state t 2F2D5E8A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2084/2 rx t 2F2D5F2C slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 2101 flags 00 decision 1 ctr none
+log: radio_event serial 2085 epoch 2 event 2084 closed 1 rows 3 overflow 0
+log: radio 2085/0 tx_state t 2F32DC8D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2085/1 tx_state t 2F32DCCA slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2085/2 rx t 2F32DD6C slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 5501 flags 00 decision 1 ctr none
+log: radio_event serial 2086 epoch 2 event 2085 closed 1 rows 3 overflow 0
+log: radio 2086/0 tx_state t 2F385ACD slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2086/1 tx_state t 2F385B0A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2086/2 rx t 2F385BAC slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 8901 flags 00 decision 1 ctr none
+log: radio_event serial 2087 epoch 2 event 2086 closed 1 rows 3 overflow 0
+log: radio 2087/0 tx_state t 2F3DD90D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2087/1 tx_state t 2F3DD94A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2087/2 rx t 2F3DD9EC slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 2901 flags 00 decision 1 ctr none
+log: radio_event serial 2088 epoch 2 event 2087 closed 1 rows 3 overflow 0
+log: radio 2088/0 tx_state t 2F43574D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2088/1 tx_state t 2F43578A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2088/2 rx t 2F43582C slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 5D01 flags 00 decision 1 ctr none
+log: radio_event serial 2089 epoch 2 event 2088 closed 1 rows 3 overflow 0
+log: radio 2089/0 tx_state t 2F48D58D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2089/1 tx_state t 2F48D5CA slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2089/2 rx t 2F48D66C slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 9101 flags 00 decision 1 ctr none
+log: radio_event serial 2090 epoch 2 event 2089 closed 1 rows 3 overflow 0
+log: radio 2090/0 tx_state t 2F4E53CD slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2090/1 tx_state t 2F4E540A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2090/2 rx t 2F4E54AC slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 3101 flags 00 decision 1 ctr none
+log: radio_event serial 2091 epoch 2 event 2090 closed 1 rows 3 overflow 0
+log: radio 2091/0 tx_state t 2F53D20E slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2091/1 tx_state t 2F53D24B slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2091/2 rx t 2F53D2EC slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 6501 flags 00 decision 1 ctr none
+log: radio_event serial 2092 epoch 2 event 2091 closed 1 rows 3 overflow 0
+log: radio 2092/0 tx_state t 2F59504D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2092/1 tx_state t 2F59508A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2092/2 rx t 2F5950FC slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 0501 flags 00 decision 1 ctr none
+log: radio_event serial 2093 epoch 2 event 2092 closed 1 rows 3 overflow 0
+log: radio 2093/0 tx_state t 2F5ECE8D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2093/1 tx_state t 2F5ECECA slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2093/2 rx t 2F5ECF6C slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 3901 flags 00 decision 1 ctr none
+log: radio_event serial 2094 epoch 2 event 2093 closed 1 rows 3 overflow 0
+log: radio 2094/0 tx_state t 2F644CCD slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2094/1 tx_state t 2F644D0A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2094/2 rx t 2F644DAC slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 6D01 flags 00 decision 1 ctr none
+log: radio_event serial 2095 epoch 2 event 2094 closed 1 rows 3 overflow 0
+log: radio 2095/0 tx_state t 2F69CB0D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2095/1 tx_state t 2F69CB4A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2095/2 rx t 2F69CBEC slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 0D01 flags 00 decision 1 ctr none
+log: radio_event serial 2096 epoch 2 event 2095 closed 1 rows 3 overflow 0
+log: radio 2096/0 tx_state t 2F6F494D slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2096/1 tx_state t 2F6F498A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2096/2 rx t 2F6F4A2C slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 4101 flags 00 decision 1 ctr none
+log: radio_event serial 2097 epoch 2 event 2096 closed 1 rows 3 overflow 0
+log: radio 2097/0 tx_state t 2F74C78E slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2097/1 tx_state t 2F74C7CB slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2097/2 rx t 2F74C86C slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 7501 flags 00 decision 1 ctr none
+log: radio_event serial 2098 epoch 2 event 2097 closed 1 rows 3 overflow 0
+log: radio 2098/0 tx_state t 2F7A51CD slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2098/1 tx_state t 2F7A520A slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2098/2 rx t 2F7A52B5 slot 0 id 255 sn 0 nesn 0 md 0 llid 2 len 16 raw 1501 flags 00 decision 5 ctr 000000000F
+log: radio_event serial 2099 epoch 2 event 2098 closed 1 rows 3 overflow 0
+log: radio 2099/0 tx_state t 2F7FC4E9 slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2099/1 tx_state t 2F7FC527 slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2099/2 rx t 2F7FC697 slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 4901 flags 00 decision 1 ctr none
+log: radio_event serial 2100 epoch 2 event 2099 closed 1 rows 3 overflow 0
+log: radio 2100/0 tx_state t 2F854309 slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2100/1 tx_state t 2F854346 slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2100/2 rx t 2F854432 slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 7D01 flags 00 decision 1 ctr none
+log: radio_event serial 2101 epoch 2 event 2100 closed 1 rows 3 overflow 0
+log: radio 2101/0 tx_state t 2F8AC10F slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2101/1 tx_state t 2F8AC14C slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2101/2 rx t 2F8AC1ED slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 1D01 flags 00 decision 1 ctr none
+log: radio_event serial 2102 epoch 2 event 2101 closed 1 rows 3 overflow 0
+log: radio 2102/0 tx_state t 2F903F57 slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2102/1 tx_state t 2F903F94 slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0A01 flags 00 decision 0 ctr none
+log: radio 2102/2 rx t 2F904034 slot 0 id 255 sn 0 nesn 0 md 0 llid 1 len 0 raw 5101 flags 00 decision 1 ctr none
+log: radio_event serial 2103 epoch 2 event 2102 closed 1 rows 3 overflow 0
+log: radio 2103/0 tx_state t 2F95BD15 slot 0 id 255 sn 1 nesn ? md 0 llid 2 len 20 raw 0801 flags 00 decision 0 ctr none
+log: radio 2103/1 tx_state t 2F95BD31 slot 1 id 255 sn 0 nesn ? md 0 llid 3 len 6 raw 0801 flags 00 decision 0 ctr none
+log: radio 2103/2 rx t 2F95BE11 slot 1 id 255 sn 1 nesn 1 md 0 llid 1 len 0 raw 8501 flags 00 decision 1 ctr none
+log: BLE S3.1 / NimBLE 1.9.0 / MIDI; SC Just Works + legacy
+log: enc_phase_N_S1_S2_PA_PB_PC 0
+log: enc_rx_on 1
+log: enc_tx_on 1
+log: enc_enabled 1
+log: enc_starts 1
+log: enc_refreshes 0
+log: mic_failures 0
+log: enc_phase_errors 0
+log: ltk_requests 1
+log: ltk_negative 0
+log: enc_tx_counter_hi 0
+log: enc_tx_counter_lo 0000000E
+log: enc_rx_counter_hi 0
+log: enc_rx_counter_lo 00000010
+log: seed_FAILED_FIRST_CHAINED_PROVISIONED_UNPERSISTED 2
+log: seed_origin 2
+log: seed_STORED_NOT_STORED_UNVERIFIED 0
+log: seed_sequence 00000002
+log: seed_credit_bits 0
+log: seed_malformed 0
+log: seed_conflicts 0
+log: seed_flash_failures 0
+log: le_rand_calls 0
+log: entropy_bytes 12
+log: reseed_attempts 1
+log: bond_count 1
+log: bond_capacity 8
+log: bond_replacements 0
+log: bond_identity E8:BF:B8:9C:77:40 type 0 rank 1 SC cccd 0008=0002 cccd 0010=0001
+log: bond_records 4
+log: bond_pending 0
+log: bond_writes 0
+log: bond_erases 0
+log: bond_failures 0
+log: bond_malformed 0
+log: bond_private_refused 0
+log: bond_private_dropped 0
+log: bond_orphan_dropped 0
+log: bond_equal_writes_skipped 0
+log: rl_capacity 10
+log: rl_entries 1
+log: rl_enabled 1
+log: rl_attempts 0
+log: rl_matches 0
+log: rl_unresolved 0
+log: rl_aes_failures 0
+log: rl_network_rejected 0
+log: executor_selftest 1
+log: executor_dispatch_max_us 176
+log: executor_dispatch_live_max_us 176
+log: executor_dispatch_negative 0
+log: executor_wall_max_us 306
+log: executor_own_max_us 175
+log: executor_item_max_us 74
+log: executor_item_over_100us 0
+log: executor_item_max_kind refill
+log: executor_item_max_opcode 00000006
+log: executor_kind service max_ticks 115 count 32129 over100 0 opcode 0000
+log: executor_kind key max_ticks 1074 count 31974 over100 0 opcode 0000
+log: executor_kind rx max_ticks 1679 count 31958 over100 0 opcode FFFF
+log: executor_kind control max_ticks 982 count 7 over100 0 opcode 0008
+log: executor_kind housekeep max_ticks 1295 count 31974 over100 0 opcode 0000
+log: executor_kind delivery max_ticks 603 count 32061 over100 0 opcode 0000
+log: executor_kind resolution max_ticks 200 count 1 over100 0 opcode 0000
+log: executor_kind driver max_ticks 83 count 32062 over100 0 opcode 0000
+log: executor_kind command max_ticks 752 count 20 over100 0 opcode 201A
+log: executor_kind stop max_ticks 146 count 1 over100 0 opcode 0C03
+log: executor_kind adv_prepare max_ticks 852 count 23 over100 0 opcode 200A
+log: executor_kind entropy_sample max_ticks 1020 count 31974 over100 0 opcode 0000
+log: executor_kind entropy_reseed max_ticks 607 count 2 over100 0 opcode 0000
+log: executor_kind entropy_output max_ticks 666 count 1 over100 0 opcode 0000
+log: executor_kind entropy_rekey max_ticks 513 count 2 over100 0 opcode 0000
+log: executor_kind control_rx max_ticks 1549 count 7 over100 0 opcode 0012
+log: executor_kind refill max_ticks 1796 count 36 over100 0 opcode 0006
+log: executor_kind reset_clear max_ticks 204 count 42 over100 0 opcode 0C03
+log: executor_kind reset_defaults max_ticks 114 count 1 over100 0 opcode 0C03
+log: executor_kind reset_stats max_ticks 367 count 1 over100 0 opcode 0C03
+log: executor_kind reset_complete max_ticks 204 count 1 over100 0 opcode 0C03
+log: executor_kind reliability max_ticks 1746 count 147 over100 0 opcode 0000
+log: executor_own_over_250us 0
+log: executor_over_250us_plus_item 0
+log: refill_max_us 73
+log: refill_ccm_max_us 26
+log: refill_other_max_us 46
+log: refill_over_80us 0
+log: worker_timer_calls 32134
+log: worker_timer_max_gap_us 1211
+log: worker_timer_over_7500us 0
+log: worker_timer_last_ticks 2FD24E45
+log: worker_timer_con 00000019
+log: worker_timer_cnt 2175
+log: worker_timer_prd 6000
+log: worker_timer_irqcfg 00000005
+log: ble_breadcrumb 30040841
+log: ble_breadcrumb_ticks 2FD24E7C
+log: ble_fault_breadcrumb 00000000
+log: ble_fault_ticks 00000000
+log: ble_fault_crash_count 0
+log: link_state_idle_created_up_closing_stopped 2
+log: link_epoch 2
+log: link_established 1
+log: conn_interval_1250us 12
+log: conn_latency 0
+log: conn_timeout_10ms 600
+log: conn_event 2114
+log: connections 1
+log: connect_invalid 0
+log: conn_events 2115
+log: rx_A_new 2116
+log: rx_B_crc_5_13 0
+log: rx_C_repeat_9 0
+log: rx_D_unknown 0
+log: retransmission_rx 0
+log: rx_delayed_stamp 0
+log: rx_backpressure 0
+log: rx_queued 0
+log: rx_peak 2
+log: tx_queued_loaded 0
+log: establishment_fail 0
+log: supervision_fail 0
+log: disconnects 0
+log: last_disconnect_reason 00000000
+log: conn_updates 1
+log: channel_map_updates 0
+log: late_instants 0
+log: pending_proc kind 0 instant 0 received 0 programmed 0 interval 0 latency 0 timeout 0 win 0 offset 0 map 00 00 00 00 00
+log: control_last_ignored opcode 0 reason 0 event 0
+log: control_ignore_length 0
+log: control_ignore_params 0
+log: control_ignore_map 0
+log: control_ignore_pending 0
+log: control_ignore_role 0
+log: control_ignore_unexpected 0
+log: control_ignore_version 0
+log: control_ignore_reserved 0
+log: control_ignore_encrypted 0
+log: conn_update serial 1 epoch 2 old 12 new 12 win 1 offset 0 instant 343 received 336 outcome 3 reason 0
+log: conn_update serial 0 epoch 0 old 0 new 0 win 0 offset 0 instant 0 received 0 outcome 0 reason 0
+log: conn_update serial 0 epoch 0 old 0 new 0 win 0 offset 0 instant 0 received 0 outcome 0 reason 0
+log: conn_update serial 0 epoch 0 old 0 new 0 win 0 offset 0 instant 0 received 0 outcome 0 reason 0
+log: acl_tx_accepted 12
+log: acl_tx_rejected 0
+log: acl_rx 14
+log: acl_acked 12
+log: ncp_credits 12
+log: acl_flushed 0
+log: control_dropped 0
+log: control_ignored 0
+log: worker_max_gap_us 1455
+log: worker_max_us 260
+log: worker_over_7500us 0
+log: worker_calls 31786
+log: terminate_timeouts 0
+log: nimble_running 1
+log: nimble_synced 1
+log: nimble_syncs 1
+log: nimble_resets 0
+log: nimble_error 0
+log: nimble_assertions 0
+log: nimble_event_drop 0
+log: nimble_acl_drop 0
+log: nimble_encrypted 1
+log: nimble_bonded 1
+log: nimble_key_size 16
+log: nimble_pair_method_legacy1_SC2 2
+log: security_requests 0
+log: nimble_bond_sc 1
+log: nimble_bond_identity_known 1
+log: nimble_peer_identity_type 0
+log: nimble_peer_identity 40 77 9C B8 BF E8
+log: security_skipped 0
+log: security_already 0
+log: pair_failures 0
+log: pair_last_status 0
+log: nimble_main_gap_ms 25
+log: nimble_mtu 517
+log: midi_echo 0
+log: nimble_subscribed 1
+log: nimble_heap_used 572
+log: nimble_heap_peak 584
+log: nimble_heap_fail 0
+log: midi_packets_in 2
+log: midi_packets_out 0
+log: midi_bad 0
+log: midi_drop 0
+log: frozen 0
+log: loop_iters_per_us_x1000 44999
+log: loop_ticks 53334
+log: clock 0 000001C1
+log: clock 1 00010400
+log: clock 2 00000006
+log: clock 3 00010200
+log: icfg_probe 043F0600 043F0600 043F0600 043F0700
+log: ticks_while_irq_masked 0
+log: error 0
+log: failure_stage 0
+log: calibration_1_record_2_self 2
+log: vm_status 2
+log: btif_status 1
+log: records_present 00000010
+log: public_address_hci 6C DF C0 52 60 FD
+log: configured_random_hci 00 00 00 00 00 00
+log: trim_crc 000089C9
+log: bringup_us 551175
+log: bringup_end_ticks 02381AF0
+log: first_hci_command_ticks 0238B233
+log: step_us 1 57
+log: step_us 2 5
+log: step_us 3 4035
+log: step_us 4 17
+log: step_us 5 46217
+log: step_us 6 490947
+log: step_us 7 7
+log: step_us 8 124
+log: step_us 9 4
+log: step_us 10 3945
+log: step_us 11 4666
+log: step_us 12 835
+log: step_us 13 47
+log: step_us 14 51
+log: step_us 15 79
+log: enabled 0
+log: stopping 0
+log: driver_step 0
+log: driver_error 0
+log: commands 21
+log: replies 22
+log: last_opcode 0000201A
+log: last_status 00000000
+log: intake_rejected 0
+log: command_overflow 0
+log: advertising_events 6
+log: event_irqs 2120
+log: rx_irqs 2117
+log: scan_req 2
+log: connect_ignored 0
+log: bad_rx 0
+log: rx_max_ticks 2697
+log: event_max_ticks 998
+log: rx_over_380us 0
+log: event_work_max_ticks 933
+log: event_work_over_150us 0
+log: ble_critical_max_ticks 28822
+log: ble_critical_over_390us 1
+log: main_controller_gap_us 1211
+log: stop_timeouts 0
+log: restarts 0
+log: enable_ticks 0241354D
+log: first_event_close_ticks 02429284
+log: dma_base 01C44A38
+log: dma_end 01C45750
+log: modem_base 01C45750
+log: dma_canary_errors 0
+log: p33_timeouts 0
+log: trace_records 87
+log: trace_total 86
+log: trace_frozen_drops 0
+log: vco_limits 47 47 47 47 47 47 4A 4F 56 5D 64 6B 72 79 81 88 8B 83 83 83 83 83 83 83 87 8E 96 9D A4 A8 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 A9 3F

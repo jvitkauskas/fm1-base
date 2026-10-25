@@ -46,13 +46,28 @@ unsigned ble_security_mic_records(ble_mic_record_t out[BLE_MIC_RECORDS])
     for(unsigned i=0;i<n;i++) out[i]=mic_records[(mic_serial-n+i)%BLE_MIC_RECORDS];
     ble_port_unlock(key); return (unsigned)n;
 }
-void ble_security_tx_loaded(uint8_t sn)
+void ble_security_tx_loaded(unsigned id,uint8_t sn)
 {
+#if FM1B_BLE_RELIABILITY
+    const tx_t *t=&queues.tx[id];
+    if(t->radio_counter!=BLE_RADIO_NO_COUNTER)
+        security_history(security.tx,2,&security.tx_count,sn,t->radio_counter,(uint8_t)(t->n+4u));
+#else
+    (void)id;
     if(security.prepared_encrypted)
         security_history(security.tx,2,&security.tx_count,sn,security.prepared_counter,security.prepared_length);
+#endif
 }
 #endif
-static void security_init(void) { ble_entropy_cancel(BLE_RANDOM_LINK); ble_secure_zero(&security,sizeof security); }
+#if FM1B_BLE_RELIABILITY
+#include "ble_reliability.inc"
+#endif
+static void security_init(void) {
+#if FM1B_BLE_RELIABILITY
+    if(!reset.active) reliability_cancel();
+#endif
+    ble_entropy_cancel(BLE_RANDOM_LINK); ble_secure_zero(&security,sizeof security);
+}
 static void security_new(void)
 {
     ble_security_diag_t saved=security.d;
@@ -109,13 +124,23 @@ static int security_receive_inner(rx_t *r)
     if(!r->n && llid==1) return 0;
     if(security.d.rx_on && r->n) {
         uint64_t count=security.d.rx_counter++;
+#if FM1B_BLE_RELIABILITY
+        uint8_t raw[31]; ble_aes_state_t before;
+        memcpy(raw,r->data,r->n); ble_port_aes_state(&before);
+#endif
         if(count>BLE_CCM_LAST || r->n<5 || !ble_ccm(security.key,security.iv,count,1,(uint8_t)llid,r->data,(uint8_t)(r->n-4u),1)) {
             BLE_DIAG_ONLY(radio_auth(r->radio_id,count,0));
             BLE_DIAG_ONLY(security_mic_record(r,count));
+#if FM1B_BLE_RELIABILITY
+            reliability_rx_failure(r,count,raw,&before);
+#endif
             return security_auth_failure(1);
         }
         BLE_DIAG_ONLY(radio_auth(r->radio_id,count,1));
         BLE_DIAG_ONLY(security_history(security.rx,4,&security.rx_count,(r->header>>3)&1u,count,r->n));
+#if FM1B_BLE_RELIABILITY
+        reliability.link.rx_ok=1; reliability_inputs_wipe();
+#endif
         r->n=(uint8_t)(r->n-4u);
     }
     if(!r->n || !llid) {
@@ -143,6 +168,9 @@ static int security_receive(rx_t *r)
     /* Detection and closing share refill exclusion. In particular CCM's inner
      * AES unlock must not expose a failed MIC to a preempting TX refill. */
     uint32_t key=ble_port_lock(); int accepted=security_receive_inner(r);
+#if FM1B_BLE_RELIABILITY
+    if(!reliability.failure_active) ble_port_diag_rx_release(r->slot);
+#endif
     ble_port_unlock(key); return accepted;
 }
 static void security_reject(uint8_t error)
@@ -161,6 +189,16 @@ static int security_control(const uint8_t *p,uint8_t n,uint16_t received)
         if(security.d.phase!=BLE_ENC_N && security.d.phase!=BLE_ENC_PC) return security_auth_failure(0),1;
         security.d.phase=BLE_ENC_S1; security.rejecting=0;
         memcpy(security.request,p+1,10); memcpy(security.skd,p+11,8); memcpy(security.iv,p+19,4);
+#if FM1B_BLE_RELIABILITY
+        reliability.link.enc_ms=queues.control.received_ms; reliability.link.enc_valid=1;
+        reliability.link.ack_valid=0; reliability.link.rx_ok=reliability.link.tx_ok=0;
+        reliability.link.old_enc=reliability_old_work();
+        memcpy(reliability.link.clear,p+1,10);
+        memcpy(reliability.link.skd,p+11,8); memset(reliability.link.skd+8,0,8);
+        memcpy(reliability.link.iv,p+19,4); memset(reliability.link.iv+4,0,4);
+        ble_secure_zero(reliability.link.ltk,16); ble_secure_zero(reliability.link.skd_input,16);
+        reliability.link.inputs=reliability.link.derived_valid=0;
+#endif
         security.random_pending=1; ble_port_pend(); return 1;
     }
     if(p[0]==6 && n==1 && security.d.phase==BLE_ENC_S2) {
@@ -207,6 +245,9 @@ static void security_worker(void)
         security.random_pending=0;
         if(rc<0) { security_reject(0x1f); return; }
         memcpy(security.skd+8,random,8); memcpy(security.iv+4,random+8,4); memcpy(reply+1,random,12);
+#if FM1B_BLE_RELIABILITY
+        memcpy(reliability.link.skd,security.skd,16); memcpy(reliability.link.iv,security.iv,8);
+#endif
         ble_secure_zero(random,sizeof random);
         if(tx_queue(reply,sizeof reply,3,0)<0) { ble_ll_close(0x1f); return; }
         security.waiting=security.ltk_event=1; security.d.ltk_requests++; return;
@@ -216,6 +257,11 @@ static void security_worker(void)
     security.reply_pending=0;
     if(!ble_aes_le(security.ltk,security.skd,key_le)) { ble_ll_close(0x1f); return; }
     for(i=0;i<16;i++) security.key[i]=key_le[15u-i];
+#if FM1B_BLE_RELIABILITY
+    memcpy(reliability.link.ltk,security.ltk,16); memcpy(reliability.link.skd_input,security.skd,16);
+    memcpy(reliability.link.derived,security.key,16); memcpy(reliability.link.skd,security.skd,16);
+    memcpy(reliability.link.iv,security.iv,8); reliability.link.inputs=reliability.link.derived_valid=1;
+#endif
     ble_secure_zero(key_le,sizeof key_le); ble_secure_zero(security.ltk,sizeof security.ltk);
     if(tx_queue(&p,1,3,0)<0) ble_ll_close(0x1f);
 }
@@ -244,9 +290,16 @@ int ble_ll_tx_prepare(unsigned id,uint8_t out[31],uint8_t *n)
     if(count>BLE_CCM_LAST || (count==BLE_CCM_LAST && !t->terminate)) { ble_ll_close(0x16); return 0; }
     BLE_DIAG_ONLY(t->radio_counter=count);
     security.d.tx_counter++;
+#if FM1B_BLE_RELIABILITY
+    ble_aes_state_t before; ble_port_aes_state(&before);
+#endif
     if(!ble_ccm(security.key,security.iv,count,0,t->llid,out,*n,0)) { ble_ll_close(0x1f); return 0; }
     BLE_DIAG_ONLY(security.prepared_counter=count; security.prepared_length=(uint8_t)(*n+4u); security.prepared_encrypted=1);
-    *n=(uint8_t)(*n+4u); return 1;
+    *n=(uint8_t)(*n+4u);
+#if FM1B_BLE_RELIABILITY
+    if(!reliability_tx_check(id,out,*n,count,&before)) return 0;
+#endif
+    return 1;
 }
 static int security_poll(uint8_t *p,uint16_t *n)
 {

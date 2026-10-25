@@ -52,6 +52,10 @@ void ble_time_pass_end(void)
     tm.running=0;
 }
 int ble_time_budget(void) { return !tm.running || (uint32_t)(ble_time_own()-tm.pass_own)<250u*24u; }
+#if FM1B_BLE_RELIABILITY
+int ble_time_has_room(uint32_t ticks)
+{ return !tm.running || (uint32_t)(ble_time_own()-tm.pass_own)+ticks<250u*24u; }
+#endif
 uint32_t ble_time_item_begin(void) { return ble_time_own(); }
 void ble_time_item_end(uint32_t start,ble_work_kind_t kind,uint16_t opcode)
 {
@@ -69,7 +73,11 @@ const char *ble_time_kind_name(unsigned kind)
     static const char *const names[BLE_WORK_COUNT]={"service","key","rx","control",
         "housekeep","delivery","resolution","driver","command","stop","adv_prepare",
         "entropy_sample","entropy_reseed","entropy_output","entropy_rekey",
-        "control_rx","refill","reset_clear","reset_defaults","reset_stats","reset_complete"};
+        "control_rx","refill","reset_clear","reset_defaults","reset_stats","reset_complete"
+#if FM1B_BLE_RELIABILITY
+        ,"reliability"
+#endif
+    };
     return kind<BLE_WORK_COUNT ? names[kind] : "unknown";
 #else
     (void)kind; return "disabled";

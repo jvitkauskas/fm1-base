@@ -1,0 +1,9 @@
+18:36:46 sniffer segment seg-183643.pcap
+18:36:49 disconnect forced (cycle 0) try 1
+18:36:56 sniffer data packets after reconnect: 0
+18:36:59 sniffer segment seg-183656.pcap
+18:37:02 disconnect forced (cycle 0) try 2
+18:37:09 sniffer data packets after reconnect: 907
+18:37:09 apto handle 0x0800 status 0x0
+18:38:09 HIT
+18:38:21 done

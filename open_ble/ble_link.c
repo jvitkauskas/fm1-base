@@ -14,6 +14,13 @@
 #include "ble_seed.h"
 #include "ble_crypto.h"
 static void security_init(void),security_new(void),security_worker(void);
+#if FM1B_BLE_RELIABILITY
+static void reliability_disconnect(void),reliability_cancel(void);
+static int reliability_hold_close(uint8_t reason),reliability_worker(void),reliability_reset_cleanup(void);
+static uint32_t reliability_old_work(void),reliability_work_before_create(void);
+static void reliability_created(uint32_t old);
+static void reliability_ack(void),reliability_disconnected(void);
+#endif
 static int security_procedure(const uint8_t *p,uint8_t n);
 #endif
 struct ble_link ble_link;
@@ -46,7 +53,11 @@ static struct {
     uint32_t order;
     uint8_t r,w,count,pdus,hr,hw,hcount;
 } queues __attribute__((section(".pool.ble")));
-static struct { uint32_t epoch; unsigned offset; uint8_t active; } reset;
+static struct { uint32_t epoch; unsigned offset; uint8_t active;
+#if FM1B_BLE_RELIABILITY
+    uint8_t diag_done;
+#endif
+} reset;
 #if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
 static uint32_t last_update_ms;
 static uint8_t last_update_valid;
@@ -165,13 +176,24 @@ void ble_ll_init(void) { memset(&ble_link,0,sizeof ble_link); memset(&queues,0,s
 void ble_ll_reset(void)
 {
     ble_ll_reset_begin();
-    while(!ble_ll_reset_step()) { } /* synchronous test/startup helper only */
+    while(!ble_ll_reset_step()) {
+#if FM1B_BLE_RELIABILITY
+        if(ble_reliability_failed()) (void)reliability_worker();
+#endif
+    } /* synchronous test/startup helper only */
 }
 void ble_ll_reset_begin(void)
 {
     /* No reclaim until stop_poll succeeds. Inhibit worker, delivery, new
      * acceptance and TX picking even if a stop interrupt preempts Reset. */
+#if FM1B_BLE_RELIABILITY
+    if(!ble_reliability_failed() && (ble_link.state==BLE_LINK_CREATED || ble_link.state==BLE_LINK_UP))
+        reliability_disconnect();
+#endif
     reset.epoch=ble_link.epoch+1u; reset.offset=0; reset.active=1;
+#if FM1B_BLE_RELIABILITY
+    reset.diag_done=0;
+#endif
     ble_link.state=BLE_LINK_CLOSING;
     timing_clear();
 }
@@ -179,6 +201,13 @@ int ble_ll_reset_step(void)
 {
     unsigned n;
     if(!reset.active) return 1;
+#if FM1B_BLE_RELIABILITY
+    if(ble_reliability_failed()) return 0;
+    if(!reset.diag_done) {
+        if(reliability_reset_cleanup()) { reset.diag_done=1; }
+        return 0;
+    }
+#endif
     if(reset.offset<sizeof queues) {
         n=sizeof queues-reset.offset; if(n>128u) n=128u;
         memset((uint8_t *)&queues+reset.offset,0,n); reset.offset+=n; return 0;
@@ -199,6 +228,9 @@ int ble_ll_create(const ble_conn_t *c,uint32_t now)
 #if FELUCCA_BLE_S31
     if(!ble_privacy_accept(c)) return 0;
 #endif
+#if FM1B_BLE_RELIABILITY
+    uint32_t old=reliability_work_before_create();
+#endif
     /* Preserve only lifetime evidence and epoch, never a previous link's
      * procedure, phase, timing, completion or deferred-queue state. */
     memset((uint8_t *)&ble_link+offsetof(struct ble_link,conn),0,
@@ -209,6 +241,9 @@ int ble_ll_create(const ble_conn_t *c,uint32_t now)
     queues.mc=queues.mr=queues.mw=0;
 #if FELUCCA_BLE_STAGE >= 3
     security_new(); ble_entropy_connection();
+#if FM1B_BLE_RELIABILITY
+    reliability_created(old);
+#endif
 #endif
 #if FM1B_BLE_DIAG && FELUCCA_BLE_STAGE >= 3
     last_update_valid=0;
@@ -231,6 +266,10 @@ void ble_ll_close(uint8_t reason)
 {
     uint32_t key=ble_port_lock();
     if(!live()) { ble_port_unlock(key); return; }
+#if FM1B_BLE_RELIABILITY
+    if(reliability_hold_close(reason)) { ble_port_unlock(key); return; }
+    reliability_disconnect();
+#endif
 #if FELUCCA_BLE_STAGE >= 3
     ble_radio_freeze(reason);
 #endif
@@ -321,6 +360,9 @@ int ble_ll_rx_marker(uint8_t marker)
 {
     rx_t *r;
     if(!live() || queues.count==BLE_RX_STREAM || !marker) return 0;
+#if FM1B_BLE_RELIABILITY
+    if(marker==BLE_MARK_RX_ON) reliability_ack();
+#endif
     r=&queues.rx[queues.w]; memset(r,0,sizeof *r);
     r->epoch=ble_link.epoch; r->used=(uint8_t)(marker+1u);
     queues.w=(uint8_t)((queues.w+1u)%BLE_RX_STREAM); queues.count++; ble_port_pend(); return 1;
@@ -397,6 +439,9 @@ int ble_ll_tx_pick(void)
         (best<0 || (int32_t)(queues.tx[i].order-queues.tx[best].order)<0)) best=(int)i;
     if(best<0) for(i=0;i<5;i++) if(queues.tx[i].state==1 &&
         (best<0 || (int32_t)(queues.tx[i].order-queues.tx[best].order)<0)) best=(int)i;
+#endif
+#if FM1B_BLE_RELIABILITY
+    best=reliability_tx_pick(best);
 #endif
     if(best>=0) queues.tx[best].state=2;
     return best;
@@ -505,6 +550,9 @@ void ble_ll_event(uint16_t event,uint32_t now)
 #if FELUCCA_BLE_STAGE >= 3
     ble_radio_event(event,1);
 #endif
+#if FM1B_BLE_RELIABILITY
+    if(ble_reliability_failed()) return;
+#endif
     uint8_t reason; unsigned i; int pending=0;
     if(!live() || (!ble_link.closed_valid && (int32_t)(now-ble_link.time.first)<0)) return; /* A8 only before first close */
     if(ble_link.closed_valid && ((uint16_t)(event-ble_link.closed_n)==0 ||
@@ -580,6 +628,10 @@ void ble_ll_worker(void)
      * Keep the old PDU drain capacity; own/pass clocks bound actual work. */
     unsigned budget=4u*BLE_RX_BACKLOG;
     uint32_t start=ble_port_ticks(),own_start=ble_time_own(),gap=start-ble_link.last_worker,key,item;
+#if FM1B_BLE_RELIABILITY
+    if(ble_time_budget() && reliability_worker()) return;
+    if(!ble_time_budget()) { ble_port_pend(); return; }
+#endif
     if(reset.active) return;
     if(live()) {
         BLE_DIAG_ONLY(ble_link.diag.worker_calls++);
@@ -704,6 +756,9 @@ int ble_ll_poll(uint8_t *type,uint8_t *p,uint16_t *n)
         BLE_DIAG_ONLY(ble_link.diag.ncp+=ble_link.completed); ble_link.completed=0; *n=7;
     } else if(ble_link.disconn_pending) {
         p[0]=5; p[1]=4; p[2]=0; ble_put16(p+3,BLE_HANDLE); p[5]=ble_link.reason; *n=6;
+#if FM1B_BLE_RELIABILITY
+        reliability_disconnected();
+#endif
         ble_link.disconn_pending=0; ble_link.diag.disconnects++; ble_link.diag.reason=ble_link.reason;
         ble_link.state=BLE_LINK_IDLE; ble_link.epoch++;
         ble_link.local_terminate=ble_link.features_known=ble_link.version_sent=ble_link.version_known=0;
@@ -737,10 +792,18 @@ void ble_ll_get_diag(ble_link_diag_t *d)
 int ble_ll_pending(void)
 {
     if(reset.active) return 0;
+#if FM1B_BLE_RELIABILITY
+    /* Failure classification closes in a separate item. Keep the stop and
+     * Disconnection Complete path scheduled after that item returns. */
+    if(ble_link.state==BLE_LINK_CLOSING) return 1;
+#endif
     return ble_link.created_pending || ble_link.disconn_pending || ble_link.completed ||
         (live() && (queues.count || queues.hcount || queues.mc || queues.control_ready || queues.refill_pending
 #if FELUCCA_BLE_STAGE >= 3
             || security.ltk_event || security.encryption_event || security.reply_pending || security.random_pending
+#if FM1B_BLE_RELIABILITY
+            || ble_reliability_pending()
+#endif
 #endif
         ));
 }

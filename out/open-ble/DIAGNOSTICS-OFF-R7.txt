@@ -1,0 +1,1 @@
+Final diagnostics-off binary and symbols contain no R7 record strings, state, software CCM verifier, DMA pins, AES snapshots, periodic KAT or software-verification entry points.

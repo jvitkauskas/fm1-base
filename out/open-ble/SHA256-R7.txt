@@ -1,0 +1,2 @@
+b829afc4cd2d3980fa3e1a73c63393ce891a97fa04a54c89c447ea601599ffea  template/build/template-open-r7.fwsc
+049117a52063e83c92461e97fc47e329615c9b3f7faf616c287b4ef26e6d134e  template/build/template-open-r7-diag-off.fwsc

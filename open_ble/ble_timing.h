@@ -11,7 +11,11 @@ typedef enum {
     BLE_WORK_ENTROPY_SAMPLE, BLE_WORK_ENTROPY_RESEED, BLE_WORK_ENTROPY_OUTPUT,
     BLE_WORK_ENTROPY_REKEY, BLE_WORK_CONTROL_RX, BLE_WORK_REFILL,
     BLE_WORK_RESET_CLEAR, BLE_WORK_RESET_DEFAULTS, BLE_WORK_RESET_STATS,
-    BLE_WORK_RESET_COMPLETE, BLE_WORK_COUNT
+    BLE_WORK_RESET_COMPLETE,
+#if FM1B_BLE_RELIABILITY
+    BLE_WORK_RELIABILITY,
+#endif
+    BLE_WORK_COUNT
 } ble_work_kind_t;
 typedef struct {
     uint32_t dispatch_max,dispatch_live_max,dispatch_negative,wall_max,own_max,item_max,item_over_100us;
@@ -31,6 +35,9 @@ void ble_time_dispatch(uint32_t request,uint32_t entry);
 void ble_time_pass_begin(uint32_t wall);
 void ble_time_pass_end(void);
 int ble_time_budget(void);
+#if FM1B_BLE_RELIABILITY
+int ble_time_has_room(uint32_t ticks);
+#endif
 uint32_t ble_time_item_begin(void);
 void ble_time_item_end(uint32_t start,ble_work_kind_t kind,uint16_t opcode);
 const char *ble_time_kind_name(unsigned kind);

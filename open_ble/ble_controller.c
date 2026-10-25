@@ -15,7 +15,11 @@
 #endif
 #endif
 
-typedef struct { uint8_t data[BLE_HCI_MAX], cancel; uint16_t n; } command_t;
+typedef struct { uint8_t data[BLE_HCI_MAX], cancel; uint16_t n;
+#if FM1B_BLE_RELIABILITY
+    uint32_t epoch;
+#endif
+} command_t;
 static struct {
     command_t q[4];
     unsigned r,w,count;
@@ -27,6 +31,20 @@ static struct {
     uint8_t reply[70],overflow_reply[6];
     uint16_t overflow_op[128]; uint8_t overflow_r,overflow_w,overflow_count;
 } ctl;
+#if FM1B_BLE_RELIABILITY
+uint32_t ble_reliability_old_commands(int all)
+{
+    uint32_t mask=0;
+    for(unsigned i=0;i<ctl.count;i++) {
+        const command_t *c=&ctl.q[(ctl.r+i)%4u];
+        if(!all && c->epoch==ble_link.epoch) continue;
+        mask|=128u;
+        uint16_t op=ble_get16(c->data);
+        if(op==0x201a || op==0x201b) mask|=256u;
+    }
+    return mask;
+}
+#endif
 _Static_assert(sizeof(ble_trace_t)==40,"trace wire/storage layout");
 #if FM1B_BLE_DIAG
 static ble_trace_t trace[BLE_TRACE_N] __attribute__((section(".ble_trace"),aligned(4)));
@@ -125,6 +143,9 @@ int ble_hci_send(uint8_t type,const uint8_t *packet,uint16_t n)
         unsigned i;
         for(i=0;i<ctl.count;i++) ctl.q[(ctl.r+i)%4].cancel=1;
     }
+    #if FM1B_BLE_RELIABILITY
+    ctl.q[ctl.w].epoch=ble_link.epoch;
+#endif
     memcpy(ctl.q[ctl.w].data,packet,n); ctl.q[ctl.w].n=n; ctl.q[ctl.w].cancel=0;
     ctl.w=(ctl.w+1u)%4; ctl.count++; BLE_DIAG_ONLY(ctl.diag.commands++);
     ble_port_unlock(key); ble_port_pend(); return 0;

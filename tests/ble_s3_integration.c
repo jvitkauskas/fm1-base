@@ -74,7 +74,13 @@ static void take_slot(unsigned slot)
 static void pump(void)
 {
     unsigned i,j;
-    for(i=0;i<32;i++) {
+    for(i=0;i<
+#if FM1B_BLE_RELIABILITY
+        512u /* bounded incremental CCM classification and TX precompute */
+#else
+        32u
+#endif
+        ;i++) {
         int any=0;
         sim_advance_us(0); ble_host_worker(); ble_port_refill();
         for(j=0;j<2;j++) if(sim_slot[j]>=0) { take_slot(j); any=1; }

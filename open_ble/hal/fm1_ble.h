@@ -65,12 +65,34 @@ static struct {
     uint16_t start_offset;
     uint32_t rx_stamp[2]; /* t_free: never changed while a slot remains full */
     uint8_t rx_delayed[2];
+#if FM1B_BLE_RELIABILITY
+    uint8_t rx_pinned[2];
+#endif
 } bb;
 enum { BB_FRAME=16, BB_RX0=340, BB_RX1=596, BB_TX0=852, BB_TX1=892 };
 #define BB_F16(off) (*(volatile uint16_t *)(void *)(ble_dma.bb+BB_FRAME+(off)))
 #define BB_F8(off) (*(volatile uint8_t *)(void *)(ble_dma.bb+BB_FRAME+(off)))
 #define BB_F32(off) (*(volatile uint32_t *)(void *)(ble_dma.bb+BB_FRAME+(off)))
 
+#if FM1B_BLE_RELIABILITY
+int ble_port_diag_radio_idle(void) { return !(BR_R(0x28038u)&2u); }
+int ble_port_diag_rx_read(unsigned slot,uint16_t *header,uint16_t *status,uint8_t out[31])
+{
+    if(slot>=2 || !bb.rx_pinned[slot] || !(BB_F8(BF_RX_CTL+slot)&1u)) return 0;
+    *header=BB_F16(BF_RX_DATA+2*slot); *status=BB_F16(BF_RX_STAT+2*slot);
+    unsigned n=*header>>8; if(n>31) return 0;
+    volatile const uint8_t *p=ble_dma.bb+(slot ? BB_RX1 : BB_RX0);
+    br_sync(); for(unsigned i=0;i<n;i++) out[i]=p[i]; br_sync(); return 1;
+}
+void ble_port_diag_rx_release(unsigned slot)
+{
+    if(slot>=2 || !bb.rx_pinned[slot]) return;
+    bb.rx_pinned[slot]=0;
+    BB_F16(BF_RX_PTR+2*slot)=(uint16_t)(slot ? BB_RX1 : BB_RX0);
+    br_sync(); BB_F8(BF_RX_CTL+slot)&=(uint8_t)~1u; br_sync();
+    bb.rx_stamp[slot]=fm1_ticks(); bb.rx_delayed[slot]=0;
+}
+#endif
 static inline void bb_mark(uint8_t stage,uint16_t detail)
 {
     ble_breadcrumb_mark(&fm1_ble_breadcrumb,stage,bb.state,detail,fm1_ticks());
@@ -112,7 +134,11 @@ static void bb_refill_limit(unsigned limit)
 {
     uint32_t k=fm1_ble_irq_save(),start=fm1_ticks(),ccm_before=ble_time_ccm_total();
     unsigned a,b,j,first,tries=0,loads=0;
-    if(bb.refill_busy || (bb.state!=4 && bb.state!=2)) { fm1_ble_irq_restore(k); return; }
+    if(bb.refill_busy
+#if FM1B_BLE_RELIABILITY
+       || ble_reliability_failed()
+#endif
+       || (bb.state!=4 && bb.state!=2)) { fm1_ble_irq_restore(k); return; }
     bb.refill_busy=1;
     do {
         a=(BB_F16(BF_TX_TOGGLE)&1u)|((BB_F8(BF_TX_CTL)&1u)<<1)|((BB_F8(BF_TX_CTL+1)&1u)<<2);
@@ -125,7 +151,7 @@ static void bb_refill_limit(unsigned limit)
     for(j=0;j<2;j++) {
         unsigned slot=first^j; int id; uint8_t n,llid; unsigned md;
         if(!(a&(2u<<slot))) continue;
-        #if FELUCCA_BLE_STAGE >= 3
+#if FELUCCA_BLE_STAGE >= 3
         if(bb.tx_id[slot]>=0 && ble_ll_tx_boundary((unsigned)bb.tx_id[slot])) continue;
 #endif
         if(bb.tx_id[slot]>=0) {
@@ -150,7 +176,7 @@ static void bb_refill_limit(unsigned limit)
         BB_F16(BF_TX_DATA+slot*2)=(uint16_t)((BB_F16(BF_TX_DATA+slot*2)&4u)|((uint16_t)n<<8)|(md<<3)|llid);
         BB_F16(BF_FLOW)=(uint16_t)((BB_F16(BF_FLOW)&~64u)|(md<<6));
 #if FELUCCA_BLE_STAGE >= 3
-        ble_security_tx_loaded((BB_F16(BF_TX_DATA+slot*2)>>2)&1u);
+        ble_security_tx_loaded((unsigned)id,(BB_F16(BF_TX_DATA+slot*2)>>2)&1u);
 #endif
 #if FELUCCA_BLE_STAGE >= 3
         ble_radio_tx(BLE_RADIO_LOAD,BB_F16(BF_EVT),slot,id,BB_F16(BF_TX_DATA+2*slot),
@@ -175,6 +201,9 @@ static void bb_connection(const ble_conn_t *c,uint8_t header,uint32_t now)
         BB_F16(BF_TX_ADV+slot*2)=(uint16_t)(((header>>7)&1u)<<4);
         BB_F16(BF_TX_DATA+slot*2)=(uint16_t)(((slot==0 ? t : !t)<<2)|1u);
         bb.tx_id[slot]=-1; bb.rx_delayed[slot]=0;
+#if FM1B_BLE_RELIABILITY
+        bb.rx_pinned[slot]=0;
+#endif
     }
     bb.refill_busy=0;
     BB_F16(BF_PRIO_CTRL)=28; BB_F16(BF_PRIO_STAT)=28;
@@ -204,6 +233,9 @@ static void bb_connection(const ble_conn_t *c,uint8_t header,uint32_t now)
 #if FELUCCA_BLE_STAGE >= 3
 static void bb_connected_rx(uint32_t stamp,int recovery)
 {
+#if FM1B_BLE_RELIABILITY
+    if(ble_reliability_failed()) return;
+#endif
     unsigned a,b,j,first,held=0,slots[2],n[2],position=2;
     uint16_t status[2],header[2],event=BB_F16(BF_EVT);
     uint8_t copy[2][31],marker=0; int boundary_slot=-1;
@@ -225,7 +257,12 @@ static void bb_connected_rx(uint32_t stamp,int recovery)
     for(j=0;j<2;j++) {
         if(a&6u) ble_radio_tx(BLE_RADIO_TX_STATE,event,j,bb.tx_id[j],BB_F16(BF_TX_DATA+2*j),
                      (uint16_t)(BB_F8(BF_TX_CTL+j)|(BB_F16(BF_TX_TOGGLE)<<8)));
-        if(a&(2u<<(first^j))) slots[held++]=first^j;
+        if(a&(2u<<(first^j))) {
+#if FM1B_BLE_RELIABILITY
+            if(bb.rx_pinned[first^j]) continue;
+#endif
+            slots[held++]=first^j;
+        }
     }
     if(marker && (!held || !ble_ll_rx_reserve(held,1))) {
         /* Reservation can block before the per-slot loop. Retain that wait
@@ -256,9 +293,18 @@ static void bb_connected_rx(uint32_t stamp,int recovery)
         if(marker && position==j) { if(!ble_ll_rx_marker(marker)) { ble_ll_close(0x3d); return; } marker=0; }
         if(delayed && has_older && (int32_t)(older-ts)>0) ts=older;
         if(!ble_ll_rx_room()) { bb.rx_delayed[slot]=1; continue; }
-        BB_F16(BF_RX_PTR+2*slot)=(uint16_t)(slot ? BB_RX1 : BB_RX0);
-        br_sync(); BB_F8(BF_RX_CTL+slot)&=(uint8_t)~1u; br_sync();
-        bb.rx_stamp[slot]=fm1_ticks(); bb.rx_delayed[slot]=0; older=ts; has_older=1;
+#if FM1B_BLE_RELIABILITY
+        /* Keep every new nonempty slot owned until its ordered auth/decode.
+         * Including clear S1 PDUs avoids guessing encryption across RX_ON. */
+        if(!ble_rx_class(status[j],(uint8_t)n[j]) && n[j] && n[j]<=31) bb.rx_pinned[slot]=1;
+        else
+#endif
+        {
+            BB_F16(BF_RX_PTR+2*slot)=(uint16_t)(slot ? BB_RX1 : BB_RX0);
+            br_sync(); BB_F8(BF_RX_CTL+slot)&=(uint8_t)~1u; br_sync();
+            bb.rx_stamp[slot]=fm1_ticks(); bb.rx_delayed[slot]=0;
+        }
+        older=ts; has_older=1;
         ble_ll_rx_slot(status[j],header[j],copy[j],ts,event,delayed,(uint8_t)slot,flags);
     }
     if(marker && !ble_ll_rx_marker(marker)) ble_ll_close(0x3d);

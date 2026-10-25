@@ -130,6 +130,7 @@ static void reset_now(const char *name)
     sim_stop_result=1;
     while(event_count==before && steps++<64) {
         uint32_t start=sim_ticks; ll(); worker();
+        if(sim_ticks-start>70u*24u) fprintf(stderr,"reset cost %s step %u ticks %u\n",name,steps,sim_ticks-start);
         assert(sim_ticks-start<=70u*24u);
         assert(!ble_ll_rx_marker(BLE_MARK_RX_ON));
         ble_ll_event(0xffffu,sim_ticks);
@@ -215,14 +216,29 @@ static void split_control(void)
     /* Stream cannot pass the authenticated, pending control before dispatch. */
     blocks=sim_aes_blocks; one_ll(); assert(sim_aes_blocks==blocks); ble_security_get_diag(&d);
     assert(d.encrypted && d.tx_on && !d.tx_counter && slot(6)<0);
+#if FM1B_BLE_RELIABILITY
+    /* R7 precomputes ciphertext without committing a counter or choosing a
+     * DMA slot, then checks hardware in the normal one-slot refill. */
+    blocks=sim_aes_blocks; one_ll(); assert(sim_aes_blocks==blocks && slot(6)<0);
+    for(unsigned i=0;i<64 && slot(6)<0;i++) one_ll();
+    s=slot(6); assert(s>=0); ble_security_get_diag(&d); assert(d.tx_counter==1);
+    for(unsigned i=0;i<64 && (sim_slot[0]<0 || sim_slot[1]<0);i++) one_ll();
+    ble_security_get_diag(&d); assert(d.tx_counter==2 && sim_slot[0]>=0 && sim_slot[1]>=0);
+#else
     blocks=sim_aes_blocks; one_ll(); assert(sim_aes_blocks-blocks==5);
     s=slot(6); assert(s>=0); ble_security_get_diag(&d); assert(d.tx_counter==1);
     { unsigned other=(unsigned)s^1u; assert(sim_slot[other]<0); }
     blocks=sim_aes_blocks; one_ll(); assert(sim_aes_blocks-blocks==7);
     ble_security_get_diag(&d); assert(d.tx_counter==2 && sim_slot[0]>=0 && sim_slot[1]>=0);
+#endif
     ble_time_get_diag(&timing);
     assert(timing.kind_count[BLE_WORK_CONTROL_RX]==1 && timing.kind_count[BLE_WORK_CONTROL]==1 &&
-        timing.kind_count[BLE_WORK_REFILL]==2);
+        timing.kind_count[BLE_WORK_REFILL]
+#if FM1B_BLE_RELIABILITY
+        >=2);
+#else
+        ==2);
+#endif
     assert(timing.kind_opcode[BLE_WORK_CONTROL_RX]==6 && timing.kind_opcode[BLE_WORK_CONTROL]==6 &&
         timing.kind_opcode[BLE_WORK_REFILL]==6);
     assert(timing.item_max<=70u*24u && !timing.item_over_100us && !timing.pass_over_budget);
@@ -234,8 +250,16 @@ static void split_control(void)
     sim_ack(0); sim_ack(1);
     { uint8_t p[5]={10}; assert(ble_ccm(sk,iv,1,1,3,p,1,0)); assert(ble_ll_rx(1,0x503,p,sim_ticks,0)); }
     sim_aes_cost_ticks=8u*24u; sim_memory_cost_ticks=1; one_ll(); one_ll();
-    ble_security_get_diag(&d); assert(d.phase==BLE_ENC_PA && d.rx_on && d.tx_on);
-    ll(); s=slot(11); assert(s>=0); sim_ack((unsigned)s);
+    ble_security_get_diag(&d);
+#if FM1B_BLE_RELIABILITY
+    for(unsigned i=0;i<64 && d.phase!=BLE_ENC_PA;i++) { one_ll(); ble_security_get_diag(&d); }
+#endif
+    assert(d.phase==BLE_ENC_PA && d.rx_on && d.tx_on);
+    ll();
+#if FM1B_BLE_RELIABILITY
+    for(unsigned i=0;i<64 && slot(11)<0;i++) ll();
+#endif
+    s=slot(11); assert(s>=0); sim_ack((unsigned)s);
     assert(ble_ll_rx(1,0x103,(uint8_t[]){11},sim_ticks,0)); ll();
     ble_security_get_diag(&d); assert(d.phase==BLE_ENC_PC && !d.rx_on && !d.tx_on && !d.rx_counter && !d.tx_counter);
     sim_aes_cost_ticks=sim_memory_cost_ticks=0;
@@ -243,6 +267,9 @@ static void split_control(void)
     init(); connect(); request(); response(); key_reply(); start_marker();
     ble_time_reset(); sim_aes_cost_ticks=8u*24u;
     assert(ble_ll_rx(1,0x503,(uint8_t[5]){0},sim_ticks,0)); ll();
+#if FM1B_BLE_RELIABILITY
+    for(unsigned i=0;i<256 && ble_reliability_failed();i++) ll();
+#endif
     ble_time_get_diag(&timing);
     assert(ble_link.reason==0x3d && timing.kind_opcode[BLE_WORK_CONTROL_RX]==0xffffu &&
         !timing.kind_count[BLE_WORK_CONTROL]);

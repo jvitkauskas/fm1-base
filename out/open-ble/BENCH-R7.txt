@@ -1,0 +1,34 @@
+Open BLE R7 bench - 2026-10-25, desktop BlueZ, Intel AX210 (USB 8087:0032, firmware ibt-0041-0041 202-5.26,
+kernel 7.2.8), image b829afc4 (R7, diagnostics on). Flashed 18:24 with m-flasher 0.6.1-dev --restart; the bond
+store was empty after the flash, so the desktop was re-paired (SC). Reboot without power-cycling: m-flasher
+download-mode, then restart.
+Traffic: APTO 100 ms (ping-r4/apto.py) -> LL_PING_REQ every ~85 ms, MIDI notes every ~1 s, btmon recording.
+Data: r7-soak/ (health phase, hit 1), ping-r7s/ (sniffer run, hit 2), offline_ccm.py. The btmon captures and
+the nRF sniffer segment (~/fm1-sniff/r7s/seg-183656.pcap) contain the LTK and stay on the desktop.
+
+HEALTH (one link, 6 min until hit 1): executor_item_over_100us 0, r7 over100 0 (max 0x6E2 ticks = 73 us),
+audio_late 0, audio_xruns 0, audio_max_wall_us 161, refill_max_us 72, dma_canary_errors 0, KAT 481/0 failures,
+TX self-check 3,462 PDUs / 0 mismatches.
+
+HIT 1, 18:31:13.8 (uptime 426.8 s, epoch 52, event 22436, slot 1): the central's ping at counter 0xE33.
+- R7: hw_retry 0, sw_same 0, near_pass 0 (C-2..C+2, both directions), KAT 1, key unchanged, IV unchanged,
+  DMA reads equal and stable. Desktop: APTO-expired events every 105 ms from 18:31:14.4, then 0x08 at 18:31:20.4.
+- Offline with the desktop LTK (offline_ccm.py): at E33, RX direction, the first byte decrypts to 0x12
+  (LL_PING_REQ), so key, IV, counter and direction are right. Only the 4-byte MIC is wrong (21 of 32 bits).
+  No AAD value reproduces it; it is not the tag of any of the 40 previous pings or a recent ATT write.
+
+HIT 2, 18:38:01.97 (after a remote reboot; uptime 109.9 s, epoch 6, event 3845, slot 0), sniffer following:
+- R7 shows the same classification. Offline: the first byte decrypts to 0x12 at counter 0x265; the MIC is wrong (17 bits).
+- nRF sniffer, an independent receiver: event 3845, central -> peripheral, CRC ok, MIC FAIL, air bytes
+  0f 05 | 4b 39 af 58 36 | CRC 32 b1 7f, identical to the FM-1's r7_ciphertext_tag. It is the only CRC-valid
+  MIC failure among 8,055 captured packets; every other packet authenticated on both receivers
+  (sniffer-ev3843-3847.tsv).
+
+CONCLUSION: the desktop's AX210 transmitted CRC-valid packets with a correct encrypted payload and a wrong MIC.
+The FM-1 rejected them and closed with 0x3D, as Core requires. The FM-1-side failures from SOAK-R4, ping-r4 and
+PING-R4L (the last one was the central's LL_START_ENC_RSP) fit the same cause; only hit 2 was seen on air.
+Open:
+- The R4 soak's opposite case (the central reported 0x3D on an FM-1 PDU) is unexplained. R7's TX self-check
+  found 0 mismatches between hardware and software CCM over ~4,000 FM-1 PDUs.
+- A long run with a different central (Mac/iPhone).
+- Bond loss when flashing R7 over R4.

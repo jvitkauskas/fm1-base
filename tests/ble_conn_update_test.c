@@ -24,7 +24,13 @@ static void drain(void)
         if(type==4 && p[0]==5) { disconnects++; last_reason=p[5]; }
     }
 }
-static void work(void) { for(unsigned i=0;i<4;i++) ble_ll_worker(); }
+static void work(void) {
+#if FM1B_BLE_RELIABILITY
+    for(unsigned i=0;i<256;i++) { ble_ll_worker(); if(i>=4 && !ble_reliability_pending()) break; }
+#else
+    for(unsigned i=0;i<4;i++) ble_ll_worker();
+#endif
+}
 static uint32_t begin(uint16_t interval,uint32_t origin)
 {
     static const uint8_t pub[6]={1,2,3,4,5,6};
@@ -186,6 +192,10 @@ static void reconnects(void)
             sim_ticks=ble_link.time.sup; work();
         }
         else ble_ll_close(reasons[cause]);
+#if FM1B_BLE_RELIABILITY
+        /* A first local 0x3D completes its classifier before normal closing. */
+        if(ble_reliability_failed()) work();
+#endif
         clean(); assert(!ble_link.anchor && !ble_link.time.win_pending && !ble_link.acc && !ble_link.closed_valid);
         work(); drain(); assert(disconnects==1 && last_reason==reasons[cause]);
         { ble_conn_t c=sim_connection(); c.interval=12; assert(ble_ll_create(&c,sim_ticks)); }

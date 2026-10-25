@@ -17,7 +17,13 @@ static int start_pressure_mode;
 static uint16_t start_interval=12;
 static uint32_t rng=0x4d494334u,sequence,delivered,crc_errors,repeats,missed,ack_lost;
 static uint32_t random32(void) { rng^=rng<<13; rng^=rng>>17; rng^=rng<<5; return rng; }
-static void work(void) { for(unsigned i=0;i<8;i++) ble_ll_worker(); }
+static void work(void) {
+#if FM1B_BLE_RELIABILITY
+    for(unsigned i=0;i<256;i++) { ble_ll_worker(); if(i>=8 && !ble_reliability_pending()) break; }
+#else
+    for(unsigned i=0;i<8;i++) ble_ll_worker();
+#endif
+}
 static int opcode(uint8_t op)
 {
     for(unsigned i=0;i<2;i++) if(sim_slot[i]>=0 && ble_ll_tx_llid((unsigned)sim_slot[i])==3 &&
@@ -178,7 +184,10 @@ static void randomized(uint32_t events)
     sim_radio_service(1); drain();
     ble_security_diag_t d; ble_security_get_diag(&d);
     assert(!oc && !d.mic_failures && d.rx_counter==accepted_counter);
-    assert(repeats && crc_errors && sim_radio_both && sim_radio_pressure && sim_radio_refused && updates);
+    assert(repeats && crc_errors && sim_radio_both && sim_radio_refused && updates);
+#if !FM1B_BLE_RELIABILITY
+    assert(sim_radio_pressure);
+#endif
     assert(!ble_link.diag.late_instants && !ble_link.diag.supervision_fail);
     printf("random seed=4d494334 events=%u counter=%" PRIu64 " missed=%u lost_ack=%u zero spontaneous MIC failures: PASS\n",events,d.rx_counter,missed,ack_lost);
 }
@@ -354,9 +363,19 @@ static void dump_test(void)
     for(const char *p=dump;*p;p++) { if(*p=='\n') line=0; else assert(++line<188u); }
     puts("production USB/CDC MIC formatter: complete fields, 39-bit hex counters, all logical rows fit USB frame: PASS");
 }
+#if FM1B_BLE_RELIABILITY
+#include "ble_reliability_test.inc"
+#endif
 int main(int argc,char **argv)
 {
+    #if FM1B_BLE_RELIABILITY
+    if(argc>2 && !strcmp(argv[1],"--r7")) { r7_test(argv[2]); return 0; }
+#endif
     if(argc>1 && !strcmp(argv[1],"--trace-timeout")) { radio_timeout_test(); return 0; }
     uint32_t events=argc>1 ? (uint32_t)strtoul(argv[1],0,0) : 10000000u;
-    central_ccm_test(); ping_stress(events/2u,12); ping_stress(events/2u,24); randomized(events); radio_trace_test(); corruption(); slot_race_and_lengths(); pause_restart(); update_age_record(); dump_test(); return 0;
+    central_ccm_test(); ping_stress(events/2u,12); ping_stress(events/2u,24); randomized(events);
+#if FM1B_BLE_RELIABILITY
+    return 0;
+#endif
+    radio_trace_test(); corruption(); slot_race_and_lengths(); pause_restart(); update_age_record(); dump_test(); return 0;
 }

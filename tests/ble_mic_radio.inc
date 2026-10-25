@@ -8,6 +8,9 @@
 static struct { _Alignas(4) uint8_t bb[BLE_BB_SIZE]; } ble_dma;
 static struct {
     uint8_t state,refill_busy,rx_delayed[2];
+#if FM1B_BLE_RELIABILITY
+    uint8_t rx_pinned[2];
+#endif
     int8_t tx_id[2];
     uint32_t rx_stamp[2];
 } bb;
@@ -15,6 +18,14 @@ enum { BB_FRAME=16,BB_RX0=340,BB_RX1=596,BB_TX0=852,BB_TX1=892 };
 #define BB_F16(o) (*(uint16_t *)(void *)(ble_dma.bb+BB_FRAME+(o)))
 #define BB_F8(o) (*(uint8_t *)(void *)(ble_dma.bb+BB_FRAME+(o)))
 #define BB_F32(o) (*(uint32_t *)(void *)(ble_dma.bb+BB_FRAME+(o)))
+#if FM1B_BLE_RELIABILITY
+int ble_port_diag_radio_idle(void) { return 1; }
+void sim_radio_flip_tx_toggle(void) { BB_F16(BF_TX_TOGGLE)^=1u; }
+void sim_radio_corrupt(unsigned slot,unsigned byte)
+{
+    assert(slot<2 && byte<31); ble_dma.bb[(slot ? BB_RX1 : BB_RX0)+byte]^=1;
+}
+#endif
 void (*sim_radio_release_hook)(void);
 uint32_t sim_radio_pressure,sim_radio_both,sim_radio_refused;
 static uint32_t fm1_ticks(void) { return sim_ticks; }
