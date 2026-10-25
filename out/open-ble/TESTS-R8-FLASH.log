@@ -1,0 +1,5 @@
+R8 RAM flash: interval 7500 us, supervision 100 ms, 560 ms total, 74 RF events / 96 audio blocks serviced, zero blocked events/xruns: PASS
+R8 RAM flash: interval 7500 us, supervision 6000 ms, 560 ms total, 74 RF events / 96 audio blocks serviced, zero blocked events/xruns: PASS
+R8 RAM flash: interval 15000 us, supervision 100 ms, 560 ms total, 37 RF events / 96 audio blocks serviced, zero blocked events/xruns: PASS
+R8 RAM flash: interval 15000 us, supervision 6000 ms, 560 ms total, 37 RF events / 96 audio blocks serviced, zero blocked events/xruns: PASS
+R8 production RAM flash wait: normal/late-ready/unresolved busy, MIDI service bound, blackout counterexample: PASS

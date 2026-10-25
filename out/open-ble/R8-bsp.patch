@@ -1,0 +1,147 @@
+diff --git a/chip/fm1_flash.h b/chip/fm1_flash.h
+index bb34c18..0c4eee5 100644
+--- a/chip/fm1_flash.h
++++ b/chip/fm1_flash.h
+@@ -7,8 +7,11 @@
+  *
+  * Everything that executes while the SFC (XIP) is switched off lives in
+  * .ram_text and touches only SFRs, the stack and RAM buffers: no .rodata, no
+- * libcalls, no XIP-resident helpers. Call the fl_*_ram() entry points with
+- * interrupts disabled. Same sequence as the AC79 SDK flash driver
++ * libcalls, no XIP-resident helpers. Normally call fl_*_ram() with IRQs off.
++ * R8 FM1B_BLE_CONNECTED_STORE instead links the ENTIRE runtime/constant set
++ * into SRAM and permits runtime IRQs through these windows; SPI0/SFC remain
++ * exclusively main-owned. The busy-wait's MIDI service is SRAM too.
++ * Same sequence as the AC79 SDK flash driver
+  * (cpu.a/vm_sfc.c.o: enter_spi_code, norflash_erase, norflash_wait_ok, exit_spi_code).
+  */
+ #pragma once
+@@ -74,6 +77,10 @@ static inline void *fl_far(void *p) { void *volatile q = p; return q; }
+ #endif
+ #endif
+ 
++#if FM1B_BLE_CONNECTED_STORE
++static volatile uint8_t fl_busy;
++static void fm1_ble_flash_service(void);
++#endif
+ typedef struct { uint32_t sfc_con, spi_con; } fl_saved_t;
+ 
+ RAMINL void fl_csync(void) { __asm__ volatile("csync" ::: "memory"); }
+@@ -125,6 +132,9 @@ RAMINL int fl_enter(fl_saved_t *s)
+         return -1;
+     fl_csync();
+     while ((int32_t)SFC_CON < 0) ;                /* SFC idle */
++#if FM1B_BLE_CONNECTED_STORE
++    fl_busy=1;
++#endif
+     SFC_CON = 0;                                  /* XIP OFF from here on */
+     IOMAP_CON0 &= ~0x20u;                         /* pins -> SPI0 / GPIO */
+     SPI0_CON = 0;
+@@ -140,6 +150,9 @@ RAMINL void fl_exit(const fl_saved_t *s)
+     while ((int32_t)SFC_CON < 0) ;
+     SFC_CON = s->sfc_con;                         /* XIP back on */
+     fl_csync();
++#if FM1B_BLE_CONNECTED_STORE
++    fl_busy=0;
++#endif
+ }
+ RAMINL void fl_inval(uint32_t off, uint32_t len)
+ {
+@@ -166,15 +179,25 @@ RAMINL int fl_wait_ready(uint32_t max_us, uint32_t *took_us)
+ /* After an issued operation, never re-enter XIP while the part is busy. */
+ RAMINL int fl_wait_issued(uint32_t issued,uint32_t normal,uint32_t extended,uint32_t *took_us)
+ {
++#if FM1B_BLE_CONNECTED_STORE
++    uint32_t serviced=issued;
++#endif
+     for (;;) {
+         uint32_t status=fl_rdsr(0x05),dt=(T4_CNT-issued)/24u;
+         if (!(status&1u)) { *took_us=dt; return dt<=normal ? 0 : -9; }
+         if (dt>=extended) { REG32(0x10000u)|=1u<<4; for (;;) ; }
++#if FM1B_BLE_CONNECTED_STORE
++        /* The complete runtime is SRAM-resident. Poll only after CS is high;
++         * service live MIDI input/host, with recursive storage excluded. */
++        if((uint32_t)(T4_CNT-serviced)>=500u*24u) {
++            fm1_ble_flash_service(); serviced=T4_CNT;
++        }
++#endif
+     }
+ }
+ #endif
+ 
+-/* ---- entry points: IRQs OFF, args/buffers in RAM ---- */
++/* ---- entry points: IRQs OFF unless the complete runtime is in SRAM; RAM args ---- */
+ 
+ static RAMFN uint32_t fl_jedec_ram(void)                 /* expect 0x856014 */
+ {
+@@ -275,6 +298,9 @@ static void fl_plain_window_init(void)
+ #if FM1B_BLE_OPEN
+ static int fl_read_plain(uint32_t off,void *dst,uint32_t n)
+ {
++#if FM1B_BLE_CONNECTED_STORE
++    if(fl_busy) return -8; /* no mapped read of a busy NOR, including app input */
++#endif
+     if(off<0x93000u || off>0x100000u || n>0x100000u-off) return -1;
+     uint8_t *p=dst; const volatile uint8_t *s=(const volatile uint8_t *)(uintptr_t)FL_XIP(off);
+     while(n--) *p++=*s++;
+@@ -288,6 +314,10 @@ static inline uint32_t irq_save(void)
+ static inline void irq_restore(uint32_t f) { __asm__ volatile("csync" ::: "memory"); fm1_icfg_set(f); }
+ /* Called with interrupts excluded, closing acceptance races with CONNECT_IND. */
+ static int fm1_ble_flash_allowed(void);
++#if FM1B_BLE_CONNECTED_STORE
++static void fm1_ble_store_masked(uint32_t ticks);
++static void fm1_ble_store_operation(int erase,uint32_t us);
++#endif
+ #else
+ static inline uint32_t irq_save(void) { __asm__ volatile("cli" ::: "memory"); return 0; }
+ static inline void irq_restore(uint32_t f) { (void)f; __asm__ volatile("csync\n\tsti" ::: "memory"); }
+@@ -295,12 +325,25 @@ static inline void irq_restore(uint32_t f) { (void)f; __asm__ volatile("csync\n\
+ 
+ static int fl_erase4k(uint32_t off, uint32_t *took_us)
+ {
++#if FM1B_BLE_CONNECTED_STORE
++    uint32_t masked=T4_CNT;
++#endif
+     uint32_t f = irq_save();
+ #if FM1B_BLE_OPEN
+     if (!fm1_ble_flash_allowed()) { irq_restore(f); return -8; }
+ #endif
++#if FM1B_BLE_CONNECTED_STORE
++    /* The entire runtime and all constants are in SRAM (linker/build proof).
++     * No ISR uses SPI0/SFC. Keep audio, tick and BLE live even while NOR busy. */
++    fm1_ble_store_masked(T4_CNT-masked);
++    irq_restore(f);
++    *took_us=0;
++    int rc = FL_FAR(fl_erase4k_ram)(off, took_us);
++    fm1_ble_store_operation(1,*took_us);
++#else
+     int rc = FL_FAR(fl_erase4k_ram)(off, took_us);
+     irq_restore(f);
++#endif
+     return rc;
+ }
+ 
+@@ -312,12 +355,23 @@ static int fl_write(uint32_t off, const uint8_t *src_ram, uint32_t n)
+         int rc;
+         uint32_t f;
+         if (chunk > n) chunk = n;
++#if FM1B_BLE_CONNECTED_STORE
++        uint32_t masked=T4_CNT;
++#endif
+         f = irq_save();
+ #if FM1B_BLE_OPEN
+         if (!fm1_ble_flash_allowed()) { irq_restore(f); return -8; }
+ #endif
++#if FM1B_BLE_CONNECTED_STORE
++        fm1_ble_store_masked(T4_CNT-masked);
++        irq_restore(f);
++        took=0;
++        rc = FL_FAR(fl_prog_ram)(off, src_ram, chunk, &took);
++        fm1_ble_store_operation(0,took);
++#else
+         rc = FL_FAR(fl_prog_ram)(off, src_ram, chunk, &took);
+         irq_restore(f);
++#endif
+         if (rc) return rc;
+         off += chunk; src_ram += chunk; n -= chunk;
+     }

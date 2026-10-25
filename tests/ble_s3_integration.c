@@ -16,6 +16,9 @@
 #include "../open_ble/ble_security.h"
 #include "../open_ble/ble_seed.h"
 #include "../open_ble/ble_bonds.h"
+#if FM1B_BLE_OPEN
+#include "../open_ble/ble_store.h"
+#endif
 #if FELUCCA_BLE_S31
 #include "../open_ble/ble_privacy.h"
 #endif
@@ -266,6 +269,7 @@ int main(int argc,char **argv)
 #endif
     uint8_t packet[70],saved_ltk[16],rand_ediv[10]={0};
     (void)packet;
+    int live_reloaded=0;
     int repeat=argc>1 && (!strcmp(argv[1],"repeat-legacy") || !strcmp(argv[1],"repeat-sc"));
     (void)repeat;
     int sc=argc>1 && (!strcmp(argv[1],"sc") || !strcmp(argv[1],"repeat-sc"));
@@ -349,8 +353,25 @@ int main(int argc,char **argv)
                events[n-1].b==2 && events[n-1].c==BLE_ATT_ERR_REQ_NOT_SUPPORTED);
     }
 #endif
+#if FM1B_BLE_OPEN
+    /* Real SMP has distributed the keys. Persist with the same encrypted
+     * connection open, then discard/reload the entire object/bond RAM cache. */
+    {
+        extern int sim_connected_store;
+        sim_connected_store=1;
+        sim_advance_us(251000); pump();
+        ble_bonds_get_diag(&bond); assert(!bond.pending && bond.writes && !bond.failures);
+        ble_host_get_diag(&d); assert(d.encrypted && d.connection==BLE_HANDLE);
+        ble_object_init(); ble_bonds_init();
+        union ble_store_key k; union ble_store_value v;
+        memset(&k,0,sizeof k); memcpy(k.sec.peer_addr.val,central,6);
+        assert(!ble_bonds_read(1,&k,&v) && !memcmp(v.sec.ltk,saved_ltk,16));
+        sim_connected_store=0; live_reloaded=1;
+        puts("R8 real NimBLE: legacy/SC bond and CCCDs saved and reloaded while the encrypted link remains open: PASS");
+    }
+#endif
     disconnect_link();
-    ble_bonds_get_diag(&bond); assert(!bond.pending && bond.writes && !bond.failures);
+    ble_bonds_get_diag(&bond); assert(!bond.pending && (bond.writes || live_reloaded) && !bond.failures);
     /* Reconstruct the RAM cache from the NOR journal (simulated reboot of
      * store, not a second NimBLE init) and encrypt with its persistent LTK. */
     ble_bonds_init();

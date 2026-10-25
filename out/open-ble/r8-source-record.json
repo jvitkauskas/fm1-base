@@ -1,0 +1,202 @@
+{
+  "base_commit": "6af1dedc312d74f8ea4e43ef5057502e4a81e79e",
+  "bsp_commit": "62a01ca7affe8de73707e309b57e98f1734c8b2d",
+  "sources": {
+    "README.md": {
+      "bytes": 13161,
+      "sha256": "a4c44bfa7cc11831d46907370e1a49c6e978c3cbd683a16a2eb15b8ece75af7f"
+    },
+    "bsp/chip/fm1_flash.h": {
+      "bytes": 14424,
+      "sha256": "021e26b245e5e6db460589574596e5537a202e601d3db0104372c01e9a1d0397"
+    },
+    "device/app_open_ram.ld": {
+      "bytes": 2346,
+      "sha256": "6b1ba2916f92c7d3a27466c6b87784cab3a9b7fd05b56a4421666737d59e5f0e"
+    },
+    "device/ble_open.c": {
+      "bytes": 5542,
+      "sha256": "d631b68c5370a2c668384a793789216a1c533e2eeb329b95472ddfd856155da8"
+    },
+    "device/ble_open_diag.c": {
+      "bytes": 26069,
+      "sha256": "0fd5506767bd5221188cf663b604261f332b36a7a2c24cd427b248d8e3023088"
+    },
+    "device/ble_open_platform.c": {
+      "bytes": 10357,
+      "sha256": "f1eb155c5ed1d5d4fc5d521b5b91c7fac0105f5872e3561f2d389335b4e93efc"
+    },
+    "device/main_fm1.c": {
+      "bytes": 36738,
+      "sha256": "f5adce2dc0edb6a36264700547694d01b06251aab9cb26a8bd14fd3028eb472f"
+    },
+    "device/mirror.c": {
+      "bytes": 23067,
+      "sha256": "f94708bb2ffabf25af7c995fa66b7f2e8290d2472f048578251580b94a63c68f"
+    },
+    "device/storage.c": {
+      "bytes": 6282,
+      "sha256": "26c88ea44070d1a7caa2bd90c3c94c10f58b46733c55d936f7e8bb0b386206fb"
+    },
+    "device/unity.c": {
+      "bytes": 14521,
+      "sha256": "6251edfbd4a503d1e3f8af86b53c86e1841d5118208d524797b912df29a6ce28"
+    },
+    "docs/OPEN-BLE.md": {
+      "bytes": 54442,
+      "sha256": "5c45485e95b944b6dab5f20a856a8f8b7b3f5be8838fe8ae295c9a4bdedc87a4"
+    },
+    "include/fastmath.h": {
+      "bytes": 7359,
+      "sha256": "a72cb4fc3f3fb8f1c164049e45f15fc141df7d1f7c362fa37dc03f247f217e69"
+    },
+    "open_ble/ble_bond_capacity.inc": {
+      "bytes": 13880,
+      "sha256": "c5c89b9533b976f7ddaa70e6d6769b5899f613b756ae04ba2c1b0be8a94751f8"
+    },
+    "open_ble/ble_bonds.h": {
+      "bytes": 1564,
+      "sha256": "2f4fa65f0d2cac353c0bf20a19fb8dff4c450d8fc3db4791299efc9391de5500"
+    },
+    "open_ble/ble_host.c": {
+      "bytes": 28456,
+      "sha256": "5292ad99bb99e4b5da97503fc0265980bd8108918112321f2d0df04c9c45625a"
+    },
+    "open_ble/ble_link.c": {
+      "bytes": 37848,
+      "sha256": "f056372938d5525d917dfd1ffc9f40680e2a5530e67c921b0877ffbeb3ca9690"
+    },
+    "open_ble/ble_link.h": {
+      "bytes": 6644,
+      "sha256": "d60c79c8f26543f2319306304f29e27536fe326b43c629329df9fa560efadf1a"
+    },
+    "open_ble/ble_store.c": {
+      "bytes": 3082,
+      "sha256": "0297742d4134ab2da36c373d91da03ce3c9edd4830ed6723b21eb693ebef6a09"
+    },
+    "open_ble/ble_store.h": {
+      "bytes": 1209,
+      "sha256": "70515fad8a37360ca0dce09633bc2fe0e9e734977ffa9e83c7d236ba69e890ae"
+    },
+    "tests/ble_connected_store_test.inc": {
+      "bytes": 5088,
+      "sha256": "fa5d3848c0b5bb453501c5191ac7e375983f7cdc7d96b0f1997ad7ac11787de8"
+    },
+    "tests/ble_flash_timing_test.c": {
+      "bytes": 4051,
+      "sha256": "e22fdc8cff24e5cd1603567ea211174e3e8255c9c7b19dcb9235a08340a857ad"
+    },
+    "tests/ble_open_sim_store.c": {
+      "bytes": 2245,
+      "sha256": "7f210b4fd5ceae456568d3280ecccd8a9cbeb5d6d8eed98a9bbfce0f34c36cf1"
+    },
+    "tests/ble_open_store_test.c": {
+      "bytes": 10302,
+      "sha256": "54f97c6c355d7c0a79dd89bcb7bc1df8c0a8eb2b705326491db8c579d449e384"
+    },
+    "tests/ble_platform_store_test.c": {
+      "bytes": 3583,
+      "sha256": "c4009dd4acb6af46702a0ace68a3af9e97c8d705fdf3012a0bc567d62eca30a9"
+    },
+    "tests/ble_s3_integration.c": {
+      "bytes": 31347,
+      "sha256": "8290a78ff7d546e63c9629eacc084719b6578b67cf87d1d2985908823a3c4ed4"
+    },
+    "tests/ldr_test.c": {
+      "bytes": 6836,
+      "sha256": "10e1cd1b16ceae67f1159df3669a2836b96b303a94f1ca28f0980b411855f1fa"
+    },
+    "tests/open_ble_build_test.py": {
+      "bytes": 5143,
+      "sha256": "0242719e713218d788e1d73e86e988121f0dce312725851f42e5c731b3a45869"
+    },
+    "tests/run_open_ble_tests.py": {
+      "bytes": 4194,
+      "sha256": "5ad3b7d75def7fcec6e81f74913f2f08ced7090d1ae8e61659a5979af190d668"
+    },
+    "tests/run_tests.sh": {
+      "bytes": 3792,
+      "sha256": "73ae6fd01bd1a3ed0e5c8939bad9c416c9af5fed75fe433bfb19689e254c14b6"
+    },
+    "tools/build.py": {
+      "bytes": 59418,
+      "sha256": "8d8abcf3f3b97443edbbcef2a9fe32f796d5a8f05213fe960f88c75fed9f9787"
+    }
+  },
+  "felucca_sources": {
+    "firmware/ble/ble_host.c": {
+      "bytes": 18541,
+      "sha256": "af19e83194ec56e6b177dc00e8e92a3877da3c5ed5fb5e6c05f0503bb4051720"
+    },
+    "docs/BLE-S3.1.md": {
+      "bytes": 30543,
+      "sha256": "fff93c183ec64680450f88eaedb5218d78552d54d8173ebb65d13a664a79391f"
+    }
+  },
+  "spec_snapshot": "/root/wl82-ble-spec-snapshots/r8",
+  "spec_sha256": {
+    "00-overview.md": "410c91cd6ba6947486b5aceef48f3fcad610701c354c68d0eb5dcb556cde04de",
+    "01-radio-bringup.md": "e697101545240062c26ad581c023a5014d89346dc2cf0a983f1ce86fa6594387",
+    "02-baseband.md": "3c92f0a818610cde31d258493ddea6d59bdaafb7cc0012fedecb862c5bbbd0d4",
+    "03-link-layer-hci.md": "7888fc78c581faf114658eddabb59a6269080ed2c921d514847545434f2ced88",
+    "04-platform.md": "a8c96397b8a891c42e6a86e00a984b2c43212c73b13ee0577b78e5ce8da05e29",
+    "05-acceptance-tests.md": "8f8ace6c54fa07a265a7ae829c4dd54bd6967478d61b7c5465e8199b97b6091a",
+    "RULES.md": "e802f465327688cfb35afe4114bcbb454879b6285961c92f731a05a021bcf935"
+  },
+  "profiles": {
+    "template-open-r8": {
+      "fwsc": {
+        "bytes": 610136,
+        "sha256": "c5422315d7111ad67932b1ef31d910fa82766561f9a9f94b6fbbb471a68e95e3"
+      },
+      "bin": {
+        "bytes": 208828,
+        "sha256": "d8313b4c87981150836babbdb706a506ae3f69155187dcc9251590a864b6fa08"
+      },
+      "elf": {
+        "bytes": 270068,
+        "sha256": "aeae718fdad1c76a9049f6ba037f81f095492f97e96d582b66e9981a7b8e6fdd"
+      },
+      "map": {
+        "bytes": 276760,
+        "sha256": "584d4e4a1050055d571bb1d0afa11d9a1393a32d38cd96af6ec828a63e9e4f38"
+      },
+      "symbols": {
+        "bytes": 95597,
+        "sha256": "0010e0e56334a8e67c4cdcd2e764943c0520ab2e869579de4ed9919eeae0bb5b"
+      },
+      "dis": {
+        "bytes": 3181624,
+        "sha256": "1b3c2035756792b598227c2a4cc38a76828ca0bbd16680add8592f785612d41c"
+      }
+    },
+    "template-open-r8-release": {
+      "fwsc": {
+        "bytes": 610136,
+        "sha256": "75dea09ae763aff0a828f2e4e4a5195618e99be1c8cf6fffda6cab9017df7180"
+      },
+      "bin": {
+        "bytes": 188172,
+        "sha256": "3a783ad8e77fd389d8576665bb09612a809fc6030a89a13950ef98f4606443b2"
+      },
+      "elf": {
+        "bytes": 247216,
+        "sha256": "4b7cf04a6e582290cba034db8ac8374e99c7bd9120583e0c1bbd7178cd2ff3ac"
+      },
+      "map": {
+        "bytes": 270197,
+        "sha256": "11815eced160f14cf8beb58b7ef592afb197c4f1ed958ef6c899428bcd0b297a"
+      },
+      "symbols": {
+        "bytes": 91548,
+        "sha256": "9d36b52b96ea7409a102e2809650f30c192cd9fe693f99b8fcd2871f5d2eedb3"
+      },
+      "dis": {
+        "bytes": 2890871,
+        "sha256": "64659cac7f98abdf45397c073cf75e63347699e9c9ad098551d9899dff098f99"
+      }
+    }
+  },
+  "hardware_contact": false,
+  "committed": false
+}

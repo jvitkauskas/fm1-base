@@ -6,6 +6,10 @@ a host simulator and a browser emulator that run the same app, and the tools to 
 MPL-2.0: an app built on it may use any licence. See [DESIGN.md](DESIGN.md), [LICENSING.md](LICENSING.md) and
 [CREDITS.md](CREDITS.md).
 
+Open BLE users: read the [upgrade/downgrade and persistence notes](docs/OPEN-BLE.md#upgrading-and-downgrading).
+R4 → R5+ migrates bonds; R5+ → R4 starts with no bonds and requires forgetting
+and pairing the device again on the central.
+
 **Status: beta.** Two firmwares are built on it so far, and they are its proof points:
 [CTL-1](https://github.com/charlesvestal/fm1-ctl) (with Bluetooth MIDI) and
 [Radio](https://github.com/charlesvestal/fm1-radio) (with WiFi). Expect the platform interface (`include/plat.h`)

@@ -11,7 +11,8 @@
 static struct {
     uint8_t peer[BLE_BOND_CAPACITY][BLE_BOND_PEER_SIZE];
     ble_bond_diag_t d;
-    uint32_t saved_crc,saved_replacements;
+    uint32_t saved_crc,saved_replacements,save_at;
+    uint8_t scheduled,urgent,saving,during_urgent;
 } bonds __attribute__((section(".pool.ble")));
 static int identity(ble_addr_t *a)
 {
@@ -24,10 +25,20 @@ static int peer_find(const ble_addr_t *a)
         if((a->type&~2u)==bonds.peer[i][0] && !memcmp(a->val,bonds.peer[i]+1,6)) return (int)i;
     return -1;
 }
+static void schedule_save(int urgent)
+{
+    if(bonds.saving && urgent) bonds.during_urgent=1;
+    if(!bonds.scheduled || (urgent && !bonds.urgent)) {
+        bonds.save_at=ble_port_ms()+(urgent ? 250u : 5000u);
+        bonds.scheduled=1; bonds.urgent=(uint8_t)!!urgent;
+    }
+}
 static void reconcile(void)
 {
     bonds.d.pending=ble_crc32(&bonds.peer[0][0],sizeof bonds.peer)!=bonds.saved_crc ||
         bonds.d.replacements!=bonds.saved_replacements;
+    if(!bonds.d.pending) bonds.scheduled=bonds.urgent=0;
+    else schedule_save(0);
 }
 static unsigned peer_count(void)
 {
@@ -137,14 +148,14 @@ int ble_bonds_write(int type,const union ble_store_value *v)
         if(!p[8]) p[8]=BLE_BOND_CAPACITY+1u;
         ble_bonds_touch(a.type,a.val);
     }
-    reconcile(); return 0;
+    reconcile(); if(type<3 && bonds.d.pending) schedule_save(1); return 0;
 }
 int ble_bonds_delete(int type,const union ble_store_key *key)
 {
     unsigned at; int i=match(type,key,&at);
     if(i<0) return BLE_HS_ENOENT;
     unsigned bit=type<3 ? 1u<<(type-1) : 4u<<((at-133u)/5u);
-    bonds.peer[i][7]&=(uint8_t)~bit; reconcile(); return 0;
+    bonds.peer[i][7]&=(uint8_t)~bit; reconcile(); if(type<3 && bonds.d.pending) schedule_save(1); return 0;
 }
 int ble_bonds_db_version(uint8_t type,const uint8_t addr[6],uint32_t *version)
 {
@@ -158,7 +169,7 @@ int ble_bonds_db_confirm(uint8_t type,const uint8_t addr[6],uint32_t version)
     if(i<0 || !(bonds.peer[i][7]&1u)) return BLE_HS_ENOENT;
     ble_put32(bonds.peer[i]+9,version); reconcile(); return 0;
 }
-void ble_bonds_replaced(void) { bonds.d.replacements++; reconcile(); }
+void ble_bonds_replaced(void) { bonds.d.replacements++; reconcile(); schedule_save(1); }
 void ble_bonds_get_diag(ble_bond_diag_t *out)
 {
     *out=bonds.d; out->count=(uint8_t)peer_count(); out->capacity=BLE_BOND_CAPACITY; out->records=0;
@@ -216,11 +227,25 @@ void ble_bonds_init(void)
 }
 void ble_bonds_flush(void)
 {
-    if(!bonds.d.pending || !ble_port_storage_idle()) return;
+    if(bonds.saving || !bonds.d.pending || !ble_port_bond_storage_ready()) return;
     canonicalize(); if(!bonds.d.pending) return;
-    if(ble_object_bonds_save(&bonds.peer[0][0],bonds.d.replacements)) { bonds.d.failures++; return; }
-    bonds.saved_crc=ble_crc32(&bonds.peer[0][0],sizeof bonds.peer); bonds.saved_replacements=bonds.d.replacements;
-    bonds.d.writes++; bonds.d.erases++; reconcile();
+    /* The RAM flash wait services host/key input. Those callbacks can mutate
+     * the live cache. Advance the baseline to the SNAPSHOT, never live bytes. */
+    uint32_t crc=ble_crc32(&bonds.peer[0][0],sizeof bonds.peer),replacements=bonds.d.replacements;
+    bonds.saving=1; bonds.during_urgent=0;
+    int rc=ble_object_bonds_save(&bonds.peer[0][0],replacements);
+    bonds.saving=0;
+    if(rc) { bonds.d.failures++; bonds.save_at=ble_port_ms()+1000u; return; }
+    bonds.saved_crc=crc; bonds.saved_replacements=replacements;
+    bonds.d.writes++; bonds.d.erases++;
+    bonds.scheduled=bonds.urgent=0; reconcile();
+    if(bonds.d.pending && bonds.during_urgent) schedule_save(1);
+}
+void ble_bonds_poll(int pairing_complete)
+{
+    if(!bonds.d.pending || bonds.saving || !pairing_complete) return;
+    if(ble_port_storage_idle() || (bonds.scheduled && (int32_t)(ble_port_ms()-bonds.save_at)>=0))
+        ble_bonds_flush();
 }
 /* R1--R4 FLBD v1: no recency was recorded. Establish a deterministic initial
  * order by first valid record slot (later slots newer), retaining both directions,

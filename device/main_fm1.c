@@ -895,7 +895,24 @@ static void fm1_main(void)
     }
 }
 
+#if FM1B_BLE_CONNECTED_STORE
+static void fm1_runtime_start(void);
+/* Only this bootstrap and the entry stub execute from XIP. Volatile copies
+ * cannot become libcalls into SRAM which has not been initialised yet. */
+__attribute__((section(".boot_text"), noinline, used))
 void fm1_cstart(void)
+{
+    volatile uint32_t *d=_rt_start;
+    const volatile uint32_t *s=_rt_load;
+    while(d<_rt_end) *d++=*s++;
+    void (*volatile entry)(void)=fm1_runtime_start;
+    entry();
+    for(;;) ;
+}
+static void fm1_runtime_start(void)
+#else
+void fm1_cstart(void)
+#endif
 {
     uint32_t *s, *d, p3, src, wdt;
 #ifdef APP_CSTART
@@ -935,8 +952,10 @@ void fm1_cstart(void)
         *d = 0;
     for (s = _data_load, d = _data_start; d < _data_end; s++, d++)
         *d = *s;
+#if !FM1B_BLE_CONNECTED_STORE
     for (s = _rt_load, d = _rt_start; d < _rt_end; s++, d++)
         *d = *s;
+#endif
     fm1_mailbox_clear();
     fm1_guard_enable(FM1_GUARD_STACK | FM1_GUARD_WRITE | FM1_GUARD_BUS | FM1_GUARD_PC);
     safe_mode = (uint8_t)(p3 >> 8);

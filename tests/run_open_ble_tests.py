@@ -33,11 +33,27 @@ def function(name,text=hal):
 (out/'hal_adv_seam.inc').write_text('\n'.join(function(n) for n in (
     'bb_map','bb_remap','bb_frame_publish_step','bb_payloads','bb_connection','bb_rx_pending','fm1_ble_adv_start'))+
     function('ble_port_reset_stats',(ROOT/'device/ble_open_platform.c').read_text()))
+flash=(ROOT/'bsp/chip/fm1_flash.h').read_text()
+start=flash.index('RAMINL int fl_wait_issued(')
+end=flash.index('\n}\n',start)+3
+(out/'flash_wait_seam.inc').write_text(flash[start:end])
+platform=(ROOT/'device/ble_open_platform.c').read_text()
+start=platform.index('static uint8_t ble_store_active;')
+end=platform.index('static void ble_platform_irq_probe',start)
+(out/'platform_store_seam.inc').write_text(platform[start:end])
 macros=subprocess.check_output([os.environ.get('CC','cc'),'-dM','-E','-DFM1B_BLE_OPEN=1',
     '-include','stdint.h','-include','bsp/chip/fm1_flash.h','-'],input=b'').decode()
 (out/'flash_ranges.inc').write_text('\n'.join(line for line in macros.splitlines() if line.startswith('#define FL_'))+'\n')
 flags=['-DBLE_HOST_TEST=1','-std=c11' ,'-O1','-g','-Wall','-Wextra','-Werror','-Wno-misleading-indentation',
        '-fsanitize=address,undefined','-fno-omit-frame-pointer','-fno-pie','-no-pie','-DFM1B_BLE_OPEN=1',f'-I{out}']
+run(os.environ.get('CC','cc'),*flags,'tests/ble_flash_timing_test.c',
+    'open_ble/ble_link_logic.c','open_ble/ble_logic.c','-o',out/'flash-timing')
+run(out/'flash-timing')
+for connected in ('0','1'):
+    run(os.environ.get('CC','cc'),*flags,'-Wno-unused-function',
+        '-DFM1B_BLE_CONNECTED_STORE='+connected,'tests/ble_platform_store_test.c',
+        '-o',out/('platform-store-'+connected))
+    run(out/('platform-store-'+connected))
 for name in ('ble_open_seam_test','ble_open_midi_test','ble_open_ranges_test'):
     run(os.environ.get('CC','cc'),*flags,'tests/'+name+'.c','open_ble/ble_health.c','-o',out/name)
     run(out/name)

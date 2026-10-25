@@ -68,6 +68,18 @@ class BuildPolicy(unittest.TestCase):
             errors=b.mmio_check()
             self.assertTrue(any('bad.c' in e and 'outside the BSP' in e for e in errors))
         finally: source.unlink(); p.rmdir()
+    def test_ram_runtime_rejects_xip(self):
+        b.APP=ROOT/'template'; b.ROOT=ROOT; b.CONF={'ble':'open'}; b.BLE=b.BLE_OPEN=True; b.WIFI=False
+        b.OUT=ROOT/'template/build'; b.STEM='template-open'
+        syms=(b.OUT/'template-open.symbols').read_text()
+        binary=(b.OUT/'template-open.bin').read_bytes()
+        for symbol in ('02012340 g     F .text 00000010 unsafe_irq',
+                       '02012340 g     O .rodata 00000010 unsafe_table'):
+            errors,_=b.check(binary,syms+'\n'+symbol,'','')
+            self.assertTrue(any('XIP text/data' in e for e in errors))
+        errors,_=b.check(binary,syms,'','call 0 <boot: 02000158 >')
+        self.assertTrue(any('calls XIP' in e for e in errors))
+
     def test_vendor_link_rejected(self):
         b.APP=ROOT/'template'; b.ROOT=ROOT; b.CONF={'ble':'open'}; b.BLE=b.BLE_OPEN=True; b.WIFI=False
         b.OUT=ROOT/'template/build'; b.STEM='template-open'

@@ -1,0 +1,1 @@
+R7 reliability symbols/strings absent; R8 persistence counters retained in release. PASS

@@ -16,3 +16,11 @@ int ble_object_seed_load(uint8_t record[64]);
 int ble_object_seed_save(const uint8_t record[64], uint32_t *ticks);
 void ble_object_bonds_load(uint8_t *peers,uint32_t *replacements);
 int ble_object_bonds_save(const uint8_t *peers,uint32_t replacements);
+
+/* Live-bond writes only; seed writes still require radio idle. */
+int ble_port_bond_storage_ready(void);
+typedef struct {
+    uint32_t connected_writes,save_us_last,save_us_max,stall_us_max,erase_us_max,program_us_max;
+    uint32_t missed_events,sup_risk,sup_margin_us_min,link_losses;
+} ble_store_diag_t;
+void ble_port_store_diag(ble_store_diag_t *out);

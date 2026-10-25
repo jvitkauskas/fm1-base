@@ -14,6 +14,7 @@ static uint8_t ble_random_config[6],ble_started,ble_store_valid;
 #include "../open_ble/ble_seed.h"
 #include "../open_ble/ble_bonds.h"
 #endif
+static void ble_store_sample(void);
 void ble_port_pend(void) { fm1_ble_worker_pend(); }
 uint32_t ble_port_lock(void) { return fm1_ble_irq_save(); }
 void ble_port_unlock(uint32_t key) { fm1_ble_irq_restore(key); }
@@ -35,7 +36,7 @@ void fm1_ble_worker_irq(void)
     uint32_t key=fm1_ble_irq_save(),start=fm1_ticks();
     uint8_t state=ble_link.state!=BLE_LINK_IDLE && ble_link.state!=BLE_LINK_STOPPED ? BLE_HEALTH_LINK :
         bb.state==1 ? BLE_HEALTH_ADVERTISING : bb.start_phase ? BLE_HEALTH_STARTING : ble_health.phase;
-    ble_health_sample(start,state,ble_link.epoch);
+    ble_health_sample(start,state,ble_link.epoch); ble_store_sample();
     fm1_ble_worker_timer_ack(); ble_llx_running=1;
     if(ble_llx_pending) {
         ble_time_dispatch(ble_llx_request_ticks,start);
@@ -106,7 +107,7 @@ void fm1_ble_rx_irq(void)
 }
 void fm1_ble_event_irq(void)
 {
-    uint32_t t=fm1_ticks(); fm1_ble_event_body(); ble_port_pend(); ble_irq_account(t,0);
+    uint32_t t=fm1_ticks(); fm1_ble_event_body(); ble_store_sample(); ble_port_pend(); ble_irq_account(t,0);
 }
 /* fm1-base A/B store; calibration remains read-only through plain XIP. */
 static int ble_flash_plain(uint32_t off,uint8_t *out,uint32_t n)
@@ -114,14 +115,82 @@ static int ble_flash_plain(uint32_t off,uint8_t *out,uint32_t n)
     return flash_ok ? fm1_ble_flash_read(off,out,n) : -1;
 }
 int ble_port_storage_idle(void) { return bb.state==0 && !fm1_ble_link_active(); }
-static int fm1_ble_flash_allowed(void) { return ble_port_storage_idle(); }
+/* Only the OBJ_BLE adapter opens the live-write gate. Other objects retain
+ * their existing idle/advertising-pause contract. No synchronous host work in
+ * an ISR: the host is held in this main-context transaction. */
+static uint8_t ble_store_active;
+static ble_store_diag_t ble_store_diag;
+#if FM1B_BLE_CONNECTED_STORE
+static void fm1_ble_flash_service(void)
+{
+    if(!ble_store_active) return; /* boot seed and ordinary idle stores */
+    ble_host_worker();
+    app_input_only();
+}
+#endif
+static void ble_store_sample(void)
+{
+    if(!ble_store_active || ble_link.state!=BLE_LINK_UP) return;
+    int32_t left=(int32_t)(ble_link.time.sup-fm1_ticks());
+    uint32_t us=left>0 ? (uint32_t)left/24u : 0;
+    if(us<ble_store_diag.sup_margin_us_min) ble_store_diag.sup_margin_us_min=us;
+    if(us<2u*ble_link.conn.interval*1250u) ble_store_diag.sup_risk=1;
+}
+#if FM1B_BLE_CONNECTED_STORE
+static void fm1_ble_store_operation(int erase,uint32_t us)
+{
+    if(!ble_store_active) return;
+    uint32_t *max=erase ? &ble_store_diag.erase_us_max : &ble_store_diag.program_us_max;
+    if(us>*max) *max=us;
+}
+static void fm1_ble_store_masked(uint32_t ticks)
+{
+    uint32_t us=(ticks+23u)/24u;
+    if(ble_store_active && us>ble_store_diag.stall_us_max) ble_store_diag.stall_us_max=us;
+}
+#endif
+void ble_port_store_diag(ble_store_diag_t *out)
+{
+    uint32_t k=ble_port_lock(); *out=ble_store_diag; ble_port_unlock(k);
+}
+int ble_port_bond_storage_ready(void)
+{
+#if FM1B_BLE_CONNECTED_STORE
+    return ble_store_valid && (ble_port_storage_idle() || ble_link.state==BLE_LINK_UP);
+#else
+    return ble_store_valid && ble_port_storage_idle();
+#endif
+}
+static int fm1_ble_flash_allowed(void)
+{
+    return ble_port_storage_idle() || (FM1B_BLE_CONNECTED_STORE && ble_store_active);
+}
 int ble_port_object_load(void *dst,uint32_t n) { return ble_store_valid ? plat_store_load(OBJ_BLE,dst,n) : -1; }
 int ble_port_object_save(const void *src,uint32_t n)
 {
-    if(!ble_store_valid || !ble_port_storage_idle()) return -8;
+    if(!ble_store_valid || !ble_port_bond_storage_ready()) return -8;
     if(!flash_ok) return -2;
+    int connected=ble_link.state==BLE_LINK_UP;
+    uint32_t start=fm1_ticks(),missed=ble_link.diag.missed_events,epoch=ble_link.epoch;
     fm1_wdt_feed();
-    int rc=plat_store_save(OBJ_BLE,src,n);
+    if(connected) {
+        uint32_t k=ble_port_lock();
+        ble_store_active=1; ble_store_diag.sup_margin_us_min=0xffffffffu;
+        ble_store_sample(); ble_port_unlock(k);
+    }
+    /* st_save writes only the inactive A/B copy and commits its header last.
+     * Bypass the generic store's advertising pause solely for this live save. */
+    int rc=connected ? st_save(OBJ_BLE,src,n) : plat_store_save(OBJ_BLE,src,n);
+    if(connected) {
+        uint32_t k=ble_port_lock(); ble_store_sample(); ble_store_active=0;
+        uint32_t us=(fm1_ticks()-start)/24u;
+        ble_store_diag.save_us_last=us;
+        if(us>ble_store_diag.save_us_max) ble_store_diag.save_us_max=us;
+        ble_store_diag.missed_events+=ble_link.diag.missed_events-missed;
+        if(ble_link.epoch!=epoch || ble_link.state!=BLE_LINK_UP) ble_store_diag.link_losses++;
+        if(!rc) ble_store_diag.connected_writes++;
+        ble_port_unlock(k);
+    }
     fm1_wdt_feed(); return rc;
 }
 static void ble_platform_irq_probe(void)

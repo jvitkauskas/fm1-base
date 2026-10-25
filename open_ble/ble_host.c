@@ -464,10 +464,14 @@ void ble_host_worker(void)
     if(!host_enabled && diag.connection!=BLE_HS_CONN_HANDLE_NONE)
         (void)ble_gap_terminate(diag.connection,BLE_ERR_REM_USER_CONN_TERM);
 #if FELUCCA_BLE_STAGE >= 3
+#if FM1B_BLE_OPEN
+    ble_bonds_poll(!ble_sm_num_procs());
+#else
     if(bond_flush_due && diag.connection==BLE_HS_CONN_HANDLE_NONE && ble_port_storage_idle()) {
         ble_bond_diag_t bd;
         ble_bonds_flush(); ble_bonds_get_diag(&bd); bond_flush_due=bd.pending;
     }
+#endif
     if(host_enabled && !gatt_change_inflight && diag.encrypted && diag.bonded &&
        diag.connection!=BLE_HS_CONN_HANDLE_NONE && !ble_sm_num_procs()) {
         struct ble_gap_conn_desc desc; uint32_t version; uint8_t flags=0;

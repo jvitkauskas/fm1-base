@@ -48,7 +48,7 @@ typedef struct {
     uint8_t win,outcome,reason;
 } ble_update_diag_t;
 typedef struct {
-    uint32_t epoch,created,invalid,events,rx_backpressure;
+    uint32_t epoch,created,invalid,events,rx_backpressure,missed_events;
 #if FM1B_BLE_DIAG
     uint32_t accepted,repetitions,acl_in,acl_out,acknowledged,ncp,flushed,ignored,rx_delayed,worker_calls,epoch_markers;
 #endif

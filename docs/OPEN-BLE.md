@@ -2,15 +2,55 @@
 <!-- Copyright (c) 2026 Julius Vitkauskas -->
 # Open BLE-MIDI for fm1-base
 
-This is the clean-room WL82/AC79 controller from `/root/fm1/Felucca-ble`,
-now implementing frozen specification **r8** for round 5. The R2–R4 base is
-committed at **208ebfb** (`open-ble`); R4 passed the owner's Mac, two iPhones,
-Android and BlueZ first-pair/MIDI bench. R5 adds eight durable LRU bonds and a
-ten-entry resolving list. Its changes are uncommitted. Results, sizes, tests,
-format/migration rules and limits: [RESULTS-R5](../out/open-ble/RESULTS-R5.md).
-Owner hardware procedure: [OWNER-BENCH-R5](../out/open-ble/OWNER-BENCH-R5.md).
-No device, host on the bench network, flash, commit or push was accessed by the
-R5 implementer. Earlier round-specific sections below remain historical evidence.
+This is the clean-room WL82/AC79 peripheral controller, implemented from the
+frozen **r8** specification. R8 adds bond persistence during a live connection
+in fm1-base using a complete SRAM runtime. Diagnostics remain the R7 profile;
+the desktop adapter's confirmed wrong-MIC transmissions require no controller
+change. R8 is a source-tested release candidate awaiting the owner's physical
+bench. See [RESULTS-R8](../out/open-ble/RESULTS-R8.md) and the short
+[OWNER-BENCH-R8](../out/open-ble/OWNER-BENCH-R8.md). Earlier sections below are
+historical round records.
+
+## Upgrading and downgrading
+
+**R4 to R5 or later:** the old v1 bond object migrates to v2. This upgrade was
+verified on hardware. Keep the existing pairing on the Mac/iPhone.
+
+**R5 or later to R4:** R4 truncates a v2 object to its old 1,108-byte load size,
+then rejects it because the CRC fails. R4 starts with no bonds. The central
+still has its keys, so forget the FM-1 on that central and pair again. A later
+R4 save can replace the newer object; do not expect a round trip to recover
+those bonds. This downgrade behavior is intentional and covered by the host
+test using the original R4 parser.
+
+## Connected persistence and SRAM budget (R8)
+
+Open BLE now defaults to `ble_connected_store = true`. The linker copies all
+runtime code and constants, including NimBLE, the app, every interrupt handler,
+and audio data, to SRAM before C startup. Only the entry/bootstrap runs from
+XIP. The build checks the layout and rejects XIP runtime text/data or calls;
+apps which exceed the SRAM regions fail the build. No vendor code is added.
+
+A security change becomes eligible after 250 ms and completion of SMP key
+distribution. CCCD/cache/recency changes use a fixed five-second deadline;
+ongoing CCCD traffic cannot postpone it. Flash busy polling leaves interrupts
+enabled and services the host and `app_input_only` every 500 us of waiting.
+These callbacks run in the main context with recursive physical storage
+excluded. Object reads of busy flash return an error. App input/audio code
+must use SRAM data and must not access mapped external flash directly; an
+app using external flash samples must provide a different storage integration.
+Normal application code should use the platform storage APIs.
+
+The atomic A/B `OBJ_BLE` format is unchanged. Only a verified readback advances
+the RAM baseline; a failed save stays pending and retries after one second.
+A power loss before commit can still lose the new bond: wait for
+`bond_pending 0`, `bond_writes` increasing, and `bond_connected_writes` increasing
+while `peripheral_linked 1`. Both profiles expose the new flash/link counters.
+
+For an app too large for this SRAM layout, `ble_connected_store = false`
+selects the old XIP layout and safe idle-only writes. That fallback retains
+the original unplug-while-connected limitation. Felucca cannot fit the full
+SRAM runtime and retains that limitation too; its retry flag is fixed.
 
 ## Build and application interface
 

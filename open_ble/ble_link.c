@@ -558,6 +558,7 @@ void ble_ll_event(uint16_t event,uint32_t now)
     if(ble_link.closed_valid && ((uint16_t)(event-ble_link.closed_n)==0 ||
                                 (uint16_t)(event-ble_link.closed_n)>=0x8000u)) return;
     ble_link.diag.events++; ble_link.diag.event=event;
+    if(!ble_link.rx_seen) ble_link.diag.missed_events++;
     instant_commit(now);
     if(event!=ble_link.anchor_event) {
         ble_link.anchor+=(uint32_t)(uint16_t)(event-ble_link.anchor_event)*ble_link.conn.interval*30000u;

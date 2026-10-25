@@ -443,7 +443,7 @@ def open_ble_units():
         prefix="ble_" if f in own and f.stem not in ("ble_host","ble_npl","ble_bonds") else "nimble_"
         obj=out / (prefix+"_".join(f.relative_to(SRC).with_suffix("").parts)+".o")
         flags=[*CFLAGS,*FPU,"-DFM1B_BLE_OPEN=1","-DFELUCCA_BLE=1","-DFELUCCA_BLE_STAGE=3",
-               "-DFELUCCA_BLE_S31=1",f"-DFM1B_BLE_DIAG={int(CONF.get('ble_diag',True))}",*nb.flags(target=True,vendor=f not in own)]
+               "-DFELUCCA_BLE_S31=1",f"-DFM1B_BLE_DIAG={int(CONF.get('ble_diag',True))}", f"-DFM1B_BLE_CONNECTED_STORE={int(CONF.get('ble_connected_store',True))}",*nb.flags(target=True,vendor=f not in own)]
         if VERSION:
             flags.append(f'-DAPP_VERSION="{VERSION}"')
         # nb's include paths are absolute; target Docker also sees ROOT at /work.
@@ -461,7 +461,7 @@ def build_app():
         import nimble_build as nb
         flags += ["-DFM1B_BLE=1", "-DFM1B_BLE_OPEN=1", "-DFELUCCA_BLE=1",
                   "-DFELUCCA_BLE_STAGE=3", "-DFELUCCA_BLE_S31=1",
-                  f"-DFM1B_BLE_DIAG={int(CONF.get('ble_diag',True))}", *nb.flags(target=True,vendor=False)]
+                  f"-DFM1B_BLE_DIAG={int(CONF.get('ble_diag',True))}", f"-DFM1B_BLE_CONNECTED_STORE={int(CONF.get('ble_connected_store',True))}", *nb.flags(target=True,vendor=False)]
     elif BLE:
         flags += ["-DFM1B_BLE=1", *inc(SRC / "ble" / "shim")]
         if CONF.get("ble_central"):
@@ -530,7 +530,7 @@ def build_app():
     # bitcode: the linker needs the toolchain's LLVM plugin
     lto = ["--plugin", "/opt/jieli/pi32v2/bin/LLVMgold.so" if use_docker() else str(toolchain() / "pi32v2/bin/LLVMgold.so"),
            "--plugin-opt=mcpu=r3", "--plugin-opt=-pi32v2-large-program=true"] if (BLE and not BLE_OPEN) or WIFI else []
-    ld = SRC / "device" / ("app_wifi.ld" if WIFI else "app.ld")
+    ld = SRC / "device" / ("app_wifi.ld" if WIFI else "app_open_ram.ld" if BLE_OPEN and CONF.get("ble_connected_store",True) else "app.ld")
     tc("pi32v2/bin/ld", *lto, "--gc-sections", "-e", "_start", "-T", ld, *objs, *b_objs,
        *b_libs, "-Map", OUT / (STEM + ".map"), "-o", elf)
     for sect in ("text.bin", "data.bin", "ramtext.bin"):
@@ -613,7 +613,18 @@ def check(img, syms, dis, rt):
     in_c1 = (lambda ln: (mm2 := LINE.match(ln)) is not None and c1[0] <= int(mm2.group(1), 16) < c1[1]) \
         if len(c1) == 2 else (lambda ln: False)   # (the second core's loop: it may call into the flash, see the top)
     rt_calls = [ln for ln in rt.splitlines() if re.search(r"\bcall\b", ln) and not in_c1(ln)]
-    if rt_calls and ((BLE and not BLE_OPEN) or WIFI):  # JieLi's .volatile_ram_code calls out; it runs with the flash on
+    ram_image=BLE_OPEN and CONF.get("ble_connected_store",True)
+    if ram_image:
+        # All runtime text and constants must be in SRAM. The only XIP text
+        # is the entry/bootstrap, and no runtime instruction may call it.
+        bad=[ln for ln in rt_calls if re.search(r": 0*2[0-9a-f]{6} >",ln)]
+        if bad: errors.append(f"SRAM runtime calls XIP: {bad[:3]}")
+        xip_symbols=[line for line in syms.splitlines()
+                     if re.match(r"0*2[0-9a-f]{6}\s",line) and re.search(r"\b[FO]\s",line)
+                     and line.split()[-1] not in ("_start","fm1_cstart")]
+        if xip_symbols: errors.append(f"SRAM runtime has XIP text/data: {xip_symbols[:3]}")
+        notes.append("connected store: complete runtime text/constants in SRAM; IRQs remain enabled")
+    elif rt_calls and ((BLE and not BLE_OPEN) or WIFI):  # JieLi's .volatile_ram_code calls out; it runs with the flash on
         notes.append(f"the radio: .ram_text contains calls (JieLi's .volatile_ram_code): {rt_calls[:3]}")
     elif rt_calls:                  # RAM code runs with the flash off: no calls into XIP
         errors.append(f".ram_text contains calls: {rt_calls[:3]}")
@@ -676,7 +687,7 @@ def check(img, syms, dis, rt):
     def sym(name):
         mm = re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M)
         return int(mm.group(1), 16) if mm else 0
-    bss = sym("_bss_end") - 0x01C08000
+    bss = sym("_bss_end") - sym("_data_start")
     pool = sym("_pool_end") - sym("_pool_start")
     if BLE_OPEN:
         dma0,dma1=sym("_ble_dma_start"),sym("_ble_dma_end")
@@ -684,13 +695,14 @@ def check(img, syms, dis, rt):
         if not (0x01C20000 <= dma0 < dma1 <= 0x01C74000 and dma1-dma0 >= 4324):
             errors.append("open BLE DMA is not in the verified pool SRAM class")
         expected_trace=20480 if CONF.get("ble_diag",True) else 0
-        if not (sym("_rt_end") <= trace0 <= trace1 <= 0x01C08000 and trace1-trace0 == expected_trace):
+        if not ((0x01C00000 <= trace0 <= trace1 <= 0x01C07F00 if ram_image else sym("_rt_end") <= trace0 <= trace1 <= 0x01C08000) and trace1-trace0 == expected_trace):
             errors.append("open BLE trace is not reserved in RAMTEXT")
         notes.append(f"open BLE: DMA {dma0:#010x}..{dma1:#010x}; trace {trace1-trace0} B of RAMTEXT")
     ram, pool_max, spare = (128 * 1024, 0x4C000, 2048) if WIFI else (96 * 1024, 0x54000, 8192)   # (app_wifi.ld)
+    if ram_image: ram, pool_max = 40*1024, 0x2E000
     if os.environ.get("FM1B_POOL_SPARE", "").isdigit():   # an app's own build for itself (a demo build with mirror)
         spare = int(os.environ["FM1B_POOL_SPARE"])
-    notes.append(f"RAMTEXT code {sym('_rt_end')-0x01C00000} B")
+    notes.append(f"RAMTEXT code {sym('_rt_end')-sym('_rt_start')} B")
     notes.append(f"image {len(img)} B; RAM .data+.bss {bss} B of {ram}; pool {pool} B of {pool_max}")
     if bss > ram:
         errors.append("RAM region overflow")
@@ -881,6 +893,8 @@ def main():
         CONF["ble_diag"]=a.ble_diag=="on"
     if not isinstance(CONF.get("ble_diag",True),bool):
         raise SystemExit("fm1.toml: ble_diag must be true or false")
+    if not isinstance(CONF.get("ble_connected_store",True),bool):
+        raise SystemExit("fm1.toml: ble_connected_store must be true or false")
     BLE = bool(CONF.get("ble")) and not a.no_ble
     BLE_OPEN = BLE and CONF.get("ble")=="open"
     if BLE_OPEN and CONF.get("ble_central"):

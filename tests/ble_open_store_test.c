@@ -169,4 +169,5 @@ static void cuts_test(void)
     printf("open storage: %u byte-cut cases (seed + bond), old/new whole, no compaction loss, loader tails blank: PASS\n",2u*(4096+BLE_OBJECT_SIZE+33));
 }
 #include "ble_bond_migration_test.inc"
-int main(void) { seed_test(); bonds_test(); cache_version_test(); downgrade_test(); cuts_test(); migration_test(); full_snapshot_cuts(); return 0; }
+#include "ble_connected_store_test.inc"
+int main(void) { seed_test(); bonds_test(); cache_version_test(); downgrade_test(); cuts_test(); migration_test(); full_snapshot_cuts(); connected_store_test(); return 0; }

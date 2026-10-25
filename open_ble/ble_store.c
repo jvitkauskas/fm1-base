@@ -34,10 +34,10 @@ void ble_object_init(void)
     } else if(n!=(int)sizeof object || !object_valid(object,sizeof object)) object_empty();
     ble_put32(object+BLE_OBJECT_SIZE-4,ble_crc32(object,BLE_OBJECT_SIZE-4));
 }
-static int object_commit(uint8_t *next)
+static int object_commit(uint8_t *next,int bond)
 {
     uint8_t verify[BLE_OBJECT_SIZE];
-    if(!ble_port_storage_idle()) return BLE_FLASH_REFUSED;
+    if(!(bond ? ble_port_bond_storage_ready() : ble_port_storage_idle())) return BLE_FLASH_REFUSED;
     ble_put32(next+BLE_OBJECT_SIZE-4,ble_crc32(next,BLE_OBJECT_SIZE-4));
     int rc=ble_port_object_save(next,BLE_OBJECT_SIZE);
     if(rc) return rc==-8 || rc==-1 ? BLE_FLASH_REFUSED :
@@ -51,7 +51,7 @@ int ble_object_seed_save(const uint8_t record[64],uint32_t *ticks)
 {
     uint8_t next[BLE_OBJECT_SIZE]; uint32_t start=ble_port_ticks();
     memcpy(next,object,sizeof next); memcpy(next+16,record,64);
-    int rc=object_commit(next); *ticks=ble_port_ticks()-start; return rc;
+    int rc=object_commit(next,0); *ticks=ble_port_ticks()-start; return rc;
 }
 void ble_object_bonds_load(uint8_t *peers,uint32_t *replacements)
 {
@@ -61,5 +61,5 @@ int ble_object_bonds_save(const uint8_t *peers,uint32_t replacements)
 {
     uint8_t next[BLE_OBJECT_SIZE];
     memcpy(next,object,sizeof next); memcpy(next+80,peers,BLE_BOND_BYTES); ble_put32(next+8,replacements);
-    return object_commit(next);
+    return object_commit(next,1);
 }

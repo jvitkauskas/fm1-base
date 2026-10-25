@@ -17,6 +17,7 @@ typedef struct {
     uint16_t cccd_handle[2],cccd_flags[2];
 } ble_bond_peer_diag_t;
 #if FM1B_BLE_OPEN
+void ble_bonds_poll(int pairing_complete);
 void ble_bonds_touch(uint8_t type,const uint8_t identity[6]);
 /* Enumerates identities, most recent first (rank 1). No key material. */
 int ble_bonds_peer(unsigned index,ble_bond_peer_diag_t *out);

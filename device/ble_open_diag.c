@@ -146,6 +146,7 @@ static void open_ble_health_dump(void)
     ble_ll_get_diag(&l); fm1_ble_irq_restore(k);
     ble_host_get_diag(&host); ble_time_get_diag(&t);
     ble_security_get_diag(&enc); ble_bonds_get_diag(&bond);
+    ble_store_diag_t store; ble_port_store_diag(&store);
     ob_kv("ble_diag",FM1B_BLE_DIAG); ob_kv("sample_ms",(int32_t)ms);
     ob_kv("peripheral_state",plat_ble_state()); ob_kv("peripheral_linked",plat_ble_linked());
     ob_kv("link_state_idle_created_up_closing_stopped",l.state); ob_kv("link_epoch",(int32_t)l.epoch);
@@ -161,6 +162,14 @@ static void open_ble_health_dump(void)
     ob_kv("gatt_confirmations",(int32_t)host.gatt_confirmations);
     ob_kv("gatt_peer_version",(int32_t)host.gatt_peer_version);
     ob_kv("bond_pending",bond.pending); ob_kv("bond_failures",(int32_t)bond.failures);
+    ob_kv("bond_writes",(int32_t)bond.writes);
+    ob_kv("bond_connected_writes",(int32_t)store.connected_writes);
+    ob_kv("bond_save_us_last",(int32_t)store.save_us_last); ob_kv("bond_save_us_max",(int32_t)store.save_us_max);
+    ob_kv("bond_erase_us_max",(int32_t)store.erase_us_max); ob_kv("bond_program_us_max",(int32_t)store.program_us_max);
+    ob_kv("bond_stall_us_max",(int32_t)store.stall_us_max); ob_kv("bond_missed_events",(int32_t)store.missed_events);
+    ob_kv("bond_sup_risk",(int32_t)store.sup_risk); ob_kv("bond_sup_margin_us_min",(int32_t)store.sup_margin_us_min);
+    ob_kv("bond_write_link_losses",(int32_t)store.link_losses);
+
     open_ble_bonds_dump();
     ob_kv("midi_packets_in",(int32_t)host.midi_in); ob_kv("midi_packets_out",(int32_t)host.midi_out);
     ob_kv("midi_bad",(int32_t)host.midi_bad); ob_kv("midi_drop",(int32_t)host.midi_drop);

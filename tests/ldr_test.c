@@ -176,5 +176,6 @@ int main(int argc, char **argv)
         logical[nfo + 0x4000 + 5] = save;
     }
     printf("%s\n", bad ? "LOADER TEST FAILED" : "loader test passed");
+    free(old); free(logical);
     return bad != 0;
 }

@@ -112,6 +112,9 @@ int plat_ble_device(void) { return BLE_DEV_OFF; }
  * The RAM flash driver rechecks idle atomically at every issued operation. */
 static int ble_open_store_begin(void)
 {
+#if FM1B_BLE_CONNECTED_STORE
+    if(ble_store_active) return -8; /* live bond snapshot owns st_buf and SPI0 */
+#endif
     if(!ble_started) {
         if(!ble_port_storage_idle()) return -8;
         uint32_t k=ble_port_lock(); ble_health_begin(BLE_GAP_FLASH); ble_port_unlock(k); return 0;

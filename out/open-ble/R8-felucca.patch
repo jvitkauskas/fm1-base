@@ -1,0 +1,39 @@
+diff --git a/docs/BLE-S3.1.md b/docs/BLE-S3.1.md
+index e4827e5..0f49e1a 100644
+--- a/docs/BLE-S3.1.md
++++ b/docs/BLE-S3.1.md
+@@ -489,3 +489,20 @@ has not been flashed or bench-qualified.
+ 5. Scriptable-central H-22..H-25, A9 sniffer/termination provenance, D-1 RF-tail,
+    cumulative interrupt masking and range/temperature qualification remain
+    the existing hardware checklist; native tests do not replace them.
++
++## R8 persistence limitation
++
++Felucca still has the disconnect-only bond journal. Its flash driver disables
++interrupts and removes XIP; the frozen r8 platform section 0.9 forbids live
++writes. Do not unplug a newly paired keyboard until the link has actually
++closed and the bond pending flag has cleared. macOS Audio MIDI Setup's
++Disconnect button may keep the underlying BLE link alive.
++
++fm1-base R8 uses a complete SRAM runtime (code and constants, all interrupt
++handlers) to keep radio, audio and MIDI running during OBJ_BLE writes. That
++mechanism does not fit Felucca: the existing S3.1c target report has a
++527,036-byte image, 97,064 bytes of static RAM, a 331,108-byte pool, and only
++1,132 bytes unused beside the RAM code/trace. The runtime cannot be copied
++into the remaining SRAM. The live-write gate therefore stays closed here;
++no unsafe connected-write workaround or destructive journal conversion was
++introduced. A failed idle flush now retains its pending retry flag.
+diff --git a/firmware/ble/ble_host.c b/firmware/ble/ble_host.c
+index f7bc9ad..925f4f9 100644
+--- a/firmware/ble/ble_host.c
++++ b/firmware/ble/ble_host.c
+@@ -321,7 +321,8 @@ void ble_host_worker(void)
+     }
+ #if FELUCCA_BLE_STAGE >= 3
+     if(bond_flush_due && diag.connection==BLE_HS_CONN_HANDLE_NONE && ble_port_storage_idle()) {
+-        ble_bonds_flush(); bond_flush_due=0;
++        ble_bond_diag_t bond;
++        ble_bonds_flush(); ble_bonds_get_diag(&bond); bond_flush_due=bond.pending;
+     }
+     if(security_due && (int32_t)(now-security_at)>=0 && diag.connection!=BLE_HS_CONN_HANDLE_NONE) {
+         struct ble_gap_conn_desc desc; ble_security_diag_t enc; int rc;

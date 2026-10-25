@@ -134,13 +134,15 @@ static int st_read(uint32_t off, void *dst, uint32_t n)   /* 256-byte IRQ-off wi
 }
 static int st_erase(uint32_t off)
 {
-    uint32_t took;
+    uint32_t took=0;
 #if FM1B_BLE_OPEN
     if(!fm1_ble_flash_allowed()) return -8;
 #endif
     if (!FL_STORE_OK(off, 0x1000u))
         return -8;
+#if !FM1B_BLE_CONNECTED_STORE
     audio_silence();
+#endif
 #if FM1B_BLE_OPEN
     uint32_t k=irq_save(); ble_health_begin(BLE_GAP_FLASH); irq_restore(k);
 #endif
