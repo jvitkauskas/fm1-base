@@ -2,8 +2,9 @@
 <!-- Copyright (c) 2026 Julius Vitkauskas -->
 # Open Bluetooth LE (`ble = "open"`)
 
-An open Bluetooth LE stack for the FM-1 (JieLi AC79/WL82): a clean-room link-layer controller for the WL82 radio,
-Apache NimBLE 1.10.0 as the host, and a BLE-MIDI service. It is an opt-in alternative to the JieLi-based
+An open Bluetooth LE stack for the FM-1 (JieLi AC79/WL82): a link-layer controller for the WL82 radio, written
+from a separate hardware specification ([provenance](#how-the-controller-was-written)), Apache NimBLE 1.10.0 as the
+host, and a BLE-MIDI service. It is an opt-in alternative to the JieLi-based
 `ble = true`, which stays the template's default. The application links nothing of JieLi's except a few
 transcribed radio tables (Apache-2.0, see [License and provenance](#license-and-provenance)).
 
@@ -199,9 +200,21 @@ CCCDs); 1232..1235 CRC-32.
   `OBJ_BLE` rolls the seed chain back: device-local persistence, not secure storage. Seed entropy is tracked by
   class and credit; clock and RF diversifiers get none; no CSPRNG qualification is claimed.
 - Calibration is read from the first VM sector `0x93000..0x93FFF` and BTIF `0xE9000..0xE9FFF`; both are
-  read-only in open builds, also through `plat_data_*` (they overlap XDATA0/1). Overwritten calibration means
-  defaults; without a valid factory identity address startup fails. `0x94000..0x96FFF` (the vendor stack's seed
-  and bond sectors) is left to the app.
+  read-only in open builds, also through `plat_data_*` (they overlap XDATA0/1). Missing calibration items fall
+  back to defaults, except two: without a valid factory identity address, or without a valid radio trim record,
+  startup fails (see [Without a radio calibration record](#without-a-radio-calibration-record)).
+  `0x94000..0x96FFF` (the vendor stack's seed and bond sectors) is left to the app.
+
+## Without a radio calibration record
+
+The open controller applies the radio trim record that the stock firmware writes on its first boot; it has no
+self-calibration of its own and never writes the calibration sectors. A unit without a valid record (one that never
+ran the stock firmware, or whose calibration sectors were overwritten) does not start Bluetooth: `plat_ble_state()`
+is `BLE_FAILED`, the log shows `open BLE: no radio calibration record`, and the readout `error 13`. To recover,
+restore the calibration sectors from a full flash backup of the unit, or run the stock firmware once and then flash
+the open build again: the stock firmware calibrates the radio and saves the record when it finds none (read from its
+code; not tested on a unit). (`error 12`, logged as `open BLE: VCO detector unusable`, means the radio's
+VCO bank scan found no usable bank group; the radio is not started either.)
 
 ## BSP interface
 
@@ -358,14 +371,86 @@ adapter.
   SDK-built firmware image by the specification side. Vendor data, not independently derived; the header lists
   each table's source.
 - NimBLE: Apache-2.0 (`third_party/nimble/LICENSE`, `NOTICE`). TinyCrypt: BSD-3-Clause, its ECC code BSD-2-Clause.
-- The controller was implemented clean-room from a hardware specification written separately. fm1-base's `ble/`,
-  `device/radio.c` and `examples/wifi/` (which wrap JieLi's closed libraries) were not consulted; the tables'
-  author read no vendor binary, disassembly or library. One tooling exception: early builds ran the existing
-  register checker, which reads every device C file including `device/radio.c`; open builds now skip that file.
+- The controller was written from a separate hardware specification; see [How the controller was
+  written](#how-the-controller-was-written) for the process, what crossed between the two sides and its limits.
+  fm1-base's `ble/`, `device/radio.c` and `examples/wifi/` (which wrap JieLi's closed libraries) were outside the
+  implementer's permitted sources.
 - An open application links nothing of JieLi's but the tables; its package carries the three SDK package-data
   files like every fm1-base package. Factory calibration is read from the unit at run time.
 
 See `LICENSING.md` and `CREDITS.md`.
+
+### How the controller was written
+
+The controller was written by two separate sides.
+
+- **The specification side** studied JieLi's AC79 SDK and the compiled Bluetooth controller and Wi-Fi RF library in an
+  SDK-built firmware image. It ran experiment firmware on a test unit and captured traffic on air. From that work it
+  wrote a hardware specification: registers, register sequences, memory layouts, timings, the vendor stack's
+  deviations from the Bluetooth Core Specification, and acceptance tests.
+- **The implementer side** wrote all code from that specification, from public sources (the Core Specification,
+  NimBLE, the SDK's `include_lib/driver` headers) and from the fm1-base and felucca-bsp trees. Each implementer round's
+  brief excluded the vendor libraries and binaries, disassembly, decompiled code and compiler IR, the specification
+  side's own notes, and fm1-base's `ble/`, `device/radio.c` and `examples/wifi/`.
+- **Who was on each side.** Both sides were AI coding agents run by the author (Julius Vitkauskas), in separate
+  sessions. The specification side was one Claude session and its sub-agents. The implementer was a separate model,
+  GPT-6.1-Sol, for most rounds, and fresh Claude sessions given only the written brief for the last ones. The
+  specification side and the author ran the hardware benches; the implementer never touched the hardware.
+
+**What crossed from the specification side to the implementer:**
+
+- the frozen specification, revisions r2 to r8 and r8.1;
+- the specification side's written answers to three implementability reviews of the specification;
+- one written brief per implementer round, listing the task and the permitted sources;
+- bench and soak reports from the hardware.
+
+Each implementer round in the first home of the code (rounds S1 to S3.1d) recorded the SHA-256 of every input file
+it read; these manifests are `out/BLE-S*-INPUT-SHA256SUMS` on the `ble-controller` branch of
+https://github.com/jvitkauskas/Felucca. The specification snapshots still match those hashes. The fm1-base rounds name
+their specification revision in their result notes (r7 for the port, r8 from round 5 on), kept in `out/open-ble/`
+on the `open-ble` branch of https://github.com/jvitkauskas/fm1-base.
+
+**Known limits of the separation.**
+
+- **The radio bring-up follows JieLi's order of operations.** The specification side read the register sequence from
+  the vendor code and recorded it as the hardware sequence. The implementer followed the specification. The register
+  values are hardware facts; the radio tables are vendor data (Apache-2.0, above).
+- **Four areas were rewritten.** Revisions r2 to r8 described four routines step by step, and the first
+  implementation followed those steps:
+  - the VCO bank table;
+  - the fallback self-calibration;
+  - the missed-event widening step;
+  - the connection RF-priority rule.
+
+  Revision 8.1 restates them as hardware facts, required results and test vectors. A separate implementer then wrote
+  them again from r8.1 alone, without access to the earlier code. The specification side compared the results with
+  the earlier code: the VCO table is identical on 3,000 random sets of readings, and the missed-event step on every
+  input combination. The priority rule changes on purpose: it no longer steps through 27, 26 and 25 after traffic. The fallback self-calibration was dropped instead: a
+  unit without a radio calibration record now does not start Bluetooth
+  (see [Without a radio calibration record](#without-a-radio-calibration-record)).
+- **The specification side made small edits to the tree:** the NimBLE version in diagnostic banner strings, one
+  comment, the arrangement of the commits, the mechanical removal of the four areas before their rewrite, and parts
+  of this document. None of these changes controller behaviour.
+- **Two reading slips were recorded:**
+  - Early builds ran the existing register checker, which reads every device C file including `device/radio.c`.
+    Open builds now skip that file.
+  - The implementer of revision 8.1 saw single comment lines from `ble/shim/`, `device/radio.c` and
+    `examples/wifi/app.h` in search output, before excluding them. None related to its task.
+- **The specification is not published.** It contains descriptions of the vendor software's internals and
+  identifiers of the test unit. The fm1-base maintainers can have a copy on request. These hashes identify it:
+
+| Revision | File | SHA-256 |
+| --- | --- | --- |
+| r8 | 00-overview.md | 410c91cd6ba6947486b5aceef48f3fcad610701c354c68d0eb5dcb556cde04de |
+| r8 | 01-radio-bringup.md | e697101545240062c26ad581c023a5014d89346dc2cf0a983f1ce86fa6594387 |
+| r8 | 02-baseband.md | 3c92f0a818610cde31d258493ddea6d59bdaafb7cc0012fedecb862c5bbbd0d4 |
+| r8 | 03-link-layer-hci.md | 7888fc78c581faf114658eddabb59a6269080ed2c921d514847545434f2ced88 |
+| r8 | 04-platform.md | a8c96397b8a891c42e6a86e00a984b2c43212c73b13ee0577b78e5ce8da05e29 |
+| r8 | 05-acceptance-tests.md | 8f8ace6c54fa07a265a7ae829c4dd54bd6967478d61b7c5465e8199b97b6091a |
+| r8 | RULES.md | e802f465327688cfb35afe4114bcbb454879b6285961c92f731a05a021bcf935 |
+| r8.1 | 08-restatement.md | b3fc28752603260ce9114a9e38b77144aca2152568cd2fb5bd04f16d34e4ce32 |
+
+Earlier revisions (r2 to r7) are identified by the input manifests above.
 
 ## Roadmap
 

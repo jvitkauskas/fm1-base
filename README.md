@@ -74,8 +74,8 @@ should say where the setting is (the template's: for details, see template/docs/
 
 ### Open Bluetooth (peripheral)
 
-`ble = "open"` (with `ble_central = false`) builds an open Bluetooth LE stack instead of JieLi's: a clean-room
-controller for the FM-1's radio, Apache NimBLE 1.10.0 as the host, and the BLE-MIDI service. It links nothing of
+`ble = "open"` (with `ble_central = false`) builds an open Bluetooth LE stack instead of JieLi's: a controller
+for the FM-1's radio written from a separate hardware specification, Apache NimBLE 1.10.0 as the host, and the BLE-MIDI service. It links nothing of
 JieLi's except a few transcribed radio tables (Apache-2.0); a package still takes its three data files from
 `$AC79_SDK`. It is one link to a computer or a phone (tested with macOS, iOS and Linux), with pairing, bonds for
 eight of them, and MIDI clock timed by the sender's timestamps. Devices (`ble_central`, `TO_BLE_DEV`) are not there
