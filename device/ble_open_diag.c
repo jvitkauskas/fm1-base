@@ -380,7 +380,7 @@ static void open_ble_dump(void)
     for (i=0;i<4;i++) { ob_hex(hw.irq_probe[i],8); ob_putc(i==3 ? '\r' : ' '); }
     ob_putc('\n');
     ob_kv("ticks_while_irq_masked",(int32_t)hw.irq_ticks_while_masked);
-    ob_kv("error",(int32_t)hw.error); ob_kv("failure_stage",(int32_t)hw.failure_stage); ob_kv("calibration_1_record_2_self",(int32_t)hw.calibration);
+    ob_kv("error",(int32_t)hw.error); ob_kv("failure_stage",(int32_t)hw.failure_stage); ob_kv("calibration_1_record",(int32_t)hw.calibration);
     ob_kv("vm_status",ble_cal.vm_status); ob_kv("btif_status",ble_cal.btif_status);
     ob_kx("records_present",ble_cal.present);
     ob_puts("public_address_hci "); ob_ble_bytes(ble_cal.public_addr,6);

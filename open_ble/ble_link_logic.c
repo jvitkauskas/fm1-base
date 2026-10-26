@@ -105,4 +105,25 @@ uint8_t ble_timeline_check(ble_timeline_t *t,const ble_conn_t *c,uint32_t now)
     if(!t->established) return (int32_t)(now-t->est_end)>=0 ? 0x3e : 0;
     return (int32_t)(now-t->sup)>=0 ? 8 : 0;
 }
-/* Removed for the clean reimplementation from specification revision 8.1 (R3, missed-event step). */
+/* Missed-event step, specification r8.1 R3.2: the (A_DRIFT, A_FINE) pair that moves the expected anchor 100 us
+ * earlier. fine: the current A_FINE, sign-extended; raw: the raw 24-bit A_CNT; phase: P = 625 - TIM_B - TIM_D,
+ * computed in unsigned arithmetic by the caller, so a negative P arrives wrapped and is read back as signed.
+ * Returns 1 with *next and *drift set, or 0 when the step is not applied (A_DRIFT >= raw A_CNT, or the new A_FINE
+ * outside -2048..2047); then neither output is written. */
+int ble_missed_step(int fine,uint32_t raw,unsigned phase,int *next,unsigned *drift)
+{
+    int64_t q=(int64_t)(int32_t)phase+fine,moved=(int64_t)fine-(int64_t)BLE_MISS_STEP_US;
+    unsigned d=0;
+    if((q>=0 && q<100) || (q>=625 && q<725)) d=1;
+    else if(q< -525) { d=1; moved=(int64_t)fine+525; }
+    if(d>=raw || moved< -2048 || moved>2047) return 0;
+    *next=(int)moved; *drift=d; return 1;
+}
+/* Connection-event priority, specification r8.1 R4 (first match wins). missed: consecutive events without a
+ * valid packet, including the one just ended (0 if it was valid). */
+uint8_t ble_link_priority(int instant_pending,int control_waiting,int acl_waiting,unsigned missed)
+{
+    if(instant_pending || control_waiting || missed>3u) return 30;
+    if(acl_waiting || missed>=1u) return 28;
+    return 19;
+}

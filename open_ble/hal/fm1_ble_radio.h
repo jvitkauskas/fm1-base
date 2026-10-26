@@ -39,6 +39,14 @@ static void br_error(uint32_t code)
 {
     if (!br_diag.error) { br_diag.error=code; br_diag.failure_stage=br_diag.stage; }
 }
+#define BR_ERR_VCO_DETECTOR 12u    /* R1: no bank group gives differing readings at divider 73 */
+#define BR_ERR_NO_TRIM 13u         /* R2: no valid stored trim record (no fallback self-calibration) */
+/* The log line (at most 43 characters) for a bring-up error whose cause has a name; 0 for the others. */
+static const char *br_error_cause(uint32_t code)
+{
+    return code==BR_ERR_NO_TRIM ? "open BLE: no radio calibration record" :
+        code==BR_ERR_VCO_DETECTOR ? "open BLE: VCO detector unusable" : 0;
+}
 static int br_wait(uint32_t addr,uint32_t mask,uint32_t expected)
 {
     uint32_t t=fm1_ticks();
@@ -184,8 +192,70 @@ static unsigned br_compare(void)
 {
     uint32_t r=br_comparator(); return ((r>>18)&1u)|((r>>16)&2u);
 }
-/* Removed for the clean reimplementation from specification revision 8.1 (R1, bank for a divider). */
-/* Removed for the clean reimplementation from specification revision 8.1 (R1, VCO bank table). */
+/* VCO bank table, specification r8.1 R1. A reading r(bank, divider) is 0..3: 2 = divider below the bank's
+ * lock range, 1 = above it, 0/3 = neither. The table and its lookup are pure (no registers), so the host test
+ * drives them with modelled readings (tests/ble_vco_test.c); br_vco() supplies the radio's readings. */
+#define BR_VCO_DIV_FIRST 73u   /* FB_DIV of the group probes and the first entry's start */
+#define BR_VCO_DIV_LAST 171u   /* the highest divider an edge search reads */
+#define BR_VCO_DIV_REST 121u   /* FB_DIV and its bank when the table is done */
+typedef unsigned (*br_vco_read_t)(unsigned bank7,unsigned divider);
+/* limits[47]: the highest bank of the lowest group k (banks 16k..16k+15) whose probes at 16k, 16k+7 and 16k+15
+ * are not all equal. Entry i<47 belongs to bank limits[47]-i (mod 256, read through its low 7 bits). One upward
+ * pass from the start divider S finds the upper edge U (first "above"; 171 if none) and the lower edge D (last
+ * "below" before U; S if none; with no "above", a "below" at 171 gives 171). limits[i]=(U(i-1)-3+D(i))/2 with
+ * U(-1)=73, and the next entry starts at D. Returns -1 (table untouched) if no group qualifies. */
+static int br_vco_table(uint8_t *limits,br_vco_read_t read)
+{
+    unsigned k,i,f,top=0,start=BR_VCO_DIV_FIRST,upper_before=BR_VCO_DIV_FIRST;
+    int found=0;
+    for (k=0;k<8 && !found;k++) {
+        unsigned a=read(16u*k,BR_VCO_DIV_FIRST),b=read(16u*k+7u,BR_VCO_DIV_FIRST),c=read(16u*k+15u,BR_VCO_DIV_FIRST);
+        if (a!=b || b!=c) { top=16u*k+15u; found=1; }
+    }
+    if (!found) return -1;
+    limits[47]=(uint8_t)top;
+    for (i=0;i<47;i++) {
+        unsigned bank=(top-i)&127u,upper=BR_VCO_DIV_LAST,lower=start;
+        for (f=start;f<=BR_VCO_DIV_LAST;f++) {
+            unsigned r=read(bank,f);
+            if (r==1) { upper=f; break; }
+            if (r==2) lower=f;
+        }
+        limits[i]=(uint8_t)((upper_before-3u+lower)/2u);
+        upper_before=upper; start=lower;
+    }
+    return 0;
+}
+/* The bank for divider f: limits[47]-(j-1) for the smallest j in 1..47 with limits[j]>f, else limits[47]-47
+ * (mod 256). j runs to 47 on purpose: entry 47 (a bank number) takes part, as specified; limits[0] does not. */
+static unsigned br_vco_bank(const uint8_t *limits,unsigned f)
+{
+    unsigned j;
+    for (j=1;j<48 && limits[j]<=f;j++) {}
+    return (limits[47]-(j-1u))&255u;
+}
+static unsigned br_bank_for(unsigned divider) { return br_vco_bank(br_limits,divider); }
+static void br_vco_set(unsigned bank,unsigned divider)
+{
+    br_af(14,127u<<19,(bank&127u)<<19); br_af(15,255u<<5,(divider&255u)<<5);
+}
+static unsigned br_vco_read(unsigned bank7,unsigned divider)
+{
+    static unsigned reads;
+    if (!(++reads&63u)) fm1_wdt_feed();   /* ~7 ms of readings */
+    br_vco_set(bank7,divider); br_rn(); return br_compare();
+}
+static void br_vco(void)
+{
+    int rc;
+    if (br_diag.error) return;
+    br_af(16,1u<<24,1u<<24);                       /* detector on for the readings */
+    rc=br_vco_table(br_limits,br_vco_read);
+    br_af(16,1u<<24,0); fm1_wdt_feed();
+    if (rc) { br_error(BR_ERR_VCO_DETECTOR); return; }
+    br_vco_set(br_bank_for(BR_VCO_DIV_REST),BR_VCO_DIV_REST);
+    BLE_DIAG_ONLY(memcpy(br_diag.vco,br_limits,sizeof br_limits));
+}
 static void br_gain(unsigned code)
 {
     const uint8_t *b=br_vga[code<42 ? code : 41].b;
@@ -219,15 +289,6 @@ static void br_apply_trim(const uint8_t *t)
     br_af(1,15u<<8,8u<<8); br_af(8,255u<<10,(uint32_t)t[42]<<10); br_af(4,255u<<14,(uint32_t)t[42]<<14);
     memcpy(br_dc,t+48,16);
 }
-/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_loopback). */
-/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_measure). */
-/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_gain_step). */
-/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_bandwidth). */
-/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_atten). */
-/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_tx_search). */
-/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_rx_dc_search). */
-/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_rx_search). */
-/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_self_calibrate). */
 static int br_signed10(unsigned v) { return (v&512u) ? (int)v-1024 : (int)v; }
 static void br_handover(void)
 {
@@ -305,7 +366,6 @@ static void br_clock_probe(void)
     BLE_DIAG_ONLY(br_diag.clocks[0]=BR_R(0x1000cu); br_diag.clocks[1]=BR_R(0x10010u););
     BLE_DIAG_ONLY(br_diag.clocks[2]=BR_R(0x10014u); br_diag.clocks[3]=BR_R(0x10008u); /* SYS_DIV, public WL82.h */);
 }
-/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_collect_trim). */
 static void br_radio_init(ble_cal_t *cal,uint32_t *modem)
 {
     static const struct { uint8_t n; uint32_t mask,value; } analog[]={
@@ -324,8 +384,11 @@ static void br_radio_init(ble_cal_t *cal,uint32_t *modem)
     BLE_DIAG_ONLY(br_diag.clocks[2]=BR_R(0x10014u); br_diag.clocks[3]=BR_R(0x10008u););
     BLE_DIAG_ONLY(br_p33_snapshot(br_diag.p33_before););
     br_stage(1);
+    /* R2: a valid stored trim record is required. There is no fallback self-calibration and nothing is written to
+     * the calibration sectors: without a record the bring-up fails here, before the radio is programmed. */
+    if (!((cal->present&8u) && ble_trim_valid(cal->trim))) br_error(BR_ERR_NO_TRIM);
     br_field(0x10010u,3u<<14,0);
-    for (i=0;i<5;i++) BR_R(0x14040u+4*i)=0;
+    for (i=0;i<5 && !br_diag.error;i++) BR_R(0x14040u+4*i)=0;
     br_field(0x14040u,1u<<8,1u<<8); br_field(0x14040u,1u<<6,1u<<6);
     br_field(0x14040u,1,1); fm1_delay_us(1); br_field(0x14040u,4,4); fm1_delay_us(1);
     br_field(0x14040u,8,8); fm1_delay_us(1); br_field(0x14040u,2,2); fm1_delay_us(50);
@@ -351,17 +414,12 @@ static void br_radio_init(ble_cal_t *cal,uint32_t *modem)
     if (!br_diag.error) BR_A(21)=0x02822520;
     br_rn(); br_af(14,1u<<18,0); fm1_delay_us(80); br_af(14,1u<<18,1u<<18);
     br_stage(6);
-    if (!br_diag.error) {
-        if ((cal->present&8u) && ble_trim_valid(cal->trim)) {
-            br_diag.calibration=1; br_apply_trim(cal->trim);
-        } else { br_diag.calibration=2; br_self_calibrate(); }
-    }
+    if (!br_diag.error) { br_diag.calibration=1; br_apply_trim(cal->trim); }   /* the record, checked at stage 1 */
     br_stage(7); br_mode(0);
     br_af(9,7u<<24,(cal->pa[0]&7u)<<24); br_af(10,7,cal->pa[1]);
     br_af(10,7u<<9,(cal->pa[2]&7u)<<9); br_af(10,7u<<15,(cal->pa[3]&7u)<<15);
     br_af(10,15u<<22,(cal->pa[4]&15u)<<22); br_af(11,7,cal->pa[5]);
     br_stage(8); br_handover();
-    if (br_diag.calibration==2 && !br_diag.error) br_collect_trim(cal->trim);
     br_stage(9);
     br_af(1,(3u<<16)|(7u<<12),(3u<<16)|(4u<<12)); br_af(2,7,0);
     br_af(3,3u<<6,1u<<6); br_af(4,(15u<<8)|127u,(9u<<8)|14u); br_gain(0);

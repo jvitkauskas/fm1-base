@@ -23,6 +23,7 @@ def run(name,objects):
     subprocess.run([str(exe)],check=True)
 run('logic',[*base,sim,pure])
 run('connection-updates',[*base,sim,compile(Path('tests/ble_conn_update_test.c'))])
+run('r81-link',[*base,sim,compile(Path('tests/ble_r81_link_test.c'))])   # spec r8.1 R3 and R4
 vendor=[compile(p,nb.flags()) for p in nb.sources()]
 port=[compile(Path('open_ble')/(n+'.c'),nb.flags(vendor=False)) for n in ('ble_npl','ble_host')]
 integration=compile(Path('tests/ble_s2_integration.c'))

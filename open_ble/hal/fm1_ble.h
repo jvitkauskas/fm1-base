@@ -453,7 +453,7 @@ static void fm1_ble_event_body(void)
                     if(ble_link.rx_seen) {
                         if(ble_link.acc>=BLE_MISS_STEP_US) { ble_link.acc=0; bb_window_length(ble_link.window); }
                     } else if(ble_link.widen+ble_link.acc+BLE_MISS_STEP_US<BLE_MISS_LIMIT_US) {
-                        uint32_t raw=bb_anchor_read(0)|((bb_anchor_read(14)&255u)<<16);
+                        uint32_t raw=(bb_anchor_read(0)&65535u)|((bb_anchor_read(14)&255u)<<16);
                         int f=(int)(bb_anchor_read(7)&4095u),next; unsigned drift;
                         if(f&2048) f-=4096;
                         if(ble_missed_step(f,raw,625u-(BR_R(0x2800cu)&1023u)-(BR_R(0x28014u)&255u),&next,&drift)) {

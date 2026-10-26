@@ -101,6 +101,7 @@ uint8_t ble_timeline_check(ble_timeline_t *t,const ble_conn_t *c,uint32_t now);
 void ble_timeline_arm(ble_timeline_t *t,uint32_t instant,uint32_t window,uint16_t timeout);
 uint8_t ble_timeline_rx_delayed(ble_timeline_t *t,uint8_t cls,uint32_t stamp,uint32_t service,int delayed);
 int ble_missed_step(int fine,uint32_t raw,unsigned phase,int *next,unsigned *drift);
+uint8_t ble_link_priority(int instant_pending,int control_waiting,int acl_waiting,unsigned missed);
 void ble_ll_init(void);
 void ble_ll_reset(void);
 /* Reset owns the stopped instance until all software slices finish. */

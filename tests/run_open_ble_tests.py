@@ -51,6 +51,12 @@ for diag in ('0','1'):
         'tests/ble_open_adv_test.c','open_ble/ble_logic.c','open_ble/ble_link_logic.c',
         'open_ble/ble_health.c','-o',out/('adv-'+diag))
     run(out/('adv-'+diag))
+# The VCO bank table (r8.1 R1): its pure part, verbatim from the radio HAL, under modelled readings.
+radio=(ROOT/'open_ble/hal/fm1_ble_radio.h').read_text()
+a=radio.index('#define BR_VCO_DIV_FIRST'); b=radio.index('static unsigned br_bank_for',a)
+(out/'vco_seam.inc').write_text(radio[a:b])
+run(os.environ.get('CC','cc'),*flags,'tests/ble_vco_test.c','-o',out/'vco')
+run(out/'vco')
 (out/'usb_wait_seam.inc').write_text(function('ble_usb_host_wait',(ROOT/'device/ble_open.c').read_text()))
 host=(ROOT/'host/plat_host.c').read_text()
 a=host.index('static int cpu2_on;'); b=host.index('\n#endif',a)

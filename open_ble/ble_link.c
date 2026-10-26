@@ -609,7 +609,10 @@ void ble_ll_event(uint16_t event,uint32_t now)
     ble_port_latency(ble_link.instant_programmed ? ble_link.pending.latency : ble_link.conn.latency,
                      !ble_link.instant_kind && ble_link.hold==0 && !pending);
     ble_link.invalid_events=ble_link.valid_seen ? 0 : (uint8_t)(ble_link.invalid_events<254 ? ble_link.invalid_events+1u : 254u);
-    /* Removed for the clean reimplementation from specification revision 8.1 (R4, connection priority). */
+    /* R4: the priority for the next event. A PDU waits for transmission until it is acknowledged (any TX state). */
+    { int control=0,acl=0;
+      for(i=0;i<BLE_TX_COUNT;i++) if(queues.tx[i].state) { if(queues.tx[i].llid==3) control=1; else acl=1; }
+      ble_link.priority=ble_link_priority(ble_link.instant_kind!=0,control,acl,ble_link.invalid_events); }
     ble_port_priority(ble_link.priority);
     /* The HAL consumes rx_seen/valid_seen for missed-event correction then
      * clears them; it never uses RX status bit 8 for these indications. */
