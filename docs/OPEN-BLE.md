@@ -142,12 +142,12 @@ The template, same BSP and toolchain, bytes. "Vendor" is the template's default 
 | --- | ---: | ---: | ---: | ---: |
 | No Bluetooth (`--no-ble`) | 81,984 | 27,908 | 69,384 | 3,172 |
 | Vendor | 219,000 | 76,420 | 93,960 | 7,060 |
-| Open, diagnostics (default) | 212,180 | 34,728 | 155,772 | 3,244 |
-| Open, `ble_diag = false` | 191,220 | 33,844 | 100,796 | 3,244 |
-| Open, `ble_diag = false`, `ble_no_pairing = true` | 166,864 | 33,844 | 100,236 | 3,244 |
+| Open, diagnostics (default) | 212,916 | 34,760 | 155,772 | 3,244 |
+| Open, `ble_diag = false` | 191,908 | 33,844 | 100,796 | 3,244 |
+| Open, `ble_diag = false`, `ble_no_pairing = true` | 167,552 | 33,844 | 100,236 | 3,244 |
 
-Against the vendor build, `ble_diag = false` saves 27,780 bytes of flash and 42,576 of static RAM for 6,836 more
-pool (35,740 bytes less RAM in all). Diagnostics add 20,960 bytes of flash, 884 of static RAM, 54,976 of pool and a
+Against the vendor build, `ble_diag = false` saves 27,092 bytes of flash and 42,576 of static RAM for 6,836 more
+pool (35,740 bytes less RAM in all). Diagnostics add 21,008 bytes of flash, 916 of static RAM, 54,976 of pool and a
 separate 20,480-byte RAMTEXT trace. Every package is 611,498 bytes (fixed container layout).
 
 ## Architecture
