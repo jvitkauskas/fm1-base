@@ -212,7 +212,7 @@ The open controller applies the radio trim record that the stock firmware writes
 a valid record (one that never ran the stock firmware, or whose calibration sectors were overwritten, for example
 by an app using that flash area for its own data) still starts Bluetooth: the radio calibrates itself at every boot,
 in place of applying the record. The self-calibration is specified to take at most 1 s of the radio start-up
-(diagnostics show it as `step_us 6`; this build's time has not been measured on a unit yet). The result is kept in
+(diagnostics show it as `step_us 6`: 340 ms on the test unit, of which 17 ms in the RX DC stage). The result is kept in
 RAM only; nothing is written to flash, so the calibration sectors stay as they are and the next boot calibrates
 again.
 
@@ -338,6 +338,20 @@ Current build, the Mac connected and playing:
 | iPhone pairing | MIDI both ways |
 
 (The restore question only takes the FM-1's physical SEL key.)
+
+The test unit has had no stored radio calibration record since 25 October, so every run above used the
+self-calibration. Those runs were made with the build before the rewrite of four areas (see [How the controller was
+written](#how-the-controller-was-written)). The rewritten build was checked on the same unit, diagnostics and release
+images, with Linux BlueZ:
+
+| Check | Result |
+| --- | --- |
+| self-calibration | 340 ms, RX DC stage 17 ms; values close to the unit's earlier ones (TX LO 52/49, RX DC -75/-50) |
+| VCO table | same shape and top bank as earlier boots, entries within 2 counts |
+| bonded reconnect | no pairing prompt |
+| MIDI both ways | 40 of 40 messages in, every note out received, 0 bad or dropped |
+
+A longer run of the rewritten build has not been made yet.
 
 Rare encrypted-link drops seen in development came from the Linux desktop's Intel AX210, which sometimes sent
 packets with a valid CRC and a wrong MIC; the FM-1 closed the link (0x3D) as the specification requires, and an
