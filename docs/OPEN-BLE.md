@@ -351,7 +351,12 @@ images, with Linux BlueZ:
 | bonded reconnect | no pairing prompt |
 | MIDI both ways | 40 of 40 messages in, every note out received, 0 bad or dropped |
 
-A longer run of the rewritten build has not been made yet.
+In the hour after that bench, the release image, idle and linked to the same desktop, ended the link 14 times with
+a MIC failure (0x3D). Nothing was recording then, so it is not known which side sent the bad packets; the desktop's
+Intel AX210 is known to send them (see below), but earlier runs on it saw about one in 8 hours. A soak with the
+desktop as central (`tools/ble_overnight_soak.py`, btmon recording) then ran for 53 minutes: five connection
+interval changes, about 900 MIDI messages in, 0 MIC or supervision failures, 0 dropped or bad MIDI. It was stopped
+early. An overnight run of the rewritten build has not been made yet.
 
 Rare encrypted-link drops seen in development came from the Linux desktop's Intel AX210, which sometimes sent
 packets with a valid CRC and a wrong MIC; the FM-1 closed the link (0x3D) as the specification requires, and an
