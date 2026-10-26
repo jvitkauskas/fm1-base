@@ -184,42 +184,8 @@ static unsigned br_compare(void)
 {
     uint32_t r=br_comparator(); return ((r>>18)&1u)|((r>>16)&2u);
 }
-static uint8_t br_bank_for(unsigned f)
-{
-    unsigned i;
-    for (i=1;i<48;i++) if (br_limits[i]>f) return (uint8_t)(br_limits[47]-(i-1));
-    return (uint8_t)(br_limits[47]-47);
-}
-static void br_vco(void)
-{
-    unsigned c,i,kept=0,lo=73,hi_prev=73,found=0;
-    br_af(16,1u<<24,1u<<24); br_af(15,255u<<5,73u<<5);
-    for (c=7;c<=119 && !br_diag.error;c+=16) {
-        unsigned m,l,h;
-        br_af(14,127u<<19,c<<19); br_rn(); m=br_compare();
-        br_af(14,127u<<19,(c-7)<<19); br_rn(); l=br_compare();
-        br_af(14,127u<<19,(c+8)<<19); br_rn(); h=br_compare();
-        kept=m;
-        if (m!=l || m!=h) { kept=c; found=1; break; }
-    }
-    /* A degenerate detector is not a usable calibration (r2 leaves this unchecked). */
-    if (!found) { br_error(2); return; }
-    br_limits[47]=(uint8_t)(kept|15u);
-    for (i=0;i<47 && !br_diag.error;i++) {
-        unsigned f=lo,hi=171;
-        br_af(14,127u<<19,((uint8_t)(br_limits[47]-i)&127u)<<19);
-        for (;f<=171;f++) {
-            unsigned r;
-            br_af(15,255u<<5,f<<5); br_rn(); r=br_compare();
-            if (r==1) { hi=f; break; }
-            if (r==2) { lo=f; if (f==171) lo=171; }
-        }
-        br_limits[i]=(uint8_t)(((int)hi_prev-3+(int)lo)/2); hi_prev=hi;
-        fm1_wdt_feed();
-    }
-    br_af(15,255u<<5,121u<<5); br_af(14,127u<<19,(br_bank_for(121)&127u)<<19);
-    br_af(16,1u<<24,0); BLE_DIAG_ONLY(memcpy(br_diag.vco,br_limits,48));
-}
+/* Removed for the clean reimplementation from specification revision 8.1 (R1, bank for a divider). */
+/* Removed for the clean reimplementation from specification revision 8.1 (R1, VCO bank table). */
 static void br_gain(unsigned code)
 {
     const uint8_t *b=br_vga[code<42 ? code : 41].b;
@@ -253,171 +219,15 @@ static void br_apply_trim(const uint8_t *t)
     br_af(1,15u<<8,8u<<8); br_af(8,255u<<10,(uint32_t)t[42]<<10); br_af(4,255u<<14,(uint32_t)t[42]<<14);
     memcpy(br_dc,t+48,16);
 }
-static void br_loopback(void) { br_phy_reset(); if (!br_diag.error) BR_R(0x31004u)=12; br_phy_write(25,24); }
-static uint32_t br_measure(unsigned sel)
-{
-    uint32_t t=fm1_ticks();
-    int32_t i,q;
-    br_bank_write(0xd4,21,1); br_bank_write(0xd4,22,1);
-    br_bank_write(0xd4,21,3); br_bank_write(0xd4,22,3);
-    while (!br_diag.error && (br_bank_read(0xd4,0x8d)&3u)) {
-        if ((uint32_t)(fm1_ticks()-t)>=24000u) { br_error(3); return 0; }
-    }
-    if (sel==1 || sel==2) {
-        unsigned r=sel==1 ? 0x81 : 0x8a;
-        uint32_t a=br_bank_read(0xd4,r),b=br_bank_read(0xd4,r+1),c=br_bank_read(0xd4,r+2);
-        return (uint32_t)((int32_t)((a<<24)|(b<<16)|(c<<8))/256);
-    }
-    i=(int16_t)((unsigned)br_bank_read(0xd4,0x81)<<8|br_bank_read(0xd4,0x82));
-    q=(int16_t)((unsigned)br_bank_read(0xd4,0x84)<<8|br_bank_read(0xd4,0x85));
-    return (uint32_t)(i*i)+(uint32_t)(q*q);
-}
-static void br_gain_step(void)
-{
-    unsigned g;
-    for (g=0;g<=36 && !br_diag.error;g++) {
-        uint8_t peak;
-        br_gain(g); br_bank_write(0xd4,23,0x82); fm1_delay_us(1000);
-        peak=br_bank_read(0xd4,0x80); br_bank_write(0xd4,23,2);
-        if (peak>47) break;
-    }
-}
-static void br_bandwidth(void)
-{
-    static const unsigned configs[3]={0x1fc,0x122,0xa0};
-    uint32_t word=255;
-    unsigned i;
-    br_af(1,15u<<8,8u<<8); br_af(20,1u<<27,1u<<27);
-    for (i=0;i<3 && !br_diag.error;i++) {
-        uint32_t t=fm1_ticks(),r;
-        br_af(26,0xffffffu,configs[i]|(30u<<10)); br_af(26,1,1);
-        do {
-            r=br_comparator();
-            if ((uint32_t)(fm1_ticks()-t)>=24000u) { br_error(4); return; }
-        } while (!(r&32u));
-        word|=((BR_A(30)>>8)&255u)<<(8u*(i+1)); br_af(26,1,0);
-    }
-    br_af(20,1u<<27,0);
-    if (br_diag.error) return;
-    BR_A(23)=BR_A(24)=word;
-    br_af(8,255u<<10,((word>>16)&255u)<<10); br_af(4,255u<<14,((word>>16)&255u)<<14);
-}
-static void br_atten(int rx)
-{
-    br_af(8,15u<<20,(rx ? 6u : 10u)<<20);
-    br_af(9,7u<<28,5u<<28); br_af(10,(3u<<13)|(3u<<27),(3u<<13)|((rx ? 1u : 3u)<<27));
-    br_af(4,15u<<8,9u<<8);
-}
-static void br_tx_search(void)
-{
-    unsigned axis;
-    int k,best,flag=1;
-    uint32_t metric;
-    br_phy_reset(); br_bank_write(0xc8,0x15,0); br_bank_write(0xc8,0x14,0);
-    br_bank_field(0xc8,0x40,128,0); br_bank_field(0xc8,0x41,128,0);
-    br_bank_write(0xc8,0x28,0); br_bank_write(0xc8,0x27,5);
-    br_phy_write(4,(uint8_t)(br_phy_read(4)&0xe7)); br_loopback();
-    br_bank_write(0xd0,0,3); br_bank_write(0xd0,95,16);
-    br_bank_write(0xd0,1,20); br_bank_write(0xd0,2,0); br_bank_write(0xd0,3,0);
-    br_bank_write(0xd4,0,62); br_bank_write(0xd4,19,30);
-    br_bank_write(0xd4,20,56); br_bank_write(0xd4,20,52);
-    br_tx(0,1023); br_tx(1,0); br_tx(2,1023); br_tx(3,0); br_tx(4,0); br_tx(5,0);
-    br_af(7,127u<<8,64u<<8); br_af(8,127,64); br_gain_step();
-    for (axis=0;axis<2 && !br_diag.error;axis++) {
-        unsigned reg=axis ? 8 : 7,shift=axis ? 0 : 8;
-        br_af(reg,127u<<shift,64u<<shift); best=64; metric=br_measure(0);
-        for (k=0;k<=127 && !br_diag.error;k++) {
-            uint32_t m;
-            br_af(reg,127u<<shift,(uint32_t)k<<shift); m=br_measure(0);
-            if (m<metric) { metric=m; best=k; }
-        }
-        br_af(reg,127u<<shift,(uint32_t)best<<shift);
-    }
-    br_tx(4,0); br_tx(5,0); br_gain_step();
-    for (axis=0;axis<2 && !br_diag.error;axis++) {
-        best=0; metric=br_measure(0);
-        for (k=-200;k<=200 && !br_diag.error;k++) {
-            uint32_t m;
-            br_tx(4+axis,(int8_t)k); m=br_measure(0);
-            if (m<metric) { metric=m; best=(int8_t)k; }
-        }
-        br_tx(4+axis,best);
-    }
-    br_bank_write(0xd4,19,60); br_tx(0,1023); br_tx(2,1023);
-    best=0; metric=br_measure(0);
-    for (k=-423;k<=423 && !br_diag.error;k++) {
-        uint32_t m;
-        br_tx(0,k<0 ? 1023+k : 1023); br_tx(2,k<0 ? 1023 : 1023-k); m=br_measure(0);
-        if (m<metric) { metric=m; best=(int8_t)k; flag=k>=0; }
-    }
-    br_tx(0,flag ? 1023 : 1023+best); br_tx(2,flag ? 1023-best : 1023);
-    br_tx(1,0); br_tx(3,0); best=0; metric=br_measure(0);
-    for (k=-200;k<=200 && !br_diag.error;k++) {
-        uint32_t m;
-        br_tx(flag ? 3 : 1,k); m=br_measure(0);
-        if (m<metric) { metric=m; best=k; }
-    }
-    br_tx(flag ? 3 : 1,best);
-}
-static void br_rx_dc_search(void)
-{
-    static const uint8_t groups[4][3]={{0,0,127},{1,0,127},{1,3,69},{1,9,14}};
-    unsigned g,j,axis;
-    br_phy_reset(); br_loopback(); br_bank_write(0xd0,0,3); br_bank_write(0xd0,95,16);
-    br_bank_write(0xd4,0,62); br_bank_write(0xd4,27,56); br_bank_write(0xd4,8,0xc0);
-    br_bank_write(0xd4,19,0); br_bank_write(0xd4,20,56); br_bank_write(0xd4,20,52); br_gain(40);
-    for (g=0;g<4 && !br_diag.error;g++) {
-        int dc[2]={0,0},step=256;
-        br_af(3,3u<<6,(uint32_t)groups[g][0]<<6);
-        br_af(4,(15u<<8)|127u,((uint32_t)groups[g][1]<<8)|groups[g][2]);
-        br_analog_dc(0,0); br_analog_dc(1,0);
-        for (j=0;j<12 && !br_diag.error;j++) {
-            for (axis=0;axis<2;axis++) {
-                int32_t m=(int32_t)br_measure(axis+1);
-                if (m>0 && dc[axis]>-510) dc[axis]-=step;
-                else if (m<0 && dc[axis]<510) dc[axis]+=step;
-                if (dc[axis]<-510) dc[axis]=-510;
-                if (dc[axis]>510) dc[axis]=510;
-                br_analog_dc(axis,dc[axis]);
-            }
-            if (step>1) step/=2;
-        }
-        for (axis=0;axis<2;axis++) ble_put16(br_dc+4*g+2*axis,br_analog_dc(axis,dc[axis]));
-    }
-}
-static void br_rx_search(void)
-{
-    int k,best=0,flag=1;
-    uint32_t metric;
-    br_phy_reset(); br_loopback(); br_bank_write(0xd0,0,3); br_bank_write(0xd0,95,16);
-    br_bank_write(0xd0,1,20); br_bank_write(0xd0,2,0); br_bank_write(0xd0,3,17);
-    br_bank_write(0xd4,9,255); br_bank_write(0xd4,11,255);
-    br_bank_write(0xd4,10,0); br_bank_write(0xd4,12,0);
-    br_bank_write(0xd4,0,62); br_bank_write(0xd4,20,56); br_bank_write(0xd4,20,4);
-    br_bank_write(0xd4,19,30); br_gain_step(); metric=br_measure(3);
-    for (k=-105;k<=105 && !br_diag.error;k++) {
-        uint32_t m;
-        br_bank_write(0xd4,9,(uint8_t)(k<0 ? 255+k : 255));
-        br_bank_write(0xd4,11,(uint8_t)(k<0 ? 255 : 255-k)); m=br_measure(3);
-        if (m<metric) { metric=m; best=(int8_t)k; }
-    }
-    flag=best>=0;
-    br_bank_write(0xd4,9,(uint8_t)(flag ? 255 : best-1));
-    br_bank_write(0xd4,11,(uint8_t)(flag ? ~best : 255));
-    best=0; metric=br_measure(3);
-    for (k=-50;k<=50 && !br_diag.error;k++) {
-        uint32_t m;
-        br_bank_write(0xd4,flag ? 12 : 10,(uint8_t)k); m=br_measure(3);
-        if (m<metric) { metric=m; best=k; }
-    }
-    br_bank_write(0xd4,flag ? 12 : 10,(uint8_t)best);
-}
-static void br_self_calibrate(void)
-{
-    br_bandwidth(); br_mode(2); br_atten(0); br_tx_search();
-    br_af(5,31,0); br_mode(0); br_af(1,1u<<15,0); br_rx_dc_search();
-    br_af(5,31,25); br_mode(3); br_atten(1); br_rx_search();
-}
+/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_loopback). */
+/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_measure). */
+/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_gain_step). */
+/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_bandwidth). */
+/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_atten). */
+/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_tx_search). */
+/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_rx_dc_search). */
+/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_rx_search). */
+/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_self_calibrate). */
 static int br_signed10(unsigned v) { return (v&512u) ? (int)v-1024 : (int)v; }
 static void br_handover(void)
 {
@@ -495,29 +305,7 @@ static void br_clock_probe(void)
     BLE_DIAG_ONLY(br_diag.clocks[0]=BR_R(0x1000cu); br_diag.clocks[1]=BR_R(0x10010u););
     BLE_DIAG_ONLY(br_diag.clocks[2]=BR_R(0x10014u); br_diag.clocks[3]=BR_R(0x10008u); /* SYS_DIV, public WL82.h */);
 }
-static void br_collect_trim(uint8_t *out)
-{
-    unsigned i;
-    uint32_t dc;
-    memset(out,0,68);
-    for (i=0;i<6;i++) {
-        unsigned packed=br_bank_read(0xd0,i<4 ? 97 : 98),shift=(i<4 ? i : i-4)*2;
-        unsigned value=((unsigned)br_bank_read(0xd0,4+i)<<2)|((packed>>shift)&3u);
-        int v=(i==0 || i==2) ? (int)value : br_signed10(value);
-        ble_put32(out+4*i,(uint32_t)v);
-    }
-    out[24]=(uint8_t)((BR_A(7)>>8)&127u); out[25]=(uint8_t)(BR_A(8)&127u);
-    out[26]=br_bank_read(0xd4,9); out[27]=br_bank_read(0xd4,11);
-    out[28]=br_bank_read(0xd4,10); out[29]=br_bank_read(0xd4,12);
-    dc=BR_A(2);
-    for (i=0;i<2;i++) {
-        unsigned v=(dc>>(i ? 17 : 7))&1023u;
-        int value=(v&512u) ? (int)(v&511u) : -(int)(v&511u);
-        ble_put32(out+32+4*i,(uint32_t)value);
-    }
-    ble_put32(out+40,BR_A(23)); ble_put32(out+44,BR_A(24)); memcpy(out+48,br_dc,16);
-    ble_put32(out+64,ble_crc16(0,out,64));
-}
+/* Removed for the clean reimplementation from specification revision 8.1 (R2, fallback self-calibration: br_collect_trim). */
 static void br_radio_init(ble_cal_t *cal,uint32_t *modem)
 {
     static const struct { uint8_t n; uint32_t mask,value; } analog[]={

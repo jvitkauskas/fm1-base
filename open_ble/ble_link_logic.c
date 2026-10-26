@@ -105,12 +105,4 @@ uint8_t ble_timeline_check(ble_timeline_t *t,const ble_conn_t *c,uint32_t now)
     if(!t->established) return (int32_t)(now-t->est_end)>=0 ? 0x3e : 0;
     return (int32_t)(now-t->sup)>=0 ? 8 : 0;
 }
-int ble_missed_step(int fine,uint32_t raw,unsigned phase,int *next,unsigned *drift)
-{
-    int q=(int)phase+fine,v=fine-(int)BLE_MISS_STEP_US;
-    unsigned d=0;
-    if((q>=625 && q<625+(int)BLE_MISS_STEP_US) || (q>=0 && q<(int)BLE_MISS_STEP_US)) d=1;
-    else if(q < (int)BLE_MISS_STEP_US-625) { d=1; v=fine+625-(int)BLE_MISS_STEP_US; }
-    if(d>=raw || v < -2048 || v>2047) return 0;
-    *next=v; *drift=d; return 1;
-}
+/* Removed for the clean reimplementation from specification revision 8.1 (R3, missed-event step). */

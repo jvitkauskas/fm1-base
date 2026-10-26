@@ -609,15 +609,7 @@ void ble_ll_event(uint16_t event,uint32_t now)
     ble_port_latency(ble_link.instant_programmed ? ble_link.pending.latency : ble_link.conn.latency,
                      !ble_link.instant_kind && ble_link.hold==0 && !pending);
     ble_link.invalid_events=ble_link.valid_seen ? 0 : (uint8_t)(ble_link.invalid_events<254 ? ble_link.invalid_events+1u : 254u);
-    if(ble_link.instant_kind || ble_link.invalid_events>3) ble_link.priority=30;
-    else if(ble_ll_acl_waiting()) ble_link.priority=28;
-    else if(ble_link.priority!=30 || ble_link.valid_seen) {
-        unsigned p=ble_link.priority ? ble_link.priority-1u : 19u;
-        if(p>27) p=27;
-        if(p==25) p=19;
-        if(p<20) p=ble_link.invalid_events ? 28 : 19;
-        ble_link.priority=(uint8_t)p;
-    }
+    /* Removed for the clean reimplementation from specification revision 8.1 (R4, connection priority). */
     ble_port_priority(ble_link.priority);
     /* The HAL consumes rx_seen/valid_seen for missed-event correction then
      * clears them; it never uses RX status bit 8 for these indications. */
