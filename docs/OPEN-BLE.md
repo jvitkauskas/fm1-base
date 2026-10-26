@@ -408,7 +408,7 @@ The controller was written by two separate sides.
 
 **What crossed from the specification side to the implementer:**
 
-- the frozen specification, revisions r2 to r8 and r8.1;
+- the frozen specification, revisions r2 to r8, r8.1 and r8.2;
 - the specification side's written answers to three implementability reviews of the specification;
 - one written brief per implementer round, listing the task and the permitted sources;
 - bench and soak reports from the hardware.
@@ -431,20 +431,27 @@ on the `open-ble` branch of https://github.com/jvitkauskas/fm1-base.
   - the missed-event widening step;
   - the connection RF-priority rule.
 
-  Revision 8.1 restates them as hardware facts, required results and test vectors. A separate implementer then wrote
-  them again from r8.1 alone, without access to the earlier code. The specification side compared the results with
-  the earlier code: the VCO table is identical on 3,000 random sets of readings, and the missed-event step on every
-  input combination. The priority rule changes on purpose: it no longer steps through 27, 26 and 25 after traffic. The fallback self-calibration was dropped instead: a
-  unit without a radio calibration record now does not start Bluetooth
-  (see [Without a radio calibration record](#without-a-radio-calibration-record)).
+  Revision 8.1 restated three of them as hardware facts, required results and test vectors. A separate implementer
+  then wrote them again from r8.1 alone, without access to the earlier code. Revision 8.1 dropped the fourth, the
+  fallback self-calibration. That was a mistake: the test unit had lost its stored calibration record and had run the
+  fallback on every boot since 25 October, which the device bench of the r8.1 build exposed. Revision 8.2 therefore
+  restates the self-calibration as well, and a separate implementer wrote it again from r8.2 alone. The
+  specification side compared the results with the earlier code on a simulated chip:
+  - the VCO table is identical on 3,000 random sets of readings;
+  - the missed-event step is identical on every input combination;
+  - the self-calibration leaves an identical register state and record on 3,000 random chip models.
+
+  The priority rule changes on purpose: it no longer steps through 27, 26 and 25 after traffic.
 - **The specification side made small edits to the tree:** the NimBLE version in diagnostic banner strings, one
   comment, the arrangement of the commits, the mechanical removal of the four areas before their rewrite, and parts
   of this document. None of these changes controller behaviour.
-- **Two reading slips were recorded:**
+- **Reading slips were recorded:**
   - Early builds ran the existing register checker, which reads every device C file including `device/radio.c`.
     Open builds now skip that file.
   - The implementer of revision 8.1 saw single comment lines from `ble/shim/`, `device/radio.c` and
     `examples/wifi/app.h` in search output, before excluding them. None related to its task.
+  - Fresh Claude implementer sessions start with the harness's one-line index of the specification side's working
+    notes: titles, no content.
 - **The specification is not published.** It contains descriptions of the vendor software's internals and
   identifiers of the test unit. The fm1-base maintainers can have a copy on request. These hashes identify it:
 
@@ -458,6 +465,7 @@ on the `open-ble` branch of https://github.com/jvitkauskas/fm1-base.
 | r8 | 05-acceptance-tests.md | 8f8ace6c54fa07a265a7ae829c4dd54bd6967478d61b7c5465e8199b97b6091a |
 | r8 | RULES.md | e802f465327688cfb35afe4114bcbb454879b6285961c92f731a05a021bcf935 |
 | r8.1 | 08-restatement.md | b3fc28752603260ce9114a9e38b77144aca2152568cd2fb5bd04f16d34e4ce32 |
+| r8.2 | 09-self-calibration.md | f1b38a892bb1163ecdc01bf95135efd9cf398abb523c96802a0be347a365dc81 |
 
 Earlier revisions (r2 to r7) are identified by the input manifests above.
 
