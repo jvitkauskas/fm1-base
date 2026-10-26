@@ -157,7 +157,7 @@ static int ble_platform_start(void)
     ble_health_begin(BLE_GAP_BOOT|BLE_GAP_RADIO_START);
     ble_platform_irq_probe();
     if(!ble_port_failed()) fm1_ble_startup(&ble_cal);
-    if(br_error_cause(br_diag.error)) plat_log(br_error_cause(br_diag.error));   /* e.g. no trim record (R2) */
+    if(br_error_cause(br_diag.error)) plat_log(br_error_cause(br_diag.error));   /* e.g. a self-calibration timeout */
     if(ble_port_failed() || !ble_public_valid(ble_cal.public_addr)) { ble_health_end(BLE_GAP_BOOT|BLE_GAP_RADIO_START); return -1; }
     ble_seed_diag_t seed; ble_seed_get_diag(&seed);
     if(seed.state==BLE_SEED_FAILED) { ble_health_end(BLE_GAP_BOOT|BLE_GAP_RADIO_START); return -1; }

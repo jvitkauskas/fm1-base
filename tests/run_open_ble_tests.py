@@ -57,6 +57,16 @@ a=radio.index('#define BR_VCO_DIV_FIRST'); b=radio.index('static unsigned br_ban
 (out/'vco_seam.inc').write_text(radio[a:b])
 run(os.environ.get('CC','cc'),*flags,'tests/ble_vco_test.c','-o',out/'vco')
 run(out/'vco')
+# The radio self-calibration (r8.2 C4): the block between its markers, the br_tx/br_analog_dc helpers and the
+# error-cause lines, verbatim from the radio HAL, against a model of the chip (S0, S1, flat minima, timeouts).
+a=radio.index('/* --- self-calibration (r8.2) begin --- */'); b=radio.index('/* --- self-calibration (r8.2) end --- */',a)
+(out/'selfcal_seam.inc').write_text(radio[a:b])
+a=radio.index('static void br_tx('); b=radio.index('static void br_apply_trim(',a)
+(out/'selfcal_helpers.inc').write_text(radio[a:b])
+a=radio.index('static const char *br_error_cause('); b=radio.index('\n}\n',a)+3
+(out/'selfcal_cause.inc').write_text(radio[a:b])
+run(os.environ.get('CC','cc'),*flags,'tests/ble_selfcal_test.c','open_ble/ble_logic.c','-o',out/'selfcal')
+run(out/'selfcal')
 (out/'usb_wait_seam.inc').write_text(function('ble_usb_host_wait',(ROOT/'device/ble_open.c').read_text()))
 host=(ROOT/'host/plat_host.c').read_text()
 a=host.index('static int cpu2_on;'); b=host.index('\n#endif',a)

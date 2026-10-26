@@ -380,12 +380,14 @@ static void open_ble_dump(void)
     for (i=0;i<4;i++) { ob_hex(hw.irq_probe[i],8); ob_putc(i==3 ? '\r' : ' '); }
     ob_putc('\n');
     ob_kv("ticks_while_irq_masked",(int32_t)hw.irq_ticks_while_masked);
-    ob_kv("error",(int32_t)hw.error); ob_kv("failure_stage",(int32_t)hw.failure_stage); ob_kv("calibration_1_record",(int32_t)hw.calibration);
+    ob_kv("error",(int32_t)hw.error); ob_kv("failure_stage",(int32_t)hw.failure_stage); ob_kv("calibration_1_record_2_self",(int32_t)hw.calibration);
     ob_kv("vm_status",ble_cal.vm_status); ob_kv("btif_status",ble_cal.btif_status);
     ob_kx("records_present",ble_cal.present);
     ob_puts("public_address_hci "); ob_ble_bytes(ble_cal.public_addr,6);
     ob_puts("configured_random_hci "); ob_ble_bytes(ble_random_config,6);
     ob_kx("trim_crc",ble_get32(ble_cal.trim+64));
+    ob_puts("trim_record "); ob_ble_bytes(ble_cal.trim,68);   /* stored (source 1) or self-calibrated (2), RAM only */
+    ob_kv("selfcal_rx_dc_us",(int32_t)(hw.selfcal_rx_dc_ticks/24)); ob_kv("selfcal_measurements",(int32_t)hw.selfcal_measures);
     ob_kv("bringup_us",(int32_t)(hw.bringup_ticks/24));
     ob_kx("bringup_end_ticks",hw.bringup_end_ticks);
     ob_kx("first_hci_command_ticks",d.first_command_ticks);

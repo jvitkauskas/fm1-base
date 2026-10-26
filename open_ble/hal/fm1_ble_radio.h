@@ -40,13 +40,7 @@ static void br_error(uint32_t code)
     if (!br_diag.error) { br_diag.error=code; br_diag.failure_stage=br_diag.stage; }
 }
 #define BR_ERR_VCO_DETECTOR 12u    /* R1: no bank group gives differing readings at divider 73 */
-#define BR_ERR_NO_TRIM 13u         /* R2: no valid stored trim record (no fallback self-calibration) */
-/* The log line (at most 43 characters) for a bring-up error whose cause has a name; 0 for the others. */
-static const char *br_error_cause(uint32_t code)
-{
-    return code==BR_ERR_NO_TRIM ? "open BLE: no radio calibration record" :
-        code==BR_ERR_VCO_DETECTOR ? "open BLE: VCO detector unusable" : 0;
-}
+/* Error 13 (r8.1 R2, no stored trim record) is withdrawn by r8.2 and not reused. 14 and 15: self-calibration. */
 static int br_wait(uint32_t addr,uint32_t mask,uint32_t expected)
 {
     uint32_t t=fm1_ticks();
@@ -289,6 +283,340 @@ static void br_apply_trim(const uint8_t *t)
     br_af(1,15u<<8,8u<<8); br_af(8,255u<<10,(uint32_t)t[42]<<10); br_af(4,255u<<14,(uint32_t)t[42]<<14);
     memcpy(br_dc,t+48,16);
 }
+/* --- self-calibration (r8.2) begin --- */
+/* Radio self-calibration, specification r8.2 C1-C3. It runs in place of the quick trim when there is no valid
+ * stored trim record: stages A to G in order, each measuring with the earlier results programmed, then
+ * br_selfcal_record() reads the result back from the hardware into a 68-octet record (the quick trim's layout).
+ * The record stays in RAM; nothing here writes flash. Hardware access goes only through the helpers above, so the
+ * host test (tests/ble_selfcal_test.c) runs this block, cut verbatim, against a model of the chip.
+ *
+ * Searches (C1.3): every candidate is measured once, in ascending order; the start value wins when its cost equals
+ * the minimum, otherwise the first (smallest) candidate with the minimum cost. No shape of the cost is assumed.
+ * RX analog DC (stage E): only signs are used. One measurement returns the I and the Q result together (C1.2), so
+ * both axes are bisected at once; then each axis is checked at the final pair (its sign there and at a
+ * neighbour) and searched again on its own if the check fails, until both hold with the same pair. */
+#define BR_ERR_SC_MEASURE 14u      /* C1.2: a power or DC measurement did not finish within 1 ms */
+#define BR_ERR_SC_BANDWIDTH 15u    /* C1.2: the bandwidth code was not ready within 1 ms */
+#define BR_SC_1MS 24000u           /* TIMER4 ticks */
+#define BR_SC_DC_MAX 510           /* stage E range: -510..510 */
+#define BR_SC_DC_ROUNDS 8          /* stage E: check-and-search rounds per group (2 suffice on the models) */
+enum { BR_SC_LO_I, BR_SC_LO_Q, BR_SC_TX_IDC, BR_SC_TX_QDC, BR_SC_TX_IMB, BR_SC_TX_IPH, BR_SC_TX_QPH,
+       BR_SC_RX_IMB, BR_SC_RX_IPH, BR_SC_RX_QPH };
+static uint32_t br_sc_measures,br_sc_rx_dc_ticks;   /* measurements in the last run; stage E duration */
+/* The measurement sequence (C1.2 steps 1-2), the same for every sel. 0 when the results can be read. */
+static int br_sc_measure(void)
+{
+    uint32_t t;
+    if (br_diag.error) return -1;
+    if (!(++br_sc_measures&63u)) fm1_wdt_feed();
+    br_bank_write(0xd4,21,1); br_bank_write(0xd4,22,1); br_bank_write(0xd4,21,3); br_bank_write(0xd4,22,3);
+    t=fm1_ticks();
+    for (;;) {
+        int late=(uint32_t)(fm1_ticks()-t)>=BR_SC_1MS;   /* taken before the read: a read after 1 ms decides */
+        unsigned busy=br_bank_read(0xd4,0x8d)&3u;
+        if (br_diag.error) return -1;
+        if (!busy) return 0;
+        if (late) { br_error(BR_ERR_SC_MEASURE); return -1; }
+    }
+}
+static int32_t br_sc_s16(unsigned hi,unsigned lo)
+{
+    int32_t v=(int32_t)((hi<<8)|lo);
+    return (v&0x8000) ? v-0x10000 : v;
+}
+/* M(0) and M(3): I x I + Q x Q. All ones after a failure (never a minimum that matters: the run is abandoned). */
+static uint32_t br_sc_power(void)
+{
+    int32_t i,q;
+    if (br_sc_measure()) return 0xffffffffu;
+    i=br_sc_s16(br_bank_read(0xd4,0x81),br_bank_read(0xd4,0x82));
+    q=br_sc_s16(br_bank_read(0xd4,0x84),br_bank_read(0xd4,0x85));
+    return (uint32_t)(i*i)+(uint32_t)(q*q);
+}
+static int br_sc_sign24(unsigned r)
+{
+    uint32_t v=((uint32_t)br_bank_read(0xd4,r)<<16)|((uint32_t)br_bank_read(0xd4,r+1)<<8)|br_bank_read(0xd4,r+2);
+    return (v&0x800000u) ? -1 : v ? 1 : 0;
+}
+/* Programs the analog DC pair v, takes one measurement and gives the signs of M(1) (axes bit 0) and M(2) (bit 1);
+ * an axis not asked for, or a failure, gives 0. */
+static void br_sc_dc_signs(const int *v,int *s,unsigned axes)
+{
+    br_analog_dc(0,v[0]); br_analog_dc(1,v[1]);
+    s[0]=s[1]=0;
+    if (br_sc_measure()) return;
+    if (axes&1u) s[0]=br_sc_sign24(0x81);
+    if (axes&2u) s[1]=br_sc_sign24(0x8a);
+}
+static int br_sc_dc_sign(const int *v,unsigned axis) { int s[2]; br_sc_dc_signs(v,s,1u<<axis); return s[axis]; }
+static unsigned br_sc_peak(void)
+{
+    unsigned peak;
+    br_bank_write(0xd4,23,0x82); fm1_delay_us(1000); peak=br_bank_read(0xd4,0x80); br_bank_write(0xd4,23,2);
+    return peak;
+}
+/* Gain setting G: the smallest code 0..36 whose ADC peak exceeds 47, else 36 (whose peak then does not matter). */
+static void br_sc_gain_setting(void)
+{
+    unsigned g;
+    fm1_wdt_feed();
+    for (g=0;g<36 && !br_diag.error;g++) { br_gain(g); if (br_sc_peak()>47u) break; }
+    br_gain(g);
+}
+static void br_sc_loopback(void)
+{
+    br_phy_reset();
+    if (!br_diag.error) BR_R(0x31004u)=12;
+    br_phy_write(25,24);
+}
+/* TX (con8 = 0b1010, con10 = 3) or RX (0b0110, 1) attenuators. */
+static void br_sc_attenuators(uint32_t con8,uint32_t con10)
+{
+    br_af(8,15u<<20,con8<<20); br_af(9,7u<<28,5u<<28);
+    br_af(10,(3u<<13)|(3u<<27),(3u<<13)|(con10<<27)); br_af(4,15u<<8,9u<<8);
+}
+static void br_sc_set(unsigned what,int v)
+{
+    switch (what) {
+    case BR_SC_LO_I: br_af(7,127u<<8,((uint32_t)v&127u)<<8); break;
+    case BR_SC_LO_Q: br_af(8,127u,(uint32_t)v&127u); break;
+    case BR_SC_TX_IDC: br_tx(4,v); break;
+    case BR_SC_TX_QDC: br_tx(5,v); break;
+    case BR_SC_TX_IPH: br_tx(1,v); break;
+    case BR_SC_TX_QPH: br_tx(3,v); break;
+    case BR_SC_TX_IMB: br_tx(0,v<0 ? 1023+v : 1023); br_tx(2,v<0 ? 1023 : 1023-v); break;
+    case BR_SC_RX_IMB:
+        br_bank_write(0xd4,9,(uint8_t)(v<0 ? 255+v : 255)); br_bank_write(0xd4,11,(uint8_t)(v<0 ? 255 : 255-v));
+        break;
+    case BR_SC_RX_IPH: br_bank_write(0xd4,10,(uint8_t)v); break;
+    default: br_bank_write(0xd4,12,(uint8_t)v); break;   /* BR_SC_RX_QPH */
+    }
+}
+/* The best value (C1.3) of parameter `what` over first..last from `start`, measured with M(0)/M(3) (the same
+ * read); the result is programmed and returned. */
+static int br_sc_search(unsigned what,int start,int first,int last)
+{
+    int v,best=first;
+    uint32_t cost,min=0xffffffffu,at_start=0xffffffffu;
+    fm1_wdt_feed();
+    if (start<first || start>last) { br_sc_set(what,start); at_start=br_sc_power(); }
+    for (v=first;v<=last && !br_diag.error;v++) {
+        br_sc_set(what,v); cost=br_sc_power();
+        if (v==start) at_start=cost;
+        if (v==first || cost<min) { min=cost; best=v; }
+    }
+    if (at_start<=min) best=start;
+    br_sc_set(what,best);
+    return best;
+}
+/* Stage E, both axes at once: brackets lo < v < hi with M < 0 at lo and M > 0 at hi; -511 and 511 stand for
+ * the ends (the measurement is taken to rise with the value: the fallback rule of C2 E3 points that way). The
+ * first measurement is at the start values 0, 0. A closed bracket keeps lo, or the in-range end. */
+static void br_sc_dc_bisect(int *v)
+{
+    int lo[2]={-BR_SC_DC_MAX-1,-BR_SC_DC_MAX-1},hi[2]={BR_SC_DC_MAX+1,BR_SC_DC_MAX+1},s[2];
+    unsigned a,open=3;
+    v[0]=v[1]=0;
+    while (open && !br_diag.error) {
+        br_sc_dc_signs(v,s,open);
+        for (a=0;a<2;a++) {
+            if (!(open&(1u<<a))) continue;
+            if (!s[a]) { open&=~(1u<<a); continue; }
+            if (s[a]<0) lo[a]=v[a]; else hi[a]=v[a];
+            if (hi[a]-lo[a]>1) v[a]=(lo[a]+hi[a])/2;
+            else { v[a]=lo[a]<-BR_SC_DC_MAX ? hi[a] : lo[a]; open&=~(1u<<a); }
+        }
+    }
+}
+/* Does `axis` satisfy the null condition at the pair v, given its sign s there? M = 0, or the opposite sign at a
+ * neighbour (the one the rising slope points to first). At an end of the range with the sign pointing outward
+ * there is no null inside the range (rising measurement), and the end is the specified value. */
+static int br_sc_dc_holds(const int *v,unsigned axis,int s)
+{
+    int w[2],n;
+    if (!s || (s<0 && v[axis]==BR_SC_DC_MAX) || (s>0 && v[axis]==-BR_SC_DC_MAX)) return 1;
+    for (n=0;n<2 && !br_diag.error;n++) {
+        w[0]=v[0]; w[1]=v[1]; w[axis]+=((s<0)==(n==0)) ? 1 : -1;
+        if (w[axis]<-BR_SC_DC_MAX || w[axis]>BR_SC_DC_MAX) continue;
+        if (br_sc_dc_sign(w,axis)==-s) return 1;
+    }
+    return 0;
+}
+/* One axis on its own, the other held: from v (sign s, not 0) step outward 1, 2, 4, ... until the sign changes,
+ * then bisect that gap. The rising direction is tried first, then the other. No change anywhere: -510 if
+ * positive, +510 if negative (C2 E3). */
+static void br_sc_dc_refine(int *v,unsigned axis,int s)
+{
+    int pass,w[2];
+    w[0]=v[0]; w[1]=v[1];
+    for (pass=0;pass<2 && !br_diag.error;pass++) {
+        int dir=((s<0)==(pass==0)) ? 1 : -1,from=v[axis],step=1;
+        for (;;) {
+            int x=from+dir*step,sx;
+            if (x>BR_SC_DC_MAX) x=BR_SC_DC_MAX;
+            if (x< -BR_SC_DC_MAX) x= -BR_SC_DC_MAX;
+            if (x==from) break;
+            w[axis]=x; sx=br_sc_dc_sign(w,axis);
+            if (br_diag.error) return;
+            if (!sx) { v[axis]=x; return; }
+            if (sx==-s) {
+                while (x-from>1 || from-x>1) {          /* M has sign s at from and -s at x */
+                    int m=(from+x)/2;
+                    w[axis]=m; sx=br_sc_dc_sign(w,axis);
+                    if (!sx || br_diag.error) { v[axis]=m; return; }
+                    if (sx==s) from=m; else x=m;
+                }
+                v[axis]=from; return;
+            }
+            from=x; step*=2;
+        }
+    }
+    v[axis]=s>0 ? -BR_SC_DC_MAX : BR_SC_DC_MAX;
+}
+/* The null of one group (C2 E3), left in v; the last pair measured is not necessarily v. */
+static void br_sc_dc_null(int *v)
+{
+    int round,s[2];
+    br_sc_dc_bisect(v);
+    for (round=0;round<BR_SC_DC_ROUNDS && !br_diag.error;round++) {
+        int changed=0;
+        br_sc_dc_signs(v,s,3);
+        if (!br_sc_dc_holds(v,0,s[0])) { br_sc_dc_refine(v,0,s[0]); changed=1; s[1]=br_sc_dc_sign(v,1); }
+        if (!br_sc_dc_holds(v,1,s[1])) { br_sc_dc_refine(v,1,s[1]); changed=1; }
+        if (!changed) break;                            /* both hold with this pair */
+    }
+}
+/* Stage E: the four RX gain groups' null pairs into the tune table br_dc; the last pair stays programmed. */
+static void br_sc_rx_dc(void)
+{
+    static const uint8_t groups[4][3]={{0,0,127},{1,0,127},{1,3,69},{1,9,14}};
+    uint32_t start=fm1_ticks();
+    unsigned g;
+    br_phy_reset(); br_sc_loopback();
+    br_bank_write(0xd0,0,3); br_bank_write(0xd0,95,16);
+    br_bank_write(0xd4,0,62); br_bank_write(0xd4,27,56); br_bank_write(0xd4,8,0xc0); br_bank_write(0xd4,19,0);
+    br_bank_write(0xd4,20,56); br_bank_write(0xd4,20,52);
+    br_gain(40);
+    for (g=0;g<4 && !br_diag.error;g++) {
+        int v[2];
+        fm1_wdt_feed();
+        br_af(3,3u<<6,(uint32_t)groups[g][0]<<6);
+        br_af(4,(15u<<8)|127u,((uint32_t)groups[g][1]<<8)|groups[g][2]);
+        br_analog_dc(0,0); br_analog_dc(1,0);
+        br_sc_dc_null(v);
+        ble_put16(br_dc+4*g,br_analog_dc(0,v[0])); ble_put16(br_dc+4*g+2,br_analog_dc(1,v[1]));
+    }
+    br_sc_rx_dc_ticks=fm1_ticks()-start;
+}
+/* Bandwidth code for one WLA_CON26 configuration (bits [9:0]; [17:10] = 0x1E, [23:18] = 0, start bit clear). */
+static uint32_t br_sc_bandwidth(uint32_t config)
+{
+    uint32_t t,code;
+    br_af(26,0xffffffu,config|(0x1eu<<10));
+    br_af(26,1u,1u);
+    t=fm1_ticks();
+    for (;;) {
+        int late=(uint32_t)(fm1_ticks()-t)>=BR_SC_1MS;
+        uint32_t r=br_comparator();
+        if (br_diag.error) return 0;
+        if (r&32u) break;
+        if (late) { br_error(BR_ERR_SC_BANDWIDTH); return 0; }
+    }
+    code=(BR_A(30)>>8)&255u;
+    br_af(26,1u,0);
+    return code;
+}
+static void br_selfcal_run(void)
+{
+    static const uint16_t config[3]={0x1fc,0x122,0x0a0};
+    uint32_t code[3],word;
+    unsigned i;
+    int k;
+    br_sc_measures=0; br_sc_rx_dc_ticks=0;
+    fm1_wdt_feed();
+    /* A: bandwidth */
+    br_af(1,15u<<8,8u<<8); br_af(20,1u<<27,1u<<27);
+    for (i=0;i<3;i++) code[i]=br_sc_bandwidth(config[i]);
+    br_af(20,1u<<27,0);
+    if (br_diag.error) return;
+    word=0xffu|(code[0]<<8)|(code[1]<<16)|(code[2]<<24);
+    BR_A(23)=word; BR_A(24)=word;
+    br_af(8,255u<<10,code[1]<<10); br_af(4,255u<<14,code[1]<<14);
+    /* B */
+    br_mode(2); br_sc_attenuators(10,3);
+    /* C: TX I/Q, M(0) */
+    br_phy_reset();
+    br_bank_write(0xc8,0x15,0); br_bank_write(0xc8,0x14,0);
+    br_bank_field(0xc8,0x40,0x80,0); br_bank_field(0xc8,0x41,0x80,0);
+    br_bank_write(0xc8,0x28,0); br_bank_write(0xc8,0x27,5);
+    br_phy_write(4,(uint8_t)(br_phy_read(4)&0xe7u));
+    br_sc_loopback();
+    br_bank_write(0xd0,0,3); br_bank_write(0xd0,95,16);
+    br_bank_write(0xd0,1,20); br_bank_write(0xd0,2,0); br_bank_write(0xd0,3,0);
+    br_bank_write(0xd4,0,62); br_bank_write(0xd4,19,30); br_bank_write(0xd4,20,56); br_bank_write(0xd4,20,52);
+    br_tx(0,1023); br_tx(1,0); br_tx(2,1023); br_tx(3,0); br_tx(4,0); br_tx(5,0);
+    br_sc_set(BR_SC_LO_I,64); br_sc_set(BR_SC_LO_Q,64);
+    br_sc_gain_setting();
+    br_sc_search(BR_SC_LO_I,64,0,127);
+    br_sc_search(BR_SC_LO_Q,64,0,127);
+    br_tx(4,0); br_tx(5,0); br_sc_gain_setting();
+    br_sc_search(BR_SC_TX_IDC,0,-128,127);
+    br_sc_search(BR_SC_TX_QDC,0,-128,127);
+    br_bank_write(0xd4,19,60); br_tx(0,1023); br_tx(2,1023);
+    k=br_sc_search(BR_SC_TX_IMB,0,-127,127);
+    br_tx(1,0); br_tx(3,0);
+    br_sc_search(k>=0 ? BR_SC_TX_QPH : BR_SC_TX_IPH,0,-200,200);
+    if (br_diag.error) return;
+    /* D */
+    br_af(5,31u,0); br_mode(0); br_af(1,1u<<15,0);
+    /* E: RX analog DC, M(1)/M(2) */
+    br_sc_rx_dc();
+    if (br_diag.error) return;
+    /* F */
+    br_af(5,31u,25u); br_mode(3); br_sc_attenuators(6,1);
+    /* G: RX I/Q, M(3) */
+    br_phy_reset(); br_sc_loopback();
+    br_bank_write(0xd0,0,3); br_bank_write(0xd0,95,16);
+    br_bank_write(0xd0,1,20); br_bank_write(0xd0,2,0); br_bank_write(0xd0,3,17);
+    br_bank_write(0xd4,9,0xff); br_bank_write(0xd4,11,0xff); br_bank_write(0xd4,10,0); br_bank_write(0xd4,12,0);
+    br_bank_write(0xd4,0,62); br_bank_write(0xd4,20,56); br_bank_write(0xd4,20,4); br_bank_write(0xd4,19,30);
+    br_sc_gain_setting();
+    k=br_sc_search(BR_SC_RX_IMB,0,-105,105);
+    br_sc_search(k>=0 ? BR_SC_RX_QPH : BR_SC_RX_IPH,0,-50,50);
+    fm1_wdt_feed();
+}
+/* The 68-octet record (C3) from the values now in the hardware; the check word is CRC-16/XMODEM of 0..63. */
+static void br_selfcal_record(uint8_t out[68])
+{
+    unsigned f,i,packed[2];
+    uint32_t dc;
+    packed[0]=br_bank_read(0xd0,97); packed[1]=br_bank_read(0xd0,98);
+    for (f=0;f<6;f++) {
+        uint32_t v=((uint32_t)br_bank_read(0xd0,4+f)<<2)|((packed[f/4]>>(2u*(f%4)))&3u);
+        if (f!=0 && f!=2 && (v&512u)) v|=0xfffffc00u;   /* phases and DC: signed 10-bit, sign-extended */
+        ble_put32(out+4*f,v);
+    }
+    out[24]=(uint8_t)((BR_A(7)>>8)&127u); out[25]=(uint8_t)(BR_A(8)&127u);
+    out[26]=br_bank_read(0xd4,9); out[27]=br_bank_read(0xd4,11);
+    out[28]=br_bank_read(0xd4,10); out[29]=br_bank_read(0xd4,12);
+    out[30]=0; out[31]=0;
+    dc=BR_A(2);
+    for (i=0;i<2;i++) {
+        uint32_t code=(dc>>(i ? 17 : 7))&1023u,magnitude=code&511u;
+        ble_put32(out+32+4*i,(code&512u) ? magnitude : 0u-magnitude);   /* sign bit set: value >= 0 */
+    }
+    ble_put32(out+40,BR_A(23)); ble_put32(out+44,BR_A(24));
+    for (i=0;i<16;i++) out[48+i]=br_dc[i];
+    ble_put32(out+64,ble_crc16(0,out,64));
+}
+/* --- self-calibration (r8.2) end --- */
+/* The log line (at most 43 characters) for a bring-up error whose cause has a name; 0 for the others. */
+static const char *br_error_cause(uint32_t code)
+{
+    return code==BR_ERR_SC_MEASURE ? "open BLE: self-cal measurement timeout" :
+        code==BR_ERR_SC_BANDWIDTH ? "open BLE: self-cal bandwidth timeout" :
+        code==BR_ERR_VCO_DETECTOR ? "open BLE: VCO detector unusable" : 0;
+}
 static int br_signed10(unsigned v) { return (v&512u) ? (int)v-1024 : (int)v; }
 static void br_handover(void)
 {
@@ -384,9 +712,6 @@ static void br_radio_init(ble_cal_t *cal,uint32_t *modem)
     BLE_DIAG_ONLY(br_diag.clocks[2]=BR_R(0x10014u); br_diag.clocks[3]=BR_R(0x10008u););
     BLE_DIAG_ONLY(br_p33_snapshot(br_diag.p33_before););
     br_stage(1);
-    /* R2: a valid stored trim record is required. There is no fallback self-calibration and nothing is written to
-     * the calibration sectors: without a record the bring-up fails here, before the radio is programmed. */
-    if (!((cal->present&8u) && ble_trim_valid(cal->trim))) br_error(BR_ERR_NO_TRIM);
     br_field(0x10010u,3u<<14,0);
     for (i=0;i<5 && !br_diag.error;i++) BR_R(0x14040u+4*i)=0;
     br_field(0x14040u,1u<<8,1u<<8); br_field(0x14040u,1u<<6,1u<<6);
@@ -414,7 +739,17 @@ static void br_radio_init(ble_cal_t *cal,uint32_t *modem)
     if (!br_diag.error) BR_A(21)=0x02822520;
     br_rn(); br_af(14,1u<<18,0); fm1_delay_us(80); br_af(14,1u<<18,1u<<18);
     br_stage(6);
-    if (!br_diag.error) { br_diag.calibration=1; br_apply_trim(cal->trim); }   /* the record, checked at stage 1 */
+    if (!br_diag.error) {
+        if ((cal->present&8u) && ble_trim_valid(cal->trim)) { br_diag.calibration=1; br_apply_trim(cal->trim); }
+        else {
+            /* r8.2 C2/C3: no valid stored record: self-calibrate in place of the quick trim. The record is kept
+             * in RAM (cal->trim) for the diagnostics and never written to flash; present bit 3 stays clear, so
+             * every boot self-calibrates again. */
+            br_diag.calibration=2; br_selfcal_run();
+            if (!br_diag.error) br_selfcal_record(cal->trim);
+            BLE_DIAG_ONLY(br_diag.selfcal_rx_dc_ticks=br_sc_rx_dc_ticks; br_diag.selfcal_measures=br_sc_measures);
+        }
+    }
     br_stage(7); br_mode(0);
     br_af(9,7u<<24,(cal->pa[0]&7u)<<24); br_af(10,7,cal->pa[1]);
     br_af(10,7u<<9,(cal->pa[2]&7u)<<9); br_af(10,7u<<15,(cal->pa[3]&7u)<<15);

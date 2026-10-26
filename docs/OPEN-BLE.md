@@ -201,20 +201,29 @@ CCCDs); 1232..1235 CRC-32.
   class and credit; clock and RF diversifiers get none; no CSPRNG qualification is claimed.
 - Calibration is read from the first VM sector `0x93000..0x93FFF` and BTIF `0xE9000..0xE9FFF`; both are
   read-only in open builds, also through `plat_data_*` (they overlap XDATA0/1). Missing calibration items fall
-  back to defaults, except two: without a valid factory identity address, or without a valid radio trim record,
-  startup fails (see [Without a radio calibration record](#without-a-radio-calibration-record)).
+  back to defaults, except two: without a valid factory identity address startup fails, and without a valid radio
+  trim record the radio calibrates itself at startup
+  (see [Without a radio calibration record](#without-a-radio-calibration-record)).
   `0x94000..0x96FFF` (the vendor stack's seed and bond sectors) is left to the app.
 
 ## Without a radio calibration record
 
-The open controller applies the radio trim record that the stock firmware writes on its first boot; it has no
-self-calibration of its own and never writes the calibration sectors. A unit without a valid record (one that never
-ran the stock firmware, or whose calibration sectors were overwritten) does not start Bluetooth: `plat_ble_state()`
-is `BLE_FAILED`, the log shows `open BLE: no radio calibration record`, and the readout `error 13`. To recover,
-restore the calibration sectors from a full flash backup of the unit, or run the stock firmware once and then flash
-the open build again: the stock firmware calibrates the radio and saves the record when it finds none (read from its
-code; not tested on a unit). (`error 12`, logged as `open BLE: VCO detector unusable`, means the radio's
-VCO bank scan found no usable bank group; the radio is not started either.)
+The open controller applies the radio trim record that the stock firmware writes on its first boot. A unit without
+a valid record (one that never ran the stock firmware, or whose calibration sectors were overwritten, for example
+by an app using that flash area for its own data) still starts Bluetooth: the radio calibrates itself at every boot,
+in place of applying the record. The self-calibration is specified to take at most 1 s of the radio start-up
+(diagnostics show it as `step_us 6`; this build's time has not been measured on a unit yet). The result is kept in
+RAM only; nothing is written to flash, so the calibration sectors stay as they are and the next boot calibrates
+again.
+
+Diagnostics builds show which way the radio was calibrated: `calibration_1_record_2_self 2` for a self-calibration
+(1 for a stored record), with `trim_crc` (the record's check word) and `trim_record` (the 68-octet record as hex).
+A measurement that does not finish within its 1 ms bound stops the start-up with `error 14`
+(`open BLE: self-cal measurement timeout`) or `error 15` (`open BLE: self-cal bandwidth timeout`); `plat_ble_state()`
+is then `BLE_FAILED`. (`error 12`, logged as `open BLE: VCO detector unusable`, means the radio's VCO bank scan
+found no usable bank group; the radio is not started either.) A stored record is not needed for Bluetooth to work.
+To have one again, restore the calibration sectors from a full flash backup of the unit, or run the stock firmware
+once (it saves a record when it finds none; read from its code, not tested on a unit).
 
 ## BSP interface
 

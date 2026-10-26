@@ -73,6 +73,7 @@ typedef struct {
 #if FM1B_BLE_DIAG
     uint32_t clocks[4],irq_probe[4],step_ticks[16];
     uint8_t p33_before[38], p33_after[38], vco[48];
+    uint32_t selfcal_rx_dc_ticks, selfcal_measures; /* r8.2 self-calibration: stage E time, measurements */
 #endif
 } ble_hw_diag_t;
 
